@@ -28,6 +28,13 @@ void SPDZ_Data_Setup_Primes(bigint& p,int lgp,int& idx,int& m)
         m=8192;
         idx=0;
         break;
+      case 61:
+        m=8192;
+        idx=0;
+      	p = 0x1FFFFFFFFFFFFFFF;
+      	cout << "\t p = " << p << "  :   ";
+      	cout << lgp << " <= " << numBits(p) << endl;
+      	return;
       case 64:
         m=16384;
         idx=1;
