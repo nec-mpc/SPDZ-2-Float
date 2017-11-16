@@ -1347,13 +1347,21 @@ void Instruction::execute(Processor& Proc) const
           }
         return;
       case STARTOPEN:
+#ifndef EXTENDED_SPDZ
         Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
+#elif EXTENDED_SPDZ == 1
+        Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
+#endif //EXTENDED_SPDZ
         return;
       case GSTARTOPEN:
         Proc.POpen_Start(start,Proc.P,Proc.MC2,size);
         return;
       case STOPOPEN:
+#ifndef EXTENDED_SPDZ
         Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
+#else //EXTENDED_SPDZ
+        Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
+#endif //EXTENDED_SPDZ
         return;
       case GSTOPOPEN:
         Proc.POpen_Stop(start,Proc.P,Proc.MC2,size);

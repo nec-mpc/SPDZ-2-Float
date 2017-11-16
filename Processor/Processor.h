@@ -271,7 +271,31 @@ class Processor : public ProcessorBase
   private:
     void maybe_decrypt_sequence(int client_id);
     void maybe_encrypt_sequence(int client_id);
+
+#ifdef EXTENDED_SPDZ
+  public:
+    void POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
+    void POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+
+#endif //EXTENDED_SPDZ
 };
+
+#ifdef EXTENDED_SPDZ
+class spdz_ext_ifc
+{
+public:
+	spdz_ext_ifc();
+	~spdz_ext_ifc();
+
+    void * ext_lib_handle;
+    int (*ext_init)(const int pid, const char * field, const size_t offline_size);
+    int (*ext_start_open)(void *);
+    int (*ext_stop_open)(void *);
+    int (*ext_term)(void *);
+
+    static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
+};
+#endif //EXTENDED_SPDZ
 
 template<> inline Share<gf2n>& Processor::get_S_ref(int i) { return get_S2_ref(i); }
 template<> inline gf2n& Processor::get_C_ref(int i)        { return get_C2_ref(i); }

@@ -9,6 +9,11 @@
 #include <sodium.h>
 #include <string>
 
+#ifdef EXTENDED_SPDZ
+#include <sys/stat.h>
+#include <dlfcn.h>
+spdz_ext_ifc the_ext_lib;
+#endif //EXTENDED_SPDZ
 
 Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
         MAC_Check<gf2n>& MC2,MAC_Check<gfp>& MCp,Machine& machine,
@@ -23,12 +28,25 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   private_input.open(get_filename("Player-Data/Private-Input-",true).c_str());
   public_output.open(get_filename("Player-Data/Public-Output-",true).c_str(), ios_base::out);
   private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
-}
 
+#ifdef EXTENDED_SPDZ
+  	stringstream ss;
+  	ss << gfp::pr();
+	if(0 != (*the_ext_lib.ext_init)(P.my_num(), ss.str().c_str(), 10))
+	{
+		cerr << "SPDZ extension library initialization failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+#endif //EXTENDED_SPDZ
+}
 
 Processor::~Processor()
 {
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
+#ifdef EXTENDED_SPDZ
+	(*the_ext_lib.ext_term)(NULL);
+#endif //EXTENDED_SPDZ
 }
 
 string Processor::get_filename(const char* prefix, bool use_number)
@@ -490,6 +508,84 @@ void Processor::maybe_encrypt_sequence(int client_id)
     it_cs->second.second++;
   }
 }
+
+#ifdef EXTENDED_SPDZ
+
+spdz_ext_ifc::spdz_ext_ifc()
+{
+	ext_lib_handle = NULL;
+	*(void**)(&ext_init) = NULL;
+	*(void**)(&ext_start_open) = NULL;
+	*(void**)(&ext_stop_open) = NULL;
+	*(void**)(&ext_term) = NULL;
+
+	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
+	if(NULL == spdz_ext_lib)
+	{
+		cerr << "SPDZ extension library defined not set" << endl;
+		abort();
+	}
+	cout << "set extension library " << spdz_ext_lib << endl;
+
+	struct stat st;
+	if(0 != stat(spdz_ext_lib, &st))
+	{
+		cerr << "failed to find extension library " << spdz_ext_lib << endl;
+		abort();
+	}
+	cout << "found extension library " << spdz_ext_lib << endl;
+
+	ext_lib_handle = dlopen(spdz_ext_lib, RTLD_NOW);
+	if(NULL == ext_lib_handle)
+	{
+		const char * dlopen_err_msg = dlerror();
+		cerr << "failed to load extension library [" << ((NULL != dlopen_err_msg)? dlopen_err_msg: "") << "]" << endl;
+		abort();
+	}
+
+	if(0 != load_extension_method("init", (void**)(&ext_init), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("start_open", (void**)(&ext_start_open), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("stop_open", (void**)(&ext_stop_open), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("term", (void**)(&ext_term), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+}
+
+spdz_ext_ifc::~spdz_ext_ifc()
+{
+	dlclose(ext_lib_handle);
+}
+
+int spdz_ext_ifc::load_extension_method(const char * method_name, void ** proc_addr, void * libhandle)
+{
+	*proc_addr = dlsym(libhandle, method_name);
+	const char * dlsym_error = dlerror();
+	if(NULL != dlsym_error || NULL == *proc_addr)
+	{
+		cerr << "failed to load " << method_name << " extension [" << ((NULL != dlsym_error)? dlsym_error: "") << "]" << endl;
+		return -1;
+	}
+	return 0;
+}
+
+#endif //EXTENDED_SPDZ
 
 template void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<gf2n>& MC,int size);
 template void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
