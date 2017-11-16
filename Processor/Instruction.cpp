@@ -1350,7 +1350,7 @@ void Instruction::execute(Processor& Proc) const
 #ifndef EXTENDED_SPDZ
         Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
 #elif EXTENDED_SPDZ == 1
-        Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
+        Proc.POpen_Start_Ext(start,Proc.P,Proc.MCp,size);
 #endif //EXTENDED_SPDZ
         return;
       case GSTARTOPEN:
@@ -1360,7 +1360,7 @@ void Instruction::execute(Processor& Proc) const
 #ifndef EXTENDED_SPDZ
         Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
 #else //EXTENDED_SPDZ
-        Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
+        Proc.POpen_Stop_Ext(start,Proc.P,Proc.MCp,size);
 #endif //EXTENDED_SPDZ
         return;
       case GSTOPOPEN:

@@ -511,6 +511,67 @@ void Processor::maybe_encrypt_sequence(int client_id)
 
 #ifdef EXTENDED_SPDZ
 
+void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size)
+{
+	//Code taken from POpen_Start(reg,P, MC, size);
+	int sz=reg.size();
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	vector<gfp>& PO = get_PO<gfp>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+	if (size>1)
+	{
+		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			vector<Share<gfp> >::iterator begin=get_S<gfp>().begin()+*reg_it;
+			Sh_PO.insert(Sh_PO.end(),begin,begin+size);
+		}
+	}
+	else
+	{
+		for (int i=0; i<sz; i++)
+		{
+			Sh_PO.push_back(get_S_ref<gfp>(reg[i]));
+		}
+	}
+	PO.resize(sz*size);
+	MC.POpen_Begin(PO,Sh_PO,P);
+
+}
+
+void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
+{
+	//Code taken from POpen_Stop(reg, P, MC, size);
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	vector<gfp>& PO = get_PO<gfp>();
+	vector<gfp>& C = get_C<gfp>();
+	int sz=reg.size();
+	PO.resize(sz*size);
+	MC.POpen_End(PO,Sh_PO,P);
+	if (size>1)
+	{
+		vector<gfp>::iterator PO_it=PO.begin();
+		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			for (vector<gfp>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
+			{
+				*C_it=*PO_it;
+				PO_it++;
+			}
+		}
+	}
+	else
+	{
+		for (unsigned int i=0; i<reg.size(); i++)
+		{
+			get_C_ref<gfp>(reg[i]) = PO[i];
+		}
+	}
+
+	sent += reg.size() * size;
+	rounds++;
+}
+
 spdz_ext_ifc::spdz_ext_ifc()
 {
 	ext_lib_handle = NULL;
