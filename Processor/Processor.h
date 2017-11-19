@@ -292,7 +292,7 @@ public:
 
     void * ext_lib_handle;
     int (*ext_init)(const int pid, const char * field, const size_t offline_size);
-    int (*ext_start_open)(void *);
+    int (*ext_start_open)(const size_t share_count, const char ** shares);
     int (*ext_stop_open)(void *);
     int (*ext_term)(void *);
 

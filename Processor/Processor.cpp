@@ -12,6 +12,7 @@
 #ifdef EXTENDED_SPDZ
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <list>
 spdz_ext_ifc the_ext_lib;
 #endif //EXTENDED_SPDZ
 
@@ -533,6 +534,29 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 	Sh_PO.reserve(sz*size);
 
 	prep_shares(reg, Sh_PO, size);
+
+	size_t share_count = Sh_PO.size();
+	char ** serialized_shares = new char*[share_count];
+	size_t j = 0;
+	for(vector< Share<gfp> >::const_iterator i = Sh_PO.begin(); i != Sh_PO.end(); ++i)
+	{
+		std::stringstream ss;
+		ss << *i;
+		serialized_shares[j++] = strdup(ss.str().c_str());
+	}
+
+	if(0 != (*the_ext_lib.ext_start_open)(share_count, (const char **)serialized_shares))
+	{
+		cerr << "SPDZ extension library start_open failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	for(j = 0; j < share_count; j++)
+	{
+		free(serialized_shares[j]);
+	}
+	delete []serialized_shares;
 
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
