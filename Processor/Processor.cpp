@@ -535,8 +535,9 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 
 	prep_shares(reg, Sh_PO, size);
 
-	size_t share_count = Sh_PO.size();
+	size_t share_count = Sh_PO.size(), open_count = 0;
 	char ** serialized_shares = new char*[share_count];
+	char ** serialized_opens = NULL;
 	size_t j = 0;
 	for(vector< Share<gfp> >::const_iterator i = Sh_PO.begin(); i != Sh_PO.end(); ++i)
 	{
@@ -545,7 +546,7 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 		serialized_shares[j++] = strdup(ss.str().c_str());
 	}
 
-	if(0 != (*the_ext_lib.ext_start_open)(share_count, (const char **)serialized_shares))
+	if(0 != (*the_ext_lib.ext_start_open)(share_count, (const char **)serialized_shares, &open_count, &serialized_opens))
 	{
 		cerr << "SPDZ extension library start_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
