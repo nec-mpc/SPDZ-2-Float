@@ -280,6 +280,11 @@ class Processor : public ProcessorBase
     void POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
     void POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
 
+    size_t serialize_shares(const vector< Share<gfp> > & shares, char *** serialized_shares);
+
+	size_t serialize_open_count, serialize_share_count;
+	char ** serialized_shares;
+	char ** serialized_opens;
 #endif //EXTENDED_SPDZ
 };
 
@@ -293,7 +298,7 @@ public:
     void * ext_lib_handle;
     int (*ext_init)(const int pid, const char * field, const int offline_size);
     int (*ext_start_open)(const size_t share_count, const char ** shares, size_t * open_count, char *** opens);
-    int (*ext_stop_open)(void *);
+    int (*ext_stop_open)(const size_t share_count, const char ** shares, const size_t open_count, const char ** opens);
     int (*ext_term)(void *);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);

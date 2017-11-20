@@ -39,6 +39,8 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	serialize_open_count = serialize_share_count = 0;
+	serialized_shares = serialized_opens = NULL;
 #endif //EXTENDED_SPDZ
 }
 
@@ -524,56 +526,62 @@ void Processor::maybe_encrypt_sequence(int client_id)
 
 #ifdef EXTENDED_SPDZ
 
-void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size)
+void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& /*P*/, MAC_Check<gfp>& /*MC*/, int size)
 {
-	//Code taken from POpen_Start(reg,P, MC, size);
 	int sz=reg.size();
 
 	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
+	vector<gfp>& PO = get_PO<gfp>();
+	PO.clear();
+
 	prep_shares(reg, Sh_PO, size);
 
-	size_t share_count = Sh_PO.size(), open_count = 0;
-	char ** serialized_shares = new char*[share_count];
-	char ** serialized_opens = NULL;
-	size_t j = 0;
-	for(vector< Share<gfp> >::const_iterator i = Sh_PO.begin(); i != Sh_PO.end(); ++i)
+	//the share values are serialized into an array of strings
+	serialize_share_count = serialize_shares(Sh_PO, &serialized_shares);
+	if(serialize_share_count != Sh_PO.size())
 	{
-		std::stringstream ss;
-		ss << *i;
-		serialized_shares[j++] = strdup(ss.str().c_str());
+		cerr << "Shared values serialization failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
 	}
 
-	if(0 != (*the_ext_lib.ext_start_open)(share_count, (const char **)serialized_shares, &open_count, &serialized_opens))
+	//the extension library is given the serialized shares and returns serialized opens
+	if(0 != (*the_ext_lib.ext_start_open)(serialize_share_count, (const char **)serialized_shares, &serialize_open_count, &serialized_opens))
 	{
 		cerr << "SPDZ extension library start_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	for(j = 0; j < share_count; j++)
+	//deserialize the open values into the open vector
+	for(size_t j = 0; j < serialize_open_count; j++)
 	{
-		free(serialized_shares[j]);
+		std::stringstream ss;
+		ss.str(serialized_opens[j]);
+		gfp open_value;
+		ss >> open_value;
+		PO.push_back(open_value);
 	}
-	delete []serialized_shares;
 
-	vector<gfp>& PO = get_PO<gfp>();
-	PO.resize(sz*size);
-
-	MC.POpen_Begin(PO,Sh_PO,P);
+	//MC.POpen_Begin(PO,Sh_PO,P);
 }
 
-void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
+void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& /*P*/,MAC_Check<gfp>& /*MC*/,int size)
 {
-	//Code taken from POpen_Stop(reg, P, MC, size);
-	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
 	vector<gfp>& PO = get_PO<gfp>();
 	vector<gfp>& C = get_C<gfp>();
-	int sz=reg.size();
-	PO.resize(sz*size);
-	MC.POpen_End(PO,Sh_PO,P);
+
+	//the extension library is given the serialized shares and returns serialized opens
+	if(0 != (*the_ext_lib.ext_stop_open)(serialize_share_count, (const char **)serialized_shares, serialize_open_count, (const char **)serialized_opens))
+	{
+		cerr << "SPDZ extension library start_open failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
 	if (size>1)
 	{
 		vector<gfp>::iterator PO_it=PO.begin();
@@ -596,6 +604,40 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<
 
 	sent += reg.size() * size;
 	rounds++;
+
+	//free & delete of the serialization buffers
+	for(size_t j = 0; j < serialize_share_count; j++)
+	{
+		free(serialized_shares[j]);
+	}
+	delete []serialized_shares;
+
+	for(size_t j = 0; j < serialize_open_count; j++)
+	{
+		free(serialized_opens[j]);
+	}
+	delete []serialized_opens;
+
+	serialize_open_count = serialize_share_count = 0;
+	serialized_shares = serialized_opens = NULL;
+}
+
+size_t Processor::serialize_shares(const vector< Share<gfp> > & shares, char *** serialized_shares)
+{
+	size_t share_count = shares.size(), serialized_share_count = 0;
+	if(0 < share_count)
+	{
+		*serialized_shares = new char*[share_count];
+		memset(*serialized_shares, 0, share_count * sizeof(char*));
+
+		for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
+		{
+			std::stringstream ss;
+			ss << *i;
+			(*serialized_shares)[serialized_share_count++] = strdup(ss.str().c_str());
+		}
+	}
+	return serialized_share_count;
 }
 
 spdz_ext_ifc::spdz_ext_ifc()
