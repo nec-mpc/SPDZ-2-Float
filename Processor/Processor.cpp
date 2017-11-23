@@ -41,8 +41,6 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 		abort();
 	}
 	cout << "SPDZ extension library initialized." << endl;
-	serialize_open_count = serialize_share_count = 0;
-	serialized_shares = serialized_opens = NULL;
 #endif //EXTENDED_SPDZ
 }
 
@@ -530,7 +528,6 @@ void Processor::maybe_encrypt_sequence(int client_id)
 
 void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
 {
-	cout << "Processor::POpen_Start_Ext() entry" << endl;
 	int sz=reg.size();
 
 	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
@@ -543,53 +540,63 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 	PO.resize(sz*size);
 
 	MC.POpen_Begin(PO,Sh_PO,P);
-	cout << "Processor::POpen_Start_Ext() exit" << endl;
+
+	//---------------------------------------------------------------------------------
 	/*
-	int sz=reg.size();
-
-	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
-	Sh_PO.clear();
-	Sh_PO.reserve(sz*size);
-
-	vector<gfp>& PO = get_PO<gfp>();
-	PO.clear();
-
-	prep_shares(reg, Sh_PO, size);
-
-	//the share values are serialized into an array of strings
-	serialize_share_count = serialize_shares(Sh_PO, &serialized_shares);
-	if(serialize_share_count != Sh_PO.size())
+	//gfp conversion unit test
+	if(!Sh_PO.empty())
 	{
-		cerr << "Shared values serialization failed." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
+		test_extension_conversion(Sh_PO[0].get_share());
 	}
+	*/
+	//---------------------------------------------------------------------------------
 
-	//the extension library is given the serialized shares and returns serialized opens
-	if(0 != (*the_ext_lib.ext_start_open)(serialize_share_count, (const char **)serialized_shares, &serialize_open_count, &serialized_opens))
+	//the share values are saved as unsigned long
+	shares2ul(Sh_PO, ul_share_values);
+	if(Sh_PO.size() == ul_share_values.size())
 	{
-		cerr << "SPDZ extension library start_open failed." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
+		/*
+		//share conversion tests
+		for(size_t i = 0; i < ul_share_values.size(); i++)
+		{
+			gfp restored = Processor::ul2gfp(ul_share_values[i]);
+			if(!restored.equal(Sh_PO[i].get_share()))
+			{
+				cerr << "Share " << i << " conversion error." << endl;
+			}
+		}
+		*/
 
-	//deserialize the open values into the open vector
-	for(size_t j = 0; j < serialize_open_count; j++)
-	{
-		std::stringstream ss;
-		ss.str(serialized_opens[j]);
-		gfp open_value;
-		ss >> open_value;
-		PO.push_back(open_value);
-	}
+		//the extension library is given the shares' values and returns opens' values
+		size_t open_count = 0;
+		unsigned long * opens = NULL;
+		if(0 != (*the_ext_lib.ext_start_open)(ul_share_values.size(), &ul_share_values[0], &open_count, &opens))
+		{
+			cerr << "SPDZ extension library start_open failed." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		/*
+		else
+		{
+			cout << "Processor::POpen_Start_Ext extension open returned " << open_count << " opens" << endl;
+		}*/
 
-	//MC.POpen_Begin(PO,Sh_PO,P);
-	 * */
+		//the returned opens are saved in a member vector and the buffer released.
+		if(0 < open_count && NULL != opens)
+		{
+			ul_open_values.assign(opens, opens + open_count);
+			delete []opens;
+			opens = NULL;
+			open_count = 0;
+		}
+	}
+	else
+		cout << "Processor::POpen_Start_Ext ul_share_values size mismatch with PO_shares." << endl;
 }
 
 void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
 {
-	cout << "Processor::POpen_Stop_Ext() entry" << endl;
 	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
 	vector<gfp>& PO = get_PO<gfp>();
 	vector<gfp>& C = get_C<gfp>();
@@ -618,77 +625,81 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<
 
 	sent += reg.size() * size;
 	rounds++;
-	cout << "Processor::POpen_Stop_Ext() exit" << endl;
 
-	/*
-	vector<gfp>& PO = get_PO<gfp>();
-	vector<gfp>& C = get_C<gfp>();
-
-	//the extension library is given the serialized shares and returns serialized opens
-	if(0 != (*the_ext_lib.ext_stop_open)(serialize_share_count, (const char **)serialized_shares, serialize_open_count, (const char **)serialized_opens))
+	//----------------------------------------------------------------------------------
+	if(0 != (*the_ext_lib.ext_stop_open)())
 	{
-		cerr << "SPDZ extension library start_open failed." << endl;
+		cerr << "SPDZ extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if (size>1)
+	/*
+	//summary
+	cout << "SPDZ-2 opened: " << PO.size() << " values while scapi opened: " << ul_open_values.size() << " values." << endl;
+	if(PO.size() == ul_open_values.size())
 	{
-		vector<gfp>::iterator PO_it=PO.begin();
-		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		bigint bi_value;
+		unsigned long ul_value;
+		for(size_t offset = 0; offset < ul_open_values.size(); offset++)
 		{
-			for (vector<gfp>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
-			{
-				*C_it=*PO_it;
-				PO_it++;
-			}
+			to_bigint(bi_value, PO[offset]);
+			ul_value = mpz_get_ui(bi_value.get_mpz_t());
+			cout << "SPDZ-2 opened: " << ul_value << " while scapi opened: " << ul_open_values[offset] << endl;
 		}
 	}
-	else
-	{
-		for (unsigned int i=0; i<reg.size(); i++)
-		{
-			get_C_ref<gfp>(reg[i]) = PO[i];
-		}
-	}
-
-	sent += reg.size() * size;
-	rounds++;
-
-	//free & delete of the serialization buffers
-	for(size_t j = 0; j < serialize_share_count; j++)
-	{
-		free(serialized_shares[j]);
-	}
-	delete []serialized_shares;
-
-	for(size_t j = 0; j < serialize_open_count; j++)
-	{
-		free(serialized_opens[j]);
-	}
-	delete []serialized_opens;
-
-	serialize_open_count = serialize_share_count = 0;
-	serialized_shares = serialized_opens = NULL;
 	*/
 }
 
-size_t Processor::serialize_shares(const vector< Share<gfp> > & shares, char *** serialized_shares)
+unsigned long Processor::gfp2ul(const gfp & gfp_value)
 {
-	size_t share_count = shares.size(), serialized_share_count = 0;
-	if(0 < share_count)
-	{
-		*serialized_shares = new char*[share_count];
-		memset(*serialized_shares, 0, share_count * sizeof(char*));
+	bigint bi_value;
+	to_bigint(bi_value, gfp_value);
+	return mpz_get_ui(bi_value.get_mpz_t());
+}
 
-		for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
-		{
-			std::stringstream ss;
-			ss << *i;
-			(*serialized_shares)[serialized_share_count++] = strdup(ss.str().c_str());
-		}
+gfp Processor::ul2gfp(const unsigned long & ul_value)
+{
+	mpz_t mpz_t_value;
+	mpz_init(mpz_t_value);
+	mpz_set_ui(mpz_t_value, ul_value);
+
+	bigint bi_value(mpz_t_value);
+
+	gfp gfp_value;
+	to_gfp(gfp_value, bi_value);
+
+	return gfp_value;
+}
+
+void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< unsigned long > & ul_values)
+{
+	ul_values.clear();
+	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
+	{
+		ul_values.push_back(Processor::gfp2ul(i->get_share()));
 	}
-	return serialized_share_count;
+}
+
+void Processor::test_extension_conversion(const gfp & original_gfp_value)
+{
+	unsigned long outward_ul_value = Processor::gfp2ul(original_gfp_value);
+
+	unsigned long inward_ul_value = (*the_ext_lib.ext_test_conversion)(outward_ul_value);
+
+	if(inward_ul_value != outward_ul_value)
+	{
+		cerr << "Processor::test_extension_conversion failed at unsigned long level " << inward_ul_value << " != " << outward_ul_value << endl;
+		abort();
+	}
+
+	gfp restored_gfp_value = Processor::ul2gfp(inward_ul_value);
+
+	if(!original_gfp_value.equal(restored_gfp_value))
+	{
+		cerr << "Processor::test_extension_conversion failed at gfp level " << restored_gfp_value << " != " << original_gfp_value << endl;
+		abort();
+	}
 }
 
 spdz_ext_ifc::spdz_ext_ifc()
@@ -742,6 +753,12 @@ spdz_ext_ifc::spdz_ext_ifc()
 	}
 
 	if(0 != load_extension_method("term", (void**)(&ext_term), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("test_conversion", (void**)(&ext_test_conversion), ext_lib_handle))
 	{
 		dlclose(ext_lib_handle);
 		abort();
