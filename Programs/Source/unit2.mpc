@@ -1,0 +1,9 @@
+
+a = sint.get_input_from(0)
+b = sint.get_input_from(1)
+c = sint.get_input_from(2)
+
+product = a*b*c
+clr_product = product.reveal()
+
+print_ln('product=%s', clr_product)
