@@ -31,14 +31,16 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
 
 #ifdef EXTENDED_SPDZ
-  	stringstream ss;
-  	ss << gfp::pr();
+	cout << "SPDZ extension library initializing." << endl;
+	stringstream ss;
+	ss << gfp::pr();
 	if(0 != (*the_ext_lib.ext_init)(P.my_num(), ss.str().c_str(), 10))
 	{
 		cerr << "SPDZ extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	cout << "SPDZ extension library initialized." << endl;
 	serialize_open_count = serialize_share_count = 0;
 	serialized_shares = serialized_opens = NULL;
 #endif //EXTENDED_SPDZ
@@ -526,8 +528,23 @@ void Processor::maybe_encrypt_sequence(int client_id)
 
 #ifdef EXTENDED_SPDZ
 
-void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& /*P*/, MAC_Check<gfp>& /*MC*/, int size)
+void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
 {
+	cout << "Processor::POpen_Start_Ext() entry" << endl;
+	int sz=reg.size();
+
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+
+	prep_shares(reg, Sh_PO, size);
+
+	vector<gfp>& PO = get_PO<gfp>();
+	PO.resize(sz*size);
+
+	MC.POpen_Begin(PO,Sh_PO,P);
+	cout << "Processor::POpen_Start_Ext() exit" << endl;
+	/*
 	int sz=reg.size();
 
 	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
@@ -567,10 +584,43 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& /*P*/, MAC_
 	}
 
 	//MC.POpen_Begin(PO,Sh_PO,P);
+	 * */
 }
 
-void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& /*P*/,MAC_Check<gfp>& /*MC*/,int size)
+void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
 {
+	cout << "Processor::POpen_Stop_Ext() entry" << endl;
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	vector<gfp>& PO = get_PO<gfp>();
+	vector<gfp>& C = get_C<gfp>();
+	int sz=reg.size();
+	PO.resize(sz*size);
+	MC.POpen_End(PO,Sh_PO,P);
+	if (size>1)
+	{
+		vector<gfp>::iterator PO_it=PO.begin();
+		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			for (vector<gfp>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
+			{
+			  *C_it=*PO_it;
+			  PO_it++;
+			}
+		}
+	}
+	else
+	{
+		for (unsigned int i=0; i<reg.size(); i++)
+		{
+			get_C_ref<gfp>(reg[i]) = PO[i];
+		}
+	}
+
+	sent += reg.size() * size;
+	rounds++;
+	cout << "Processor::POpen_Stop_Ext() exit" << endl;
+
+	/*
 	vector<gfp>& PO = get_PO<gfp>();
 	vector<gfp>& C = get_C<gfp>();
 
@@ -620,6 +670,7 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& /*P*/,MAC_Ch
 
 	serialize_open_count = serialize_share_count = 0;
 	serialized_shares = serialized_opens = NULL;
+	*/
 }
 
 size_t Processor::serialize_shares(const vector< Share<gfp> > & shares, char *** serialized_shares)
