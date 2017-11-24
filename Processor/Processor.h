@@ -285,7 +285,7 @@ class Processor : public ProcessorBase
     static void shares2ul(const vector< Share<gfp> > & shares, std::vector< unsigned long > & ul_values);
     static void test_extension_conversion(const gfp & gfp_value);
 
-    std::vector< unsigned long > ul_share_values, ul_open_values;
+    void * spdz_ext_handle;
 
 	#endif //EXTENDED_SPDZ
 };
@@ -298,10 +298,10 @@ public:
 	~spdz_ext_ifc();
 
     void * ext_lib_handle;
-    int (*ext_init)(const int pid, const char * field, const int offline_size);
-    int (*ext_start_open)(const size_t share_count, const unsigned long * shares, size_t * open_count, unsigned long ** opens);
-    int (*ext_stop_open)();
-    int (*ext_term)(void *);
+    int (*ext_init)(void ** handle, const int pid, const char * field, const int offline_size);
+    int (*ext_start_open)(void * handle, const size_t share_count, const unsigned long * shares);
+    int (*ext_stop_open)(void * handle, size_t * open_count, unsigned long ** opens);
+    int (*ext_term)(void * handle);
     unsigned long (*ext_test_conversion)(const unsigned long);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);

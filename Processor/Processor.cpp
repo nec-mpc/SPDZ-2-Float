@@ -31,10 +31,11 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
 
 #ifdef EXTENDED_SPDZ
+    spdz_ext_handle = NULL;
 	cout << "SPDZ extension library initializing." << endl;
 	stringstream ss;
 	ss << gfp::pr();
-	if(0 != (*the_ext_lib.ext_init)(P.my_num(), ss.str().c_str(), 10))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_ext_handle, P.my_num(), ss.str().c_str(), 10))
 	{
 		cerr << "SPDZ extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -48,7 +49,7 @@ Processor::~Processor()
 {
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
 #ifdef EXTENDED_SPDZ
-	(*the_ext_lib.ext_term)(NULL);
+	(*the_ext_lib.ext_term)(spdz_ext_handle);
 #endif //EXTENDED_SPDZ
 }
 
@@ -552,10 +553,11 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 	//---------------------------------------------------------------------------------
 
 	//the share values are saved as unsigned long
+	std::vector<unsigned long> ul_share_values;
 	shares2ul(Sh_PO, ul_share_values);
 	if(Sh_PO.size() == ul_share_values.size())
 	{
-		/*
+		/**/
 		//share conversion tests
 		for(size_t i = 0; i < ul_share_values.size(); i++)
 		{
@@ -564,32 +566,21 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 			{
 				cerr << "Share " << i << " conversion error." << endl;
 			}
+			else
+				std::cout << "Share [" << Sh_PO[i].get_share() << "] --> ul " << ul_share_values[i] << endl;
 		}
-		*/
 
 		//the extension library is given the shares' values and returns opens' values
-		size_t open_count = 0;
-		unsigned long * opens = NULL;
-		if(0 != (*the_ext_lib.ext_start_open)(ul_share_values.size(), &ul_share_values[0], &open_count, &opens))
+		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0]))
 		{
 			cerr << "SPDZ extension library start_open failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
 			abort();
 		}
-		/*
 		else
 		{
-			cout << "Processor::POpen_Start_Ext extension open returned " << open_count << " opens" << endl;
-		}*/
-
-		//the returned opens are saved in a member vector and the buffer released.
-		if(0 < open_count && NULL != opens)
-		{
-			ul_open_values.assign(opens, opens + open_count);
-			delete []opens;
-			opens = NULL;
-			open_count = 0;
-		}
+			cout << "Processor::POpen_Start_Ext extension start open launched." << endl;
+		}/**/
 	}
 	else
 		cout << "Processor::POpen_Start_Ext ul_share_values size mismatch with PO_shares." << endl;
@@ -627,28 +618,30 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<
 	rounds++;
 
 	//----------------------------------------------------------------------------------
-	if(0 != (*the_ext_lib.ext_stop_open)())
+	size_t open_count = 0;
+	unsigned long * opens = NULL;
+	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
 	{
 		cerr << "SPDZ extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-
-	/*
-	//summary
-	cout << "SPDZ-2 opened: " << PO.size() << " values while scapi opened: " << ul_open_values.size() << " values." << endl;
-	if(PO.size() == ul_open_values.size())
+	else
 	{
-		bigint bi_value;
-		unsigned long ul_value;
-		for(size_t offset = 0; offset < ul_open_values.size(); offset++)
+		cout << "Processor::POpen_Stop_Ext extension stop open success." << endl;
+	}/**/
+
+	/**/
+	//summary
+	cout << "SPDZ-2 opened: " << PO.size() << " values while extension opened: " << open_count << " values." << endl;
+	if(PO.size() == open_count)
+	{
+		for(size_t offset = 0; offset < open_count; offset++)
 		{
-			to_bigint(bi_value, PO[offset]);
-			ul_value = mpz_get_ui(bi_value.get_mpz_t());
-			cout << "SPDZ-2 opened: " << ul_value << " while scapi opened: " << ul_open_values[offset] << endl;
+			cout << "SPDZ-2 opened: " << gfp2ul(PO[offset]) << " while extension opened: " << opens[offset] << endl;
 		}
 	}
-	*/
+
 }
 
 unsigned long Processor::gfp2ul(const gfp & gfp_value)
