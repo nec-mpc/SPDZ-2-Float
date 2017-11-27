@@ -711,6 +711,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_init) = NULL;
 	*(void**)(&ext_start_open) = NULL;
 	*(void**)(&ext_stop_open) = NULL;
+	*(void**)(&ext_triple) = NULL;
 	*(void**)(&ext_term) = NULL;
 
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -750,6 +751,12 @@ spdz_ext_ifc::spdz_ext_ifc()
 	}
 
 	if(0 != load_extension_method("stop_open", (void**)(&ext_stop_open), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("triple", (void**)(&ext_triple), ext_lib_handle))
 	{
 		dlclose(ext_lib_handle);
 		abort();

@@ -1045,7 +1045,11 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case TRIPLE:
-        Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#ifndef EXTENDED_SPDZ
+          Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#else //EXTENDED_SPDZ
+        Proc.Triple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#endif //EXTENDED_SPDZ
         break;
       case GTRIPLE:
         Proc.DataF.get_three(DATA_GF2N, DATA_TRIPLE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
@@ -1349,7 +1353,7 @@ void Instruction::execute(Processor& Proc) const
       case STARTOPEN:
 #ifndef EXTENDED_SPDZ
         Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
-#elif EXTENDED_SPDZ == 1
+#else //EXTENDED_SPDZ
         Proc.POpen_Start_Ext(start,Proc.P,Proc.MCp,size);
 #endif //EXTENDED_SPDZ
         return;
