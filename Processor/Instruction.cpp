@@ -1048,7 +1048,13 @@ void Instruction::execute(Processor& Proc) const
 #ifndef EXTENDED_SPDZ
           Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #else //EXTENDED_SPDZ
-        Proc.Triple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+			/*
+			 * This API is not yet supported by the
+			 * protocol party hence it commented out
+			 * and the original triple call is made.
+			Proc.Triple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+			*/
+			Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #endif //EXTENDED_SPDZ
         break;
       case GTRIPLE:
