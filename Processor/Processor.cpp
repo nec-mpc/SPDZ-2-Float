@@ -561,7 +561,8 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 		//share conversion tests
 		for(size_t i = 0; i < ul_share_values.size(); i++)
 		{
-			gfp restored = Processor::ul2gfp(ul_share_values[i]);
+			gfp restored;
+			restored.assign(ul_share_values[i]);
 			if(!restored.equal(Sh_PO[i].get_share()))
 			{
 				cerr << "Share " << i << " conversion error." << endl;
@@ -626,22 +627,36 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	else
-	{
-		cout << "Processor::POpen_Stop_Ext extension stop open success." << endl;
-	}/**/
 
-	/**/
-	//summary
-	cout << "SPDZ-2 opened: " << PO.size() << " values while extension opened: " << open_count << " values." << endl;
+	/*cout << "SPDZ-2 opened: " << PO.size() << " values while extension opened: " << open_count << " values." << endl;
 	if(PO.size() == open_count)
 	{
 		for(size_t offset = 0; offset < open_count; offset++)
 		{
 			cout << "SPDZ-2 opened: " << gfp2ul(PO[offset]) << " while extension opened: " << opens[offset] << endl;
 		}
-	}
+	}*/
 
+	if(NULL != opens)
+	{
+		delete []opens;
+		opens = NULL;
+		open_count = 0;
+	}
+}
+
+void Processor::Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
+{
+	unsigned long ul_a, ul_b, ul_c;
+	if(0 != (*the_ext_lib.ext_triple)(spdz_ext_handle, &ul_a, &ul_b, &ul_c))
+	{
+		cerr << "SPDZ extension library triple failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+	Processor::ul2share(ul_a, a);
+	Processor::ul2share(ul_b, b);
+	Processor::ul2share(ul_c, c);
 }
 
 unsigned long Processor::gfp2ul(const gfp & gfp_value)
@@ -651,20 +666,6 @@ unsigned long Processor::gfp2ul(const gfp & gfp_value)
 	return mpz_get_ui(bi_value.get_mpz_t());
 }
 
-gfp Processor::ul2gfp(const unsigned long & ul_value)
-{
-	mpz_t mpz_t_value;
-	mpz_init(mpz_t_value);
-	mpz_set_ui(mpz_t_value, ul_value);
-
-	bigint bi_value(mpz_t_value);
-
-	gfp gfp_value;
-	to_gfp(gfp_value, bi_value);
-
-	return gfp_value;
-}
-
 void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< unsigned long > & ul_values)
 {
 	ul_values.clear();
@@ -672,6 +673,15 @@ void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< unsi
 	{
 		ul_values.push_back(Processor::gfp2ul(i->get_share()));
 	}
+}
+
+void Processor::ul2share(const unsigned long in_value, Share<gfp> & out_value)
+{
+	gfp mac, value;
+	value.assign(in_value);
+	mac.mul(MCp.get_alphai(), value);
+	out_value.set_share(value);
+	out_value.set_mac(mac);
 }
 
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
@@ -686,8 +696,8 @@ void Processor::test_extension_conversion(const gfp & original_gfp_value)
 		abort();
 	}
 
-	gfp restored_gfp_value = Processor::ul2gfp(inward_ul_value);
-
+	gfp restored_gfp_value;
+	restored_gfp_value.assign(inward_ul_value);
 	if(!original_gfp_value.equal(restored_gfp_value))
 	{
 		cerr << "Processor::test_extension_conversion failed at gfp level " << restored_gfp_value << " != " << original_gfp_value << endl;
