@@ -709,6 +709,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 {
 	ext_lib_handle = NULL;
 	*(void**)(&ext_init) = NULL;
+	*(void**)(&ext_offline) = NULL;
 	*(void**)(&ext_start_open) = NULL;
 	*(void**)(&ext_stop_open) = NULL;
 	*(void**)(&ext_triple) = NULL;
@@ -739,6 +740,12 @@ spdz_ext_ifc::spdz_ext_ifc()
 	}
 
 	if(0 != load_extension_method("init", (void**)(&ext_init), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("offline", (void**)(&ext_start_open), ext_lib_handle))
 	{
 		dlclose(ext_lib_handle);
 		abort();
