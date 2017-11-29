@@ -1095,6 +1095,10 @@ void Instruction::execute(Processor& Proc) const
           Proc.temp.ans2.output(Proc.private_output, false);
         break;
       case INPUT:
+    	  /* The input is not yet implemented in the SPDZ extension library hence
+    	   * it is commented out. Once implemented, uncomment the extension deference.
+#ifndef EXTENDED_SPDZ
+    	   */
         { gfp& rr=Proc.temp.rrp; gfp& t=Proc.temp.tp; gfp& tmp=Proc.temp.tmpp;
           Proc.DataF.get_input(Proc.get_Sp_ref(r[0]),rr,n);
           octetStream o;
@@ -1120,6 +1124,11 @@ void Instruction::execute(Processor& Proc) const
           tmp.add(Proc.get_Sp_ref(r[0]).get_mac(),tmp);
           Proc.get_Sp_ref(r[0]).set_mac(tmp);
         }
+        /*
+#else //EXTENDED_SPDZ
+        Proc.Input_Ext(Proc.get_Sp_ref(r[0]), n);
+#endif //EXTENDED_SPDZ
+		*/
         break;
       case GINPUT:
         { gf2n& rr=Proc.temp.rr2; gf2n& t=Proc.temp.t2; gf2n& tmp=Proc.temp.tmp2;

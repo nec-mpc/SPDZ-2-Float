@@ -659,6 +659,18 @@ void Processor::Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 	Processor::ul2share(ul_c, c);
 }
 
+void Processor::Input_Ext(Share<gfp>& input_value, const int input_party_id)
+{
+	unsigned long ul_input_value;
+	if(0 != (*the_ext_lib.ext_input)(spdz_ext_handle, input_party_id, &ul_input_value))
+	{
+		cerr << "SPDZ extension library input failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+	ul2share(ul_input_value, input_value);
+}
+
 unsigned long Processor::gfp2ul(const gfp & gfp_value)
 {
 	bigint bi_value;
@@ -713,6 +725,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_start_open) = NULL;
 	*(void**)(&ext_stop_open) = NULL;
 	*(void**)(&ext_triple) = NULL;
+	*(void**)(&ext_input) = NULL;
 	*(void**)(&ext_term) = NULL;
 
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -764,6 +777,12 @@ spdz_ext_ifc::spdz_ext_ifc()
 	}
 
 	if(0 != load_extension_method("triple", (void**)(&ext_triple), ext_lib_handle))
+	{
+		dlclose(ext_lib_handle);
+		abort();
+	}
+
+	if(0 != load_extension_method("input", (void**)(&ext_term), ext_lib_handle))
 	{
 		dlclose(ext_lib_handle);
 		abort();

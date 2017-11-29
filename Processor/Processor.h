@@ -281,6 +281,8 @@ class Processor : public ProcessorBase
     void POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
 
     void Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+    void Input_Ext(Share<gfp>& input_value, const int input_party_id);
+
     void ul2share(const unsigned long in_value, Share<gfp> & out_value);
 
     static unsigned long gfp2ul(const gfp &);
@@ -305,6 +307,7 @@ public:
     int (*ext_start_open)(void * handle, const size_t share_count, const unsigned long * shares);
     int (*ext_stop_open)(void * handle, size_t * open_count, unsigned long ** opens);
     int (*ext_triple)(void * handle, unsigned long * a, unsigned long * b, unsigned long * c);
+    int (*ext_input)(void * handle, const int input_of_pid, unsigned long * input_value);
     int (*ext_term)(void * handle);
     unsigned long (*ext_test_conversion)(const unsigned long);
 
