@@ -1090,7 +1090,6 @@ void Instruction::execute(Processor& Proc) const
         break;
       case INPUT:
 #ifndef EXTENDED_SPDZ
-    	   */
         { gfp& rr=Proc.temp.rrp; gfp& t=Proc.temp.tp; gfp& tmp=Proc.temp.tmpp;
           Proc.DataF.get_input(Proc.get_Sp_ref(r[0]),rr,n);
           octetStream o;
