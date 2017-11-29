@@ -279,7 +279,6 @@ class Processor : public ProcessorBase
   public:
     void POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
     void POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
-
     void Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
     void Input_Ext(Share<gfp>& input_value, const int input_party_id);
 

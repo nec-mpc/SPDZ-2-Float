@@ -1048,13 +1048,7 @@ void Instruction::execute(Processor& Proc) const
 #ifndef EXTENDED_SPDZ
           Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #else //EXTENDED_SPDZ
-			/*
-			 * This API is not yet supported by the
-			 * protocol party hence it commented out
-			 * and the original triple call is made.
 			Proc.Triple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
-			*/
-			Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #endif //EXTENDED_SPDZ
         break;
       case GTRIPLE:
@@ -1095,8 +1089,6 @@ void Instruction::execute(Processor& Proc) const
           Proc.temp.ans2.output(Proc.private_output, false);
         break;
       case INPUT:
-    	  /* The input is not yet implemented in the SPDZ extension library hence
-    	   * it is commented out. Once implemented, uncomment the extension deference.
 #ifndef EXTENDED_SPDZ
     	   */
         { gfp& rr=Proc.temp.rrp; gfp& t=Proc.temp.tp; gfp& tmp=Proc.temp.tmpp;
@@ -1124,11 +1116,9 @@ void Instruction::execute(Processor& Proc) const
           tmp.add(Proc.get_Sp_ref(r[0]).get_mac(),tmp);
           Proc.get_Sp_ref(r[0]).set_mac(tmp);
         }
-        /*
 #else //EXTENDED_SPDZ
         Proc.Input_Ext(Proc.get_Sp_ref(r[0]), n);
 #endif //EXTENDED_SPDZ
-		*/
         break;
       case GINPUT:
         { gf2n& rr=Proc.temp.rr2; gf2n& t=Proc.temp.t2; gf2n& tmp=Proc.temp.tmp2;
