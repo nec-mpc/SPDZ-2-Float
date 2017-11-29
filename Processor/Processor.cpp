@@ -671,6 +671,52 @@ void Processor::Input_Ext(Share<gfp>& input_value, const int input_party_id)
 	ul2share(ul_input_value, input_value);
 }
 
+void Processor::Input_Start_Ext(int player, int n_inputs)
+{
+	if(0 != (*the_ext_lib.ext_start_input)(spdz_ext_handle, player, n_inputs))
+	{
+		cerr << "SPDZ extension library start input failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::Input_Stop_Ext(int /*player*/, vector<int> targets)
+{
+	size_t input_count = 0;
+	unsigned long * inputs = NULL;
+	if(0 != (*the_ext_lib.ext_stop_input)(spdz_ext_handle, &input_count, &inputs))
+	{
+		cerr << "SPDZ extension library stop input failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(NULL == inputs)
+	{
+		cerr << "SPDZ extension library stop input returned null ptr." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(targets.size() == input_count)
+	{
+		for(size_t i = 0; i < input_count; ++i)
+		{
+			Share<gfp>& share = get_S_ref<gfp>(targets[i]);
+			ul2share(inputs[i], share);
+		}
+	}
+	else
+	{
+		cerr << "SPDZ extension library stop input returned mismatched number of inputs " << targets.size() << "/" << input_count << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	delete []inputs;
+}
+
 unsigned long Processor::gfp2ul(const gfp & gfp_value)
 {
 	bigint bi_value;
@@ -732,6 +778,8 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_input) = NULL;
 	*(void**)(&ext_start_verify) = NULL;
 	*(void**)(&ext_stop_verify) = NULL;
+	*(void**)(&ext_start_input) = NULL;
+	*(void**)(&ext_stop_input) = NULL;
 
 	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -770,6 +818,8 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("input",ext_input)
 	LOAD_LIB_METHOD("start_verify",ext_start_verify)
 	LOAD_LIB_METHOD("stop_verify",ext_stop_verify)
+	LOAD_LIB_METHOD("start_input",ext_start_input)
+	LOAD_LIB_METHOD("stop_input",ext_stop_input)
 	LOAD_LIB_METHOD("test_conversion",ext_test_conversion)
 }
 

@@ -1147,13 +1147,21 @@ void Instruction::execute(Processor& Proc) const
         }
         break;
       case STARTINPUT:
+#ifndef EXTENDED_SPDZ
         Proc.inputp.start(r[0],n);
+#else //EXTENDED_SPDZ
+        Proc.Input_Start_Ext(r[0],n);
+#endif //EXTENDED_SPDZ
         break;
       case GSTARTINPUT:
         Proc.input2.start(r[0],n);
         break;
       case STOPINPUT:
-        Proc.inputp.stop(n,start);
+#ifndef EXTENDED_SPDZ
+    	Proc.inputp.stop(n,start);
+#else //EXTENDED_SPDZ
+    	Proc.Input_Stop_Ext(n, start);
+#endif //EXTENDED_SPDZ
         break;
       case GSTOPINPUT:
         Proc.input2.stop(n,start);
