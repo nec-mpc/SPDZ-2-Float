@@ -572,7 +572,7 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 		}
 
 		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0]))
+		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
 		{
 			cerr << "SPDZ extension library start_open failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
@@ -717,17 +717,23 @@ void Processor::test_extension_conversion(const gfp & original_gfp_value)
 	}
 }
 
+#define LOAD_LIB_METHOD(Name,Proc)	\
+if(0 != load_extension_method(Name, (void**)(&Proc), ext_lib_handle)) { dlclose(ext_lib_handle); abort(); }
+
 spdz_ext_ifc::spdz_ext_ifc()
 {
 	ext_lib_handle = NULL;
 	*(void**)(&ext_init) = NULL;
+	*(void**)(&ext_term) = NULL;
 	*(void**)(&ext_offline) = NULL;
 	*(void**)(&ext_start_open) = NULL;
 	*(void**)(&ext_stop_open) = NULL;
 	*(void**)(&ext_triple) = NULL;
 	*(void**)(&ext_input) = NULL;
-	*(void**)(&ext_term) = NULL;
+	*(void**)(&ext_start_verify) = NULL;
+	*(void**)(&ext_stop_verify) = NULL;
 
+	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
 	if(NULL == spdz_ext_lib)
 	{
@@ -736,6 +742,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	}
 	cout << "set extension library " << spdz_ext_lib << endl;
 
+	//verify the SPDZ-2 extension library exists
 	struct stat st;
 	if(0 != stat(spdz_ext_lib, &st))
 	{
@@ -744,6 +751,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	}
 	cout << "found extension library " << spdz_ext_lib << endl;
 
+	//load the SPDZ-2 extension library
 	ext_lib_handle = dlopen(spdz_ext_lib, RTLD_NOW);
 	if(NULL == ext_lib_handle)
 	{
@@ -752,53 +760,17 @@ spdz_ext_ifc::spdz_ext_ifc()
 		abort();
 	}
 
-	if(0 != load_extension_method("init", (void**)(&ext_init), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("offline", (void**)(&ext_start_open), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("start_open", (void**)(&ext_start_open), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("stop_open", (void**)(&ext_stop_open), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("triple", (void**)(&ext_triple), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("input", (void**)(&ext_term), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("term", (void**)(&ext_term), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
-
-	if(0 != load_extension_method("test_conversion", (void**)(&ext_test_conversion), ext_lib_handle))
-	{
-		dlclose(ext_lib_handle);
-		abort();
-	}
+	//loading the SPDZ-2 extension library methods
+	LOAD_LIB_METHOD("init",ext_init)
+	LOAD_LIB_METHOD("term",ext_term)
+	LOAD_LIB_METHOD("offline",ext_offline)
+	LOAD_LIB_METHOD("start_open",ext_start_open)
+	LOAD_LIB_METHOD("stop_open",ext_stop_open)
+	LOAD_LIB_METHOD("triple",ext_triple)
+	LOAD_LIB_METHOD("input",ext_input)
+	LOAD_LIB_METHOD("start_verify",ext_start_verify)
+	LOAD_LIB_METHOD("stop_verify",ext_stop_verify)
+	LOAD_LIB_METHOD("test_conversion",ext_test_conversion)
 }
 
 spdz_ext_ifc::~spdz_ext_ifc()
