@@ -275,58 +275,84 @@ class Processor : public ProcessorBase
     void maybe_decrypt_sequence(int client_id);
     void maybe_encrypt_sequence(int client_id);
 
-#ifdef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
+
   public:
-    void POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
-    void POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
-    void Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
-    void Input_Ext(Share<gfp>& input_value, const int input_party_id);
-    void Input_Start_Ext(int player, int n_inputs);
-    void Input_Stop_Ext(int player, vector<int> targets);
+#if defined(EXTENDED_SPDZ_32)
+    void POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
+    void POpen_Stop_Ext_32(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+    void Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+    void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
+    void Input_Start_Ext_32(int player, int n_inputs);
+    void Input_Stop_Ext_32(int player, vector<int> targets);
 
-    void ul2share(const unsigned long in_value, Share<gfp> & out_value);
+    void ui2share(const u_int32_t in_value, Share<gfp> & out_value);
 
-    static unsigned long gfp2ul(const gfp &);
-    static void shares2ul(const vector< Share<gfp> > & shares, std::vector< unsigned long > & ul_values);
+    static u_int32_t gfp2ui(const gfp &);
+    static void shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values);
+#endif
+
+#if defined(EXTENDED_SPDZ_64)
+    void POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
+    void POpen_Stop_Ext_64(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+    void Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+    void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
+    void Input_Start_Ext_64(int player, int n_inputs);
+    void Input_Stop_Ext_64(int player, vector<int> targets);
+
+    void ul2share(const u_int64_t in_value, Share<gfp> & out_value);
+
+    static u_int64_t gfp2ul(const gfp &);
+    static void shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values);
+#endif
+
     static void test_extension_conversion(const gfp & gfp_value);
 
     void * spdz_ext_handle;
 
-	#endif //EXTENDED_SPDZ
+#endif
+
 };
 
-#ifdef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
+
+#if defined(EXTENDED_SPDZ_32)
+#define SPDZEXT_VALTYPE	u_int32_t
+#elif defined(EXTENDED_SPDZ_64)
+#define SPDZEXT_VALTYPE	u_int64_t
+#endif
+
 class spdz_ext_ifc
 {
 public:
 	spdz_ext_ifc();
 	~spdz_ext_ifc();
 
-    void * ext_lib_handle;
+	void * ext_lib_handle;
 
-    int (*ext_init)(void ** handle, const int pid, const char * field, const int offline_size);
+	int (*ext_init)(void ** handle, const int pid, const char * field, const int offline_size);
     int (*ext_term)(void * handle);
 
     int (*ext_offline)(void * handle, const int offline_size);
 
-    int (*ext_start_open)(void * handle, const size_t share_count, const unsigned long * shares, int verify);
-    int (*ext_stop_open)(void * handle, size_t * open_count, unsigned long ** opens);
+    int (*ext_start_open)(void * handle, const size_t share_count, const SPDZEXT_VALTYPE * shares, int verify);
+    int (*ext_stop_open)(void * handle, size_t * open_count, SPDZEXT_VALTYPE ** opens);
 
-    int (*ext_triple)(void * handle, unsigned long * a, unsigned long * b, unsigned long * c);
+    int (*ext_triple)(void * handle, SPDZEXT_VALTYPE * a, SPDZEXT_VALTYPE * b, SPDZEXT_VALTYPE * c);
 
-    int (*ext_input)(void * handle, const int input_of_pid, unsigned long * input_value);
+    int (*ext_input)(void * handle, const int input_of_pid, SPDZEXT_VALTYPE * input_value);
+
+    int (*ext_start_input)(void * handle, const int input_of_pid, const size_t num_of_inputs);
+    int (*ext_stop_input)(void * handle, size_t * input_count, SPDZEXT_VALTYPE ** inputs);
 
     int (*ext_start_verify)(void * handle, int * error);
     int (*ext_stop_verify)(void * handle);
 
-    int (*ext_start_input)(void * handle, const int input_of_pid, const size_t num_of_inputs);
-    int (*ext_stop_input)(void * handle, size_t * input_count, unsigned long ** inputs);
-
-    unsigned long (*ext_test_conversion)(const unsigned long);
+    SPDZEXT_VALTYPE (*ext_test_conversion)(const SPDZEXT_VALTYPE);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };
-#endif //EXTENDED_SPDZ
+#endif
 
 template<> inline Share<gf2n>& Processor::get_S_ref(int i) { return get_S2_ref(i); }
 template<> inline gf2n& Processor::get_C_ref(int i)        { return get_C2_ref(i); }

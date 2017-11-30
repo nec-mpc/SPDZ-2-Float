@@ -9,12 +9,12 @@
 #include <sodium.h>
 #include <string>
 
-#ifdef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <list>
 spdz_ext_ifc the_ext_lib;
-#endif //EXTENDED_SPDZ
+#endif
 
 Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
         MAC_Check<gf2n>& MC2,MAC_Check<gfp>& MCp,Machine& machine,
@@ -30,7 +30,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   public_output.open(get_filename("Player-Data/Public-Output-",true).c_str(), ios_base::out);
   private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
 
-#ifdef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
     spdz_ext_handle = NULL;
 	cout << "SPDZ extension library initializing." << endl;
 	stringstream ss;
@@ -42,15 +42,15 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 		abort();
 	}
 	cout << "SPDZ extension library initialized." << endl;
-#endif //EXTENDED_SPDZ
+#endif
 }
 
 Processor::~Processor()
 {
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
-#ifdef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
 	(*the_ext_lib.ext_term)(spdz_ext_handle);
-#endif //EXTENDED_SPDZ
+#endif
 }
 
 string Processor::get_filename(const char* prefix, bool use_number)
@@ -525,9 +525,9 @@ void Processor::maybe_encrypt_sequence(int client_id)
   }
 }
 
-#ifdef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
 
-void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
+void Processor::POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
 {
 	int sz=reg.size();
 
@@ -553,41 +553,41 @@ void Processor::POpen_Start_Ext(const vector<int>& reg,const Player& P, MAC_Chec
 	//---------------------------------------------------------------------------------
 
 	//the share values are saved as unsigned long
-	std::vector<unsigned long> ul_share_values;
-	shares2ul(Sh_PO, ul_share_values);
-	if(Sh_PO.size() == ul_share_values.size())
+	std::vector<u_int32_t> ui_share_values;
+	shares2ui(Sh_PO, ui_share_values);
+	if(Sh_PO.size() == ui_share_values.size())
 	{
 		/**/
 		//share conversion tests
-		for(size_t i = 0; i < ul_share_values.size(); i++)
+		for(size_t i = 0; i < ui_share_values.size(); i++)
 		{
 			gfp restored;
-			restored.assign(ul_share_values[i]);
+			restored.assign((long)ui_share_values[i]);
 			if(!restored.equal(Sh_PO[i].get_share()))
 			{
 				cerr << "Share " << i << " conversion error." << endl;
 			}
 			else
-				std::cout << "Share [" << Sh_PO[i].get_share() << "] --> ul " << ul_share_values[i] << endl;
+				std::cout << "Share [" << Sh_PO[i].get_share() << "] --> ui " << ui_share_values[i] << endl;
 		}
 
 		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ui_share_values.size(), &ui_share_values[0], 1))
 		{
-			cerr << "SPDZ extension library start_open failed." << endl;
+			cerr << "Processor::POpen_Start_Ext_32 extension library start_open failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
 			abort();
 		}
 		else
 		{
-			cout << "Processor::POpen_Start_Ext extension start open launched." << endl;
+			cout << "Processor::POpen_Start_Ext_32 extension start open launched." << endl;
 		}/**/
 	}
 	else
-		cout << "Processor::POpen_Start_Ext ul_share_values size mismatch with PO_shares." << endl;
+		cout << "Processor::POpen_Start_Ext_32 ui_share_values size mismatch with PO_shares." << endl;
 }
 
-void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
+void Processor::POpen_Stop_Ext_32(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
 {
 	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
 	vector<gfp>& PO = get_PO<gfp>();
@@ -620,22 +620,13 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<
 
 	//----------------------------------------------------------------------------------
 	size_t open_count = 0;
-	unsigned long * opens = NULL;
+	u_int32_t * opens = NULL;
 	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
 	{
-		cerr << "SPDZ extension library stop_open failed." << endl;
+		cerr << "Processor::POpen_Stop_Ext_32 extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-
-	/*cout << "SPDZ-2 opened: " << PO.size() << " values while extension opened: " << open_count << " values." << endl;
-	if(PO.size() == open_count)
-	{
-		for(size_t offset = 0; offset < open_count; offset++)
-		{
-			cout << "SPDZ-2 opened: " << gfp2ul(PO[offset]) << " while extension opened: " << opens[offset] << endl;
-		}
-	}*/
 
 	if(NULL != opens)
 	{
@@ -645,12 +636,241 @@ void Processor::POpen_Stop_Ext(const vector<int>& reg,const Player& P,MAC_Check<
 	}
 }
 
-void Processor::Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
+void Processor::Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
-	unsigned long ul_a, ul_b, ul_c;
+	u_int32_t ui_a, ui_b, ui_c;
+	if(0 != (*the_ext_lib.ext_triple)(spdz_ext_handle, &ui_a, &ui_b, &ui_c))
+	{
+		cerr << "Processor::Triple_Ext_32 extension library triple failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+	Processor::ui2share(ui_a, a);
+	Processor::ui2share(ui_b, b);
+	Processor::ui2share(ui_c, c);
+}
+
+void Processor::Input_Ext_32(Share<gfp>& input_value, const int input_party_id)
+{
+	u_int32_t ui_input_value;
+	if(0 != (*the_ext_lib.ext_input)(spdz_ext_handle, input_party_id, &ui_input_value))
+	{
+		cerr << "Processor::Input_Ext_32 extension library input failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+	ui2share(ui_input_value, input_value);
+}
+
+void Processor::Input_Start_Ext_32(int player, int n_inputs)
+{
+	if(0 != (*the_ext_lib.ext_start_input)(spdz_ext_handle, player, n_inputs))
+	{
+		cerr << "Processor::Input_Start_Ext_32 extension library start input failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
+{
+	size_t input_count = 0;
+	u_int32_t * inputs = NULL;
+	if(0 != (*the_ext_lib.ext_stop_input)(spdz_ext_handle, &input_count, &inputs))
+	{
+		cerr << "Processor::Input_Stop_Ext_32 extension library stop input failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(NULL == inputs)
+	{
+		cerr << "Processor::Input_Stop_Ext_32 extension library stop input returned null ptr." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(targets.size() == input_count)
+	{
+		for(size_t i = 0; i < input_count; ++i)
+		{
+			Share<gfp>& share = get_S_ref<gfp>(targets[i]);
+			ui2share(inputs[i], share);
+		}
+	}
+	else
+	{
+		cerr << "Processor::Input_Stop_Ext_32 extension library stop input returned mismatched number of inputs " << targets.size() << "/" << input_count << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	delete []inputs;
+}
+
+void Processor::ui2share(const u_int32_t in_value, Share<gfp> & out_value)
+{
+	gfp mac, value;
+	value.assign((long)in_value);
+	mac.mul(MCp.get_alphai(), value);
+	out_value.set_share(value);
+	out_value.set_mac(mac);
+}
+
+u_int32_t Processor::gfp2ui(const gfp & gfp_value)
+{
+	bigint bi_value;
+	to_bigint(bi_value, gfp_value);
+	return mpz_get_ui(bi_value.get_mpz_t());
+}
+
+void Processor::shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values)
+{
+	ui_values.clear();
+	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
+	{
+		ui_values.push_back(Processor::gfp2ui(i->get_share()));
+	}
+}
+
+void Processor::test_extension_conversion(const gfp & original_gfp_value)
+{
+	u_int32_t outward_ui_value = Processor::gfp2ui(original_gfp_value);
+
+	u_int32_t inward_ui_value = (*the_ext_lib.ext_test_conversion)(outward_ui_value);
+
+	if(inward_ui_value != outward_ui_value)
+	{
+		cerr << "Processor::test_extension_conversion failed at unsigned long level " << inward_ui_value << " != " << outward_ui_value << endl;
+		abort();
+	}
+
+	gfp restored_gfp_value;
+	restored_gfp_value.assign((long)inward_ui_value);
+	if(!original_gfp_value.equal(restored_gfp_value))
+	{
+		cerr << "Processor::test_extension_conversion failed at gfp level " << restored_gfp_value << " != " << original_gfp_value << endl;
+		abort();
+	}
+}
+
+#elif defined(EXTENDED_SPDZ_64)
+
+void Processor::POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
+{
+	int sz=reg.size();
+
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+
+	prep_shares(reg, Sh_PO, size);
+
+	vector<gfp>& PO = get_PO<gfp>();
+	PO.resize(sz*size);
+
+	MC.POpen_Begin(PO,Sh_PO,P);
+
+	//---------------------------------------------------------------------------------
+	/*
+	//gfp conversion unit test
+	if(!Sh_PO.empty())
+	{
+		test_extension_conversion(Sh_PO[0].get_share());
+	}
+	*/
+	//---------------------------------------------------------------------------------
+
+	//the share values are saved as unsigned long
+	std::vector<u_int64_t> ul_share_values;
+	shares2ul(Sh_PO, ul_share_values);
+	if(Sh_PO.size() == ul_share_values.size())
+	{
+		/**/
+		//share conversion tests
+		for(size_t i = 0; i < ul_share_values.size(); i++)
+		{
+			gfp restored;
+			restored.assign(ul_share_values[i]);
+			if(!restored.equal(Sh_PO[i].get_share()))
+			{
+				cerr << "Share " << i << " conversion error." << endl;
+			}
+			else
+				std::cout << "Share [" << Sh_PO[i].get_share() << "] --> ul " << ul_share_values[i] << endl;
+		}
+
+		//the extension library is given the shares' values and returns opens' values
+		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		{
+			cerr << "Processor::POpen_Start_Ext_64 extension library start_open failed." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		else
+		{
+			cout << "Processor::POpen_Start_Ext_64 extension start open launched." << endl;
+		}/**/
+	}
+	else
+		cout << "Processor::POpen_Start_Ext_64 ul_share_values size mismatch with PO_shares." << endl;
+}
+
+void Processor::POpen_Stop_Ext_64(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
+{
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	vector<gfp>& PO = get_PO<gfp>();
+	vector<gfp>& C = get_C<gfp>();
+	int sz=reg.size();
+	PO.resize(sz*size);
+	MC.POpen_End(PO,Sh_PO,P);
+	if (size>1)
+	{
+		vector<gfp>::iterator PO_it=PO.begin();
+		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			for (vector<gfp>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
+			{
+			  *C_it=*PO_it;
+			  PO_it++;
+			}
+		}
+	}
+	else
+	{
+		for (unsigned int i=0; i<reg.size(); i++)
+		{
+			get_C_ref<gfp>(reg[i]) = PO[i];
+		}
+	}
+
+	sent += reg.size() * size;
+	rounds++;
+
+	//----------------------------------------------------------------------------------
+	size_t open_count = 0;
+	u_int64_t * opens = NULL;
+	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
+	{
+		cerr << "Processor::POpen_Stop_Ext_64 extension library stop_open failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(NULL != opens)
+	{
+		delete []opens;
+		opens = NULL;
+		open_count = 0;
+	}
+}
+
+void Processor::Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
+{
+	u_int64_t ul_a, ul_b, ul_c;
 	if(0 != (*the_ext_lib.ext_triple)(spdz_ext_handle, &ul_a, &ul_b, &ul_c))
 	{
-		cerr << "SPDZ extension library triple failed." << endl;
+		cerr << "Processor::Triple_Ext_64 extension library triple failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
@@ -659,42 +879,42 @@ void Processor::Triple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 	Processor::ul2share(ul_c, c);
 }
 
-void Processor::Input_Ext(Share<gfp>& input_value, const int input_party_id)
+void Processor::Input_Ext_64(Share<gfp>& input_value, const int input_party_id)
 {
-	unsigned long ul_input_value;
+	u_int64_t ul_input_value;
 	if(0 != (*the_ext_lib.ext_input)(spdz_ext_handle, input_party_id, &ul_input_value))
 	{
-		cerr << "SPDZ extension library input failed." << endl;
+		cerr << "Processor::Input_Ext_64 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 	ul2share(ul_input_value, input_value);
 }
 
-void Processor::Input_Start_Ext(int player, int n_inputs)
+void Processor::Input_Start_Ext_64(int player, int n_inputs)
 {
 	if(0 != (*the_ext_lib.ext_start_input)(spdz_ext_handle, player, n_inputs))
 	{
-		cerr << "SPDZ extension library start input failed." << endl;
+		cerr << "Processor::Input_Start_Ext_64 extension library start input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 }
 
-void Processor::Input_Stop_Ext(int /*player*/, vector<int> targets)
+void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 {
 	size_t input_count = 0;
-	unsigned long * inputs = NULL;
+	u_int64_t * inputs = NULL;
 	if(0 != (*the_ext_lib.ext_stop_input)(spdz_ext_handle, &input_count, &inputs))
 	{
-		cerr << "SPDZ extension library stop input failed." << endl;
+		cerr << "Processor::Input_Stop_Ext_64 extension library stop input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
 	if(NULL == inputs)
 	{
-		cerr << "SPDZ extension library stop input returned null ptr." << endl;
+		cerr << "Processor::Input_Stop_Ext_64 extension library stop input returned null ptr." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
@@ -709,7 +929,7 @@ void Processor::Input_Stop_Ext(int /*player*/, vector<int> targets)
 	}
 	else
 	{
-		cerr << "SPDZ extension library stop input returned mismatched number of inputs " << targets.size() << "/" << input_count << endl;
+		cerr << "Processor::Input_Stop_Ext_64 extension library stop input returned mismatched number of inputs " << targets.size() << "/" << input_count << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
@@ -717,23 +937,7 @@ void Processor::Input_Stop_Ext(int /*player*/, vector<int> targets)
 	delete []inputs;
 }
 
-unsigned long Processor::gfp2ul(const gfp & gfp_value)
-{
-	bigint bi_value;
-	to_bigint(bi_value, gfp_value);
-	return mpz_get_ui(bi_value.get_mpz_t());
-}
-
-void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< unsigned long > & ul_values)
-{
-	ul_values.clear();
-	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
-	{
-		ul_values.push_back(Processor::gfp2ul(i->get_share()));
-	}
-}
-
-void Processor::ul2share(const unsigned long in_value, Share<gfp> & out_value)
+void Processor::ul2share(const u_int64_t in_value, Share<gfp> & out_value)
 {
 	gfp mac, value;
 	value.assign(in_value);
@@ -742,11 +946,27 @@ void Processor::ul2share(const unsigned long in_value, Share<gfp> & out_value)
 	out_value.set_mac(mac);
 }
 
+u_int64_t Processor::gfp2ul(const gfp & gfp_value)
+{
+	bigint bi_value;
+	to_bigint(bi_value, gfp_value);
+	return mpz_get_ui(bi_value.get_mpz_t());
+}
+
+void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values)
+{
+	ul_values.clear();
+	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
+	{
+		ul_values.push_back(Processor::gfp2ul(i->get_share()));
+	}
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
-	unsigned long outward_ul_value = Processor::gfp2ul(original_gfp_value);
+	u_int64_t outward_ul_value = Processor::gfp2ul(original_gfp_value);
 
-	unsigned long inward_ul_value = (*the_ext_lib.ext_test_conversion)(outward_ul_value);
+	u_int64_t inward_ul_value = (*the_ext_lib.ext_test_conversion)(outward_ul_value);
 
 	if(inward_ul_value != outward_ul_value)
 	{
@@ -762,6 +982,11 @@ void Processor::test_extension_conversion(const gfp & original_gfp_value)
 		abort();
 	}
 }
+
+#endif
+
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
+
 
 #define LOAD_LIB_METHOD(Name,Proc)	\
 if(0 != load_extension_method(Name, (void**)(&Proc), ext_lib_handle)) { dlclose(ext_lib_handle); abort(); }

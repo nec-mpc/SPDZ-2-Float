@@ -1045,11 +1045,13 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case TRIPLE:
-#ifndef EXTENDED_SPDZ
-          Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
-#else //EXTENDED_SPDZ
-			Proc.Triple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
-#endif //EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.Triple_Ext_32(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.Triple_Ext_64(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#else
+    	  Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#endif
         break;
       case GTRIPLE:
         Proc.DataF.get_three(DATA_GF2N, DATA_TRIPLE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
@@ -1089,7 +1091,11 @@ void Instruction::execute(Processor& Proc) const
           Proc.temp.ans2.output(Proc.private_output, false);
         break;
       case INPUT:
-#ifndef EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
+    	Proc.Input_Ext_32(Proc.get_Sp_ref(r[0]), n);
+#elif defined(EXTENDED_SPDZ_64)
+        Proc.Input_Ext_64(Proc.get_Sp_ref(r[0]), n);
+#else
         { gfp& rr=Proc.temp.rrp; gfp& t=Proc.temp.tp; gfp& tmp=Proc.temp.tmpp;
           Proc.DataF.get_input(Proc.get_Sp_ref(r[0]),rr,n);
           octetStream o;
@@ -1115,9 +1121,7 @@ void Instruction::execute(Processor& Proc) const
           tmp.add(Proc.get_Sp_ref(r[0]).get_mac(),tmp);
           Proc.get_Sp_ref(r[0]).set_mac(tmp);
         }
-#else //EXTENDED_SPDZ
-        Proc.Input_Ext(Proc.get_Sp_ref(r[0]), n);
-#endif //EXTENDED_SPDZ
+#endif
         break;
       case GINPUT:
         { gf2n& rr=Proc.temp.rr2; gf2n& t=Proc.temp.t2; gf2n& tmp=Proc.temp.tmp2;
@@ -1147,21 +1151,25 @@ void Instruction::execute(Processor& Proc) const
         }
         break;
       case STARTINPUT:
-#ifndef EXTENDED_SPDZ
-        Proc.inputp.start(r[0],n);
-#else //EXTENDED_SPDZ
-        Proc.Input_Start_Ext(r[0],n);
-#endif //EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.Input_Start_Ext_32(r[0],n);
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.Input_Start_Ext_64(r[0],n);
+#else
+    	  Proc.inputp.start(r[0],n);
+#endif
         break;
       case GSTARTINPUT:
         Proc.input2.start(r[0],n);
         break;
       case STOPINPUT:
-#ifndef EXTENDED_SPDZ
-    	Proc.inputp.stop(n,start);
-#else //EXTENDED_SPDZ
-    	Proc.Input_Stop_Ext(n, start);
-#endif //EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.Input_Stop_Ext_32(n, start);
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.Input_Stop_Ext_64(n, start);
+#else
+    	  Proc.inputp.stop(n,start);
+#endif
         break;
       case GSTOPINPUT:
         Proc.input2.stop(n,start);
@@ -1363,21 +1371,25 @@ void Instruction::execute(Processor& Proc) const
           }
         return;
       case STARTOPEN:
-#ifndef EXTENDED_SPDZ
-        Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
-#else //EXTENDED_SPDZ
-        Proc.POpen_Start_Ext(start,Proc.P,Proc.MCp,size);
-#endif //EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.POpen_Start_Ext_32(start,Proc.P,Proc.MCp,size);
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.POpen_Start_Ext_64(start,Proc.P,Proc.MCp,size);
+#else
+    	  Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
+#endif
         return;
       case GSTARTOPEN:
         Proc.POpen_Start(start,Proc.P,Proc.MC2,size);
         return;
       case STOPOPEN:
-#ifndef EXTENDED_SPDZ
-        Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
-#else //EXTENDED_SPDZ
-        Proc.POpen_Stop_Ext(start,Proc.P,Proc.MCp,size);
-#endif //EXTENDED_SPDZ
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.POpen_Stop_Ext_32(start,Proc.P,Proc.MCp,size);
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.POpen_Stop_Ext_64(start,Proc.P,Proc.MCp,size);
+#else
+    	  Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
+#endif
         return;
       case GSTOPOPEN:
         Proc.POpen_Stop(start,Proc.P,Proc.MC2,size);
