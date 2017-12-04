@@ -35,7 +35,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 	cout << "SPDZ extension library initializing." << endl;
 	stringstream ss;
 	ss << gfp::pr();
-	if(0 != (*the_ext_lib.ext_init)(&spdz_ext_handle, P.my_num(), ss.str().c_str(), 10))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_ext_handle, P.my_num(), P.num_players(), ss.str().c_str(), 10))
 	{
 		cerr << "SPDZ extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
