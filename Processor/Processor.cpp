@@ -602,25 +602,8 @@ void Processor::POpen_Stop_Ext_32(const vector<int>& reg,const Player& P,MAC_Che
 	int sz=reg.size();
 	PO.resize(sz*size);
 	MC.POpen_End(PO,Sh_PO,P);
-	if (size>1)
-	{
-		vector<gfp>::iterator PO_it=PO.begin();
-		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
-		{
-			for (vector<gfp>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
-			{
-			  *C_it=*PO_it;
-			  PO_it++;
-			}
-		}
-	}
-	else
-	{
-		for (unsigned int i=0; i<reg.size(); i++)
-		{
-			get_C_ref<gfp>(reg[i]) = PO[i];
-		}
-	}
+
+	POpen_Stop_prep_opens(reg, PO, C, size);
 
 	sent += reg.size() * size;
 	rounds++;
@@ -831,25 +814,8 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,const Player& P,MAC_Che
 	int sz=reg.size();
 	PO.resize(sz*size);
 	MC.POpen_End(PO,Sh_PO,P);
-	if (size>1)
-	{
-		vector<gfp>::iterator PO_it=PO.begin();
-		for (vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
-		{
-			for (vector<gfp>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
-			{
-			  *C_it=*PO_it;
-			  PO_it++;
-			}
-		}
-	}
-	else
-	{
-		for (unsigned int i=0; i<reg.size(); i++)
-		{
-			get_C_ref<gfp>(reg[i]) = PO[i];
-		}
-	}
+
+	POpen_Stop_prep_opens(reg, PO, C, size);
 
 	sent += reg.size() * size;
 	rounds++;
