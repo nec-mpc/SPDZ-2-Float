@@ -263,7 +263,7 @@ class Processor : public ProcessorBase
   void POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
 
   template <class T>
-  void prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size);
+  void POpen_Start_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size);
 
   template <class T>
   void POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);

@@ -409,7 +409,7 @@ void Processor::write_shares_to_file(const vector<int>& data_registers) {
 }
 
 template <class T>
-void Processor::prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size)
+void Processor::POpen_Start_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size)
 {
 	if (size>1)
 	{
@@ -438,7 +438,7 @@ void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<T>&
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
-	prep_shares(reg, Sh_PO, size);
+	POpen_Start_prep_shares(reg, Sh_PO, size);
 
 	vector<T>& PO = get_PO<T>();
 	PO.resize(sz*size);
@@ -535,7 +535,7 @@ void Processor::POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_C
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
-	prep_shares(reg, Sh_PO, size);
+	POpen_Start_prep_shares(reg, Sh_PO, size);
 
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
@@ -764,7 +764,7 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_C
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
-	prep_shares(reg, Sh_PO, size);
+	POpen_Start_prep_shares(reg, Sh_PO, size);
 
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
