@@ -289,7 +289,6 @@ class Processor : public ProcessorBase
   void Input_Start_Ext_32(int player, int n_inputs);
   void Input_Stop_Ext_32(int player, vector<int> targets);
 
-  static u_int32_t gfp2ui(const gfp &);
   static void shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values);
  #endif
 
@@ -301,7 +300,6 @@ class Processor : public ProcessorBase
   void Input_Start_Ext_64(int player, int n_inputs);
   void Input_Stop_Ext_64(int player, vector<int> targets);
 
-  static u_int64_t gfp2ul(const gfp &);
   static void shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values);
 #endif
 

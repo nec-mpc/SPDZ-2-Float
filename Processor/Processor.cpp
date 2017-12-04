@@ -540,15 +540,23 @@ void uint2gfps(vector<gfp> & values, const T * uint_values, const size_t uint_va
 	values.resize(uint_value_count);
 	for(size_t i = 0; i < uint_value_count; i++)
 	{
-		values[i].assign((unsigned long)uint_values[i]);
+		values[i].assign((u_int64_t)uint_values[i]);
 	}
+}
+
+template <class T>
+void gfp2uint(const gfp & gfp_value, T & t)
+{
+	bigint bi_value;
+	to_bigint(bi_value, gfp_value);
+	t = mpz_get_ui(bi_value.get_mpz_t());
 }
 
 template <class T>
 void Processor::uint2share(const T in_value, Share<gfp> & out_value)
 {
 	gfp mac, value;
-	value.assign((unsigned long)in_value);
+	value.assign((u_int64_t)in_value);
 	mac.mul(MCp.get_alphai(), value);
 	out_value.set_share(value);
 	out_value.set_mac(mac);
@@ -711,25 +719,29 @@ void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
 	delete []inputs;
 }
 
+/*
 u_int32_t Processor::gfp2ui(const gfp & gfp_value)
 {
 	bigint bi_value;
 	to_bigint(bi_value, gfp_value);
 	return mpz_get_ui(bi_value.get_mpz_t());
-}
+}*/
 
 void Processor::shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values)
 {
 	ui_values.clear();
 	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
 	{
-		ui_values.push_back(Processor::gfp2ui(i->get_share()));
+		u_int32_t v;
+		gfp2uint(i->get_share(), v);
+		ui_values.push_back(v);
 	}
 }
 
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
-	u_int32_t outward_ui_value = Processor::gfp2ui(original_gfp_value);
+	u_int32_t outward_ui_value;
+	gfp2uint(original_gfp_value, outward_ui_value);
 
 	u_int32_t inward_ui_value = (*the_ext_lib.ext_test_conversion)(outward_ui_value);
 
@@ -902,25 +914,21 @@ void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 	delete []inputs;
 }
 
-u_int64_t Processor::gfp2ul(const gfp & gfp_value)
-{
-	bigint bi_value;
-	to_bigint(bi_value, gfp_value);
-	return mpz_get_ui(bi_value.get_mpz_t());
-}
-
 void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values)
 {
 	ul_values.clear();
 	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
 	{
-		ul_values.push_back(Processor::gfp2ul(i->get_share()));
+		u_int64_t v;
+		gfp2uint(i->get_share(), v);
+		ul_values.push_back(v);
 	}
 }
 
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
-	u_int64_t outward_ul_value = Processor::gfp2ul(original_gfp_value);
+	u_int64_t outward_ul_value;
+	gfp2uint(original_gfp_value, outward_ul_value);
 
 	u_int64_t inward_ul_value = (*the_ext_lib.ext_test_conversion)(outward_ul_value);
 
