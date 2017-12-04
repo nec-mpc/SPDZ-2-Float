@@ -430,6 +430,30 @@ void Processor::POpen_Start_prep_shares(const vector<int>& reg, vector< Share<T>
 }
 
 template <class T>
+void Processor::POpen_Stop_prep_opens(const vector<int>& reg, vector<T>& PO, vector<T>& C, int size)
+{
+	if (size>1)
+	{
+		typename vector<T>::iterator PO_it=PO.begin();
+		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			for (typename vector<T>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
+			{
+			  *C_it=*PO_it;
+			  PO_it++;
+			}
+		}
+	}
+	else
+	{
+		for (unsigned int i=0; i<reg.size(); i++)
+		{
+			get_C_ref<T>(reg[i]) = PO[i];
+		}
+	}
+}
+
+template <class T>
 void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size)
 {
 	int sz=reg.size();
@@ -456,25 +480,8 @@ void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& 
 	int sz=reg.size();
 	PO.resize(sz*size);
 	MC.POpen_End(PO,Sh_PO,P);
-	if (size>1)
-	{
-		typename vector<T>::iterator PO_it=PO.begin();
-		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
-		{
-			for (typename vector<T>::iterator C_it=C.begin()+*reg_it; C_it!=C.begin()+*reg_it+size; C_it++)
-			{
-			  *C_it=*PO_it;
-			  PO_it++;
-			}
-		}
-	}
-	else
-	{
-		for (unsigned int i=0; i<reg.size(); i++)
-		{
-			get_C_ref<T>(reg[i]) = PO[i];
-		}
-	}
+
+	POpen_Stop_prep_opens(reg, PO, C, size);
 
 	sent += reg.size() * size;
 	rounds++;

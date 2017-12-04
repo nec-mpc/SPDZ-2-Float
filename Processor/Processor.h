@@ -268,6 +268,9 @@ class Processor : public ProcessorBase
   template <class T>
   void POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
 
+  template <class T>
+  void POpen_Stop_prep_opens(const vector<int>& reg, vector<T>& PO, vector<T>& C, int size);
+
   // Print the processor state
   friend ostream& operator<<(ostream& s,const Processor& P);
 
