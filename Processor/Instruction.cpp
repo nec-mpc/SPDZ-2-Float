@@ -1372,9 +1372,9 @@ void Instruction::execute(Processor& Proc) const
         return;
       case STARTOPEN:
 #if defined(EXTENDED_SPDZ_32)
-    	  Proc.POpen_Start_Ext_32(start,Proc.P,Proc.MCp,size);
+    	  Proc.POpen_Start_Ext_32(start, size);
 #elif defined(EXTENDED_SPDZ_64)
-    	  Proc.POpen_Start_Ext_64(start,Proc.P,Proc.MCp,size);
+    	  Proc.POpen_Start_Ext_64(start, size);
 #else
     	  Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
 #endif
@@ -1384,9 +1384,9 @@ void Instruction::execute(Processor& Proc) const
         return;
       case STOPOPEN:
 #if defined(EXTENDED_SPDZ_32)
-    	  Proc.POpen_Stop_Ext_32(start,Proc.P,Proc.MCp,size);
+    	  Proc.POpen_Stop_Ext_32(start, size);
 #elif defined(EXTENDED_SPDZ_64)
-    	  Proc.POpen_Stop_Ext_64(start,Proc.P,Proc.MCp,size);
+    	  Proc.POpen_Stop_Ext_64(start, size);
 #else
     	  Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
 #endif

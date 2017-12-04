@@ -532,9 +532,23 @@ void Processor::maybe_encrypt_sequence(int client_id)
   }
 }
 
+#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
+
+template <class T>
+void uint2gfps(vector<gfp> & values, const T * uint_values, const size_t uint_value_count)
+{
+	values.resize(uint_value_count);
+	for(size_t i = 0; i < uint_value_count; i++)
+	{
+		values[i].assign((unsigned long)uint_values[i]);
+	}
+}
+
+#endif
+
 #if defined(EXTENDED_SPDZ_32)
 
-void Processor::POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
+void Processor::POpen_Start_Ext_32(const vector<int>& reg, int size)
 {
 	int sz=reg.size();
 
@@ -547,37 +561,11 @@ void Processor::POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_C
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
 
-	MC.POpen_Begin(PO,Sh_PO,P);
-
-	//---------------------------------------------------------------------------------
-	/*
-	//gfp conversion unit test
-	if(!Sh_PO.empty())
-	{
-		test_extension_conversion(Sh_PO[0].get_share());
-	}
-	*/
-	//---------------------------------------------------------------------------------
-
 	//the share values are saved as unsigned long
 	std::vector<u_int32_t> ui_share_values;
 	shares2ui(Sh_PO, ui_share_values);
 	if(Sh_PO.size() == ui_share_values.size())
 	{
-		/**/
-		//share conversion tests
-		for(size_t i = 0; i < ui_share_values.size(); i++)
-		{
-			gfp restored;
-			restored.assign((long)ui_share_values[i]);
-			if(!restored.equal(Sh_PO[i].get_share()))
-			{
-				cerr << "Share " << i << " conversion error." << endl;
-			}
-			else
-				std::cout << "Share [" << Sh_PO[i].get_share() << "] --> ui " << ui_share_values[i] << endl;
-		}
-
 		//the extension library is given the shares' values and returns opens' values
 		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ui_share_values.size(), &ui_share_values[0], 1))
 		{
@@ -588,27 +576,24 @@ void Processor::POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_C
 		else
 		{
 			cout << "Processor::POpen_Start_Ext_32 extension start open launched." << endl;
-		}/**/
+		}
 	}
 	else
+	{
 		cout << "Processor::POpen_Start_Ext_32 ui_share_values size mismatch with PO_shares." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
 }
 
-void Processor::POpen_Stop_Ext_32(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
+void Processor::POpen_Stop_Ext_32(const vector<int>& reg, int size)
 {
-	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	//vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
 	vector<gfp>& PO = get_PO<gfp>();
 	vector<gfp>& C = get_C<gfp>();
 	int sz=reg.size();
 	PO.resize(sz*size);
-	MC.POpen_End(PO,Sh_PO,P);
 
-	POpen_Stop_prep_opens(reg, PO, C, size);
-
-	sent += reg.size() * size;
-	rounds++;
-
-	//----------------------------------------------------------------------------------
 	size_t open_count = 0;
 	u_int32_t * opens = NULL;
 	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
@@ -620,10 +605,28 @@ void Processor::POpen_Stop_Ext_32(const vector<int>& reg,const Player& P,MAC_Che
 
 	if(NULL != opens)
 	{
+		if(PO.size() != open_count)
+		{
+			cerr << "Processor::POpen_Stop_Ext_32 size mismatch between share and open values array." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		uint2gfps(PO, opens, open_count);
 		delete []opens;
 		opens = NULL;
 		open_count = 0;
 	}
+	else
+	{
+		cerr << "Processor::POpen_Stop_Ext_32 null open values array returned." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	POpen_Stop_prep_opens(reg, PO, C, size);
+
+	sent += reg.size() * size;
+	rounds++;
 }
 
 void Processor::Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
@@ -746,7 +749,7 @@ void Processor::test_extension_conversion(const gfp & original_gfp_value)
 
 #elif defined(EXTENDED_SPDZ_64)
 
-void Processor::POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC, int size)
+void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 {
 	int sz=reg.size();
 
@@ -759,37 +762,11 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_C
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
 
-	MC.POpen_Begin(PO,Sh_PO,P);
-
-	//---------------------------------------------------------------------------------
-	/*
-	//gfp conversion unit test
-	if(!Sh_PO.empty())
-	{
-		test_extension_conversion(Sh_PO[0].get_share());
-	}
-	*/
-	//---------------------------------------------------------------------------------
-
 	//the share values are saved as unsigned long
 	std::vector<u_int64_t> ul_share_values;
 	shares2ul(Sh_PO, ul_share_values);
 	if(Sh_PO.size() == ul_share_values.size())
 	{
-		/**/
-		//share conversion tests
-		for(size_t i = 0; i < ul_share_values.size(); i++)
-		{
-			gfp restored;
-			restored.assign(ul_share_values[i]);
-			if(!restored.equal(Sh_PO[i].get_share()))
-			{
-				cerr << "Share " << i << " conversion error." << endl;
-			}
-			else
-				std::cout << "Share [" << Sh_PO[i].get_share() << "] --> ul " << ul_share_values[i] << endl;
-		}
-
 		//the extension library is given the shares' values and returns opens' values
 		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
 		{
@@ -800,27 +777,23 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_C
 		else
 		{
 			cout << "Processor::POpen_Start_Ext_64 extension start open launched." << endl;
-		}/**/
+		}
 	}
 	else
-		cout << "Processor::POpen_Start_Ext_64 ul_share_values size mismatch with PO_shares." << endl;
+	{
+		cout << "Processor::POpen_Start_Ext_64 ui_share_values size mismatch with PO_shares." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
 }
 
-void Processor::POpen_Stop_Ext_64(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size)
+void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 {
-	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
 	vector<gfp>& PO = get_PO<gfp>();
 	vector<gfp>& C = get_C<gfp>();
 	int sz=reg.size();
 	PO.resize(sz*size);
-	MC.POpen_End(PO,Sh_PO,P);
 
-	POpen_Stop_prep_opens(reg, PO, C, size);
-
-	sent += reg.size() * size;
-	rounds++;
-
-	//----------------------------------------------------------------------------------
 	size_t open_count = 0;
 	u_int64_t * opens = NULL;
 	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
@@ -832,10 +805,28 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,const Player& P,MAC_Che
 
 	if(NULL != opens)
 	{
+		if(PO.size() != open_count)
+		{
+			cerr << "Processor::POpen_Stop_Ext_64 size mismatch between share and open values array." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		uint2gfps(PO, opens, open_count);
 		delete []opens;
 		opens = NULL;
 		open_count = 0;
 	}
+	else
+	{
+		cerr << "Processor::POpen_Stop_Ext_64 null open values array returned." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	POpen_Stop_prep_opens(reg, PO, C, size);
+
+	sent += reg.size() * size;
+	rounds++;
 }
 
 void Processor::Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)

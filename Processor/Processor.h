@@ -282,8 +282,8 @@ class Processor : public ProcessorBase
 
   public:
 #if defined(EXTENDED_SPDZ_32)
-    void POpen_Start_Ext_32(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
-    void POpen_Stop_Ext_32(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+    void POpen_Start_Ext_32(const vector<int>& reg, int size);
+    void POpen_Stop_Ext_32(const vector<int>& reg, int size);
     void Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
     void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
     void Input_Start_Ext_32(int player, int n_inputs);
@@ -293,11 +293,11 @@ class Processor : public ProcessorBase
 
     static u_int32_t gfp2ui(const gfp &);
     static void shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values);
-#endif
+ #endif
 
 #if defined(EXTENDED_SPDZ_64)
-    void POpen_Start_Ext_64(const vector<int>& reg,const Player& P, MAC_Check<gfp>& MC,int size);
-    void POpen_Stop_Ext_64(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+    void POpen_Start_Ext_64(const vector<int>& reg,int size);
+    void POpen_Stop_Ext_64(const vector<int>& reg,int size);
     void Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
     void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
     void Input_Start_Ext_64(int player, int n_inputs);
