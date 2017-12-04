@@ -544,6 +544,16 @@ void uint2gfps(vector<gfp> & values, const T * uint_values, const size_t uint_va
 	}
 }
 
+template <class T>
+void Processor::uint2share(const T in_value, Share<gfp> & out_value)
+{
+	gfp mac, value;
+	value.assign((unsigned long)in_value);
+	mac.mul(MCp.get_alphai(), value);
+	out_value.set_share(value);
+	out_value.set_mac(mac);
+}
+
 #endif
 
 #if defined(EXTENDED_SPDZ_32)
@@ -638,9 +648,9 @@ void Processor::Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	Processor::ui2share(ui_a, a);
-	Processor::ui2share(ui_b, b);
-	Processor::ui2share(ui_c, c);
+	uint2share(ui_a, a);
+	uint2share(ui_b, b);
+	uint2share(ui_c, c);
 }
 
 void Processor::Input_Ext_32(Share<gfp>& input_value, const int input_party_id)
@@ -652,7 +662,7 @@ void Processor::Input_Ext_32(Share<gfp>& input_value, const int input_party_id)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	ui2share(ui_input_value, input_value);
+	uint2share(ui_input_value, input_value);
 }
 
 void Processor::Input_Start_Ext_32(int player, int n_inputs)
@@ -688,7 +698,7 @@ void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
 		for(size_t i = 0; i < input_count; ++i)
 		{
 			Share<gfp>& share = get_S_ref<gfp>(targets[i]);
-			ui2share(inputs[i], share);
+			uint2share(inputs[i], share);
 		}
 	}
 	else
@@ -699,15 +709,6 @@ void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
 	}
 
 	delete []inputs;
-}
-
-void Processor::ui2share(const u_int32_t in_value, Share<gfp> & out_value)
-{
-	gfp mac, value;
-	value.assign((long)in_value);
-	mac.mul(MCp.get_alphai(), value);
-	out_value.set_share(value);
-	out_value.set_mac(mac);
 }
 
 u_int32_t Processor::gfp2ui(const gfp & gfp_value)
@@ -838,9 +839,9 @@ void Processor::Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	Processor::ul2share(ul_a, a);
-	Processor::ul2share(ul_b, b);
-	Processor::ul2share(ul_c, c);
+	uint2share(ul_a, a);
+	uint2share(ul_b, b);
+	uint2share(ul_c, c);
 }
 
 void Processor::Input_Ext_64(Share<gfp>& input_value, const int input_party_id)
@@ -852,7 +853,7 @@ void Processor::Input_Ext_64(Share<gfp>& input_value, const int input_party_id)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	ul2share(ul_input_value, input_value);
+	uint2share(ul_input_value, input_value);
 }
 
 void Processor::Input_Start_Ext_64(int player, int n_inputs)
@@ -888,7 +889,7 @@ void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 		for(size_t i = 0; i < input_count; ++i)
 		{
 			Share<gfp>& share = get_S_ref<gfp>(targets[i]);
-			ul2share(inputs[i], share);
+			uint2share(inputs[i], share);
 		}
 	}
 	else
@@ -899,15 +900,6 @@ void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 	}
 
 	delete []inputs;
-}
-
-void Processor::ul2share(const u_int64_t in_value, Share<gfp> & out_value)
-{
-	gfp mac, value;
-	value.assign(in_value);
-	mac.mul(MCp.get_alphai(), value);
-	out_value.set_share(value);
-	out_value.set_mac(mac);
 }
 
 u_int64_t Processor::gfp2ul(const gfp & gfp_value)

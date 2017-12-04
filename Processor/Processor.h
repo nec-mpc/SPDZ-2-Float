@@ -279,39 +279,38 @@ class Processor : public ProcessorBase
     void maybe_encrypt_sequence(int client_id);
 
 #if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
-
   public:
+
 #if defined(EXTENDED_SPDZ_32)
-    void POpen_Start_Ext_32(const vector<int>& reg, int size);
-    void POpen_Stop_Ext_32(const vector<int>& reg, int size);
-    void Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
-    void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
-    void Input_Start_Ext_32(int player, int n_inputs);
-    void Input_Stop_Ext_32(int player, vector<int> targets);
+  void POpen_Start_Ext_32(const vector<int>& reg, int size);
+  void POpen_Stop_Ext_32(const vector<int>& reg, int size);
+  void Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+  void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
+  void Input_Start_Ext_32(int player, int n_inputs);
+  void Input_Stop_Ext_32(int player, vector<int> targets);
 
-    void ui2share(const u_int32_t in_value, Share<gfp> & out_value);
-
-    static u_int32_t gfp2ui(const gfp &);
-    static void shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values);
+  static u_int32_t gfp2ui(const gfp &);
+  static void shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values);
  #endif
 
 #if defined(EXTENDED_SPDZ_64)
-    void POpen_Start_Ext_64(const vector<int>& reg,int size);
-    void POpen_Stop_Ext_64(const vector<int>& reg,int size);
-    void Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
-    void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
-    void Input_Start_Ext_64(int player, int n_inputs);
-    void Input_Stop_Ext_64(int player, vector<int> targets);
+  void POpen_Start_Ext_64(const vector<int>& reg,int size);
+  void POpen_Stop_Ext_64(const vector<int>& reg,int size);
+  void Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+  void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
+  void Input_Start_Ext_64(int player, int n_inputs);
+  void Input_Stop_Ext_64(int player, vector<int> targets);
 
-    void ul2share(const u_int64_t in_value, Share<gfp> & out_value);
-
-    static u_int64_t gfp2ul(const gfp &);
-    static void shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values);
+  static u_int64_t gfp2ul(const gfp &);
+  static void shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values);
 #endif
 
-    static void test_extension_conversion(const gfp & gfp_value);
+  template <class T>
+  void uint2share(const T in_value, Share<gfp> & out_value);
 
-    void * spdz_ext_handle;
+  static void test_extension_conversion(const gfp & gfp_value);
+
+  void * spdz_ext_handle;
 
 #endif
 
