@@ -288,8 +288,6 @@ class Processor : public ProcessorBase
   void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
   void Input_Start_Ext_32(int player, int n_inputs);
   void Input_Stop_Ext_32(int player, vector<int> targets);
-
-  static void shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values);
  #endif
 
 #if defined(EXTENDED_SPDZ_64)
@@ -299,8 +297,6 @@ class Processor : public ProcessorBase
   void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
   void Input_Start_Ext_64(int player, int n_inputs);
   void Input_Stop_Ext_64(int player, vector<int> targets);
-
-  static void shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values);
 #endif
 
   template <class T>

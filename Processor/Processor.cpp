@@ -562,6 +562,18 @@ void Processor::uint2share(const T in_value, Share<gfp> & out_value)
 	out_value.set_mac(mac);
 }
 
+template <class T>
+void shares2uints(const vector< Share<gfp> > & shares, std::vector< T > & uint_values)
+{
+	uint_values.clear();
+	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
+	{
+		T v;
+		gfp2uint(i->get_share(), v);
+		uint_values.push_back(v);
+	}
+}
+
 #endif
 
 #if defined(EXTENDED_SPDZ_32)
@@ -581,7 +593,7 @@ void Processor::POpen_Start_Ext_32(const vector<int>& reg, int size)
 
 	//the share values are saved as unsigned long
 	std::vector<u_int32_t> ui_share_values;
-	shares2ui(Sh_PO, ui_share_values);
+	shares2uints(Sh_PO, ui_share_values);
 	if(Sh_PO.size() == ui_share_values.size())
 	{
 		//the extension library is given the shares' values and returns opens' values
@@ -719,25 +731,6 @@ void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
 	delete []inputs;
 }
 
-/*
-u_int32_t Processor::gfp2ui(const gfp & gfp_value)
-{
-	bigint bi_value;
-	to_bigint(bi_value, gfp_value);
-	return mpz_get_ui(bi_value.get_mpz_t());
-}*/
-
-void Processor::shares2ui(const vector< Share<gfp> > & shares, std::vector< u_int32_t > & ui_values)
-{
-	ui_values.clear();
-	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
-	{
-		u_int32_t v;
-		gfp2uint(i->get_share(), v);
-		ui_values.push_back(v);
-	}
-}
-
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int32_t outward_ui_value;
@@ -777,7 +770,7 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 
 	//the share values are saved as unsigned long
 	std::vector<u_int64_t> ul_share_values;
-	shares2ul(Sh_PO, ul_share_values);
+	shares2uints(Sh_PO, ul_share_values);
 	if(Sh_PO.size() == ul_share_values.size())
 	{
 		//the extension library is given the shares' values and returns opens' values
@@ -912,17 +905,6 @@ void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 	}
 
 	delete []inputs;
-}
-
-void Processor::shares2ul(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & ul_values)
-{
-	ul_values.clear();
-	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
-	{
-		u_int64_t v;
-		gfp2uint(i->get_share(), v);
-		ul_values.push_back(v);
-	}
 }
 
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
