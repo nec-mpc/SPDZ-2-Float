@@ -409,7 +409,7 @@ void Processor::write_shares_to_file(const vector<int>& data_registers) {
 }
 
 template <class T>
-void Processor::POpen_Start_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size)
+void Processor::P_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size)
 {
 	if (size>1)
 	{
@@ -462,7 +462,7 @@ void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<T>&
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
-	POpen_Start_prep_shares(reg, Sh_PO, size);
+	P_prep_shares(reg, Sh_PO, size);
 
 	vector<T>& PO = get_PO<T>();
 	PO.resize(sz*size);
@@ -574,6 +574,31 @@ void shares2uints(const vector< Share<gfp> > & shares, std::vector< T > & uint_v
 	}
 }
 
+template <class T>
+void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size, T * products)
+{
+	if (size>1)
+	{
+		size_t product_idx = 0;
+		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			vector<Share<gfp> >::iterator insert_point=get_S<gfp>().begin()+*reg_it;
+			for(int i = 0; i < size; ++i)
+			{
+				uint2share(products[product_idx++], *(insert_point + i));
+			}
+		}
+	}
+	else
+	{
+		int sz=reg.size();
+		for(int i = 0; i < sz; ++i)
+		{
+			uint2share(products[i], get_S_ref<gfp>(reg[i]));
+		}
+	}
+}
+
 #endif
 
 #if defined(EXTENDED_SPDZ_32)
@@ -586,7 +611,7 @@ void Processor::POpen_Start_Ext_32(const vector<int>& reg, int size)
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
-	POpen_Start_prep_shares(reg, Sh_PO, size);
+	P_prep_shares(reg, Sh_PO, size);
 
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
@@ -731,6 +756,81 @@ void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
 	delete []inputs;
 }
 
+void Processor::PMult_Start_Ext_32(const vector<int>& reg, int size)
+{
+	int sz=reg.size();
+
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+
+	P_prep_shares(reg, Sh_PO, size);
+
+	vector<gfp>& PO = get_PO<gfp>();
+	PO.resize(sz*size);
+
+	//the share values are saved as unsigned long
+	std::vector<u_int32_t> ul_share_values;
+	shares2uints(Sh_PO, ul_share_values);
+	if(Sh_PO.size() == ul_share_values.size())
+	{
+		//the extension library is given the shares' values and returns opens' values
+		if(0 != (*the_ext_lib.ext_start_mult)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		{
+			cerr << "Processor::PMult_Start_Ext_32 extension library start_mult failed." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		else
+		{
+			cout << "Processor::PMult_Start_Ext_32 extension library start_mult launched." << endl;
+		}
+	}
+	else
+	{
+		cout << "Processor::PMult_Start_Ext_32 ui_share_values size mismatch with PO_shares." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::PMult_Stop_Ext_32(const vector<int>& reg, int size)
+{
+	int sz=reg.size();
+
+	size_t product_count = 0;
+	u_int32_t * products = NULL;
+	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_ext_handle, &product_count, &products))
+	{
+		cerr << "Processor::PMult_Stop_Ext_32 extension library stop_mult failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(NULL != products)
+	{
+		if((sz*size) != (int)product_count)
+		{
+			cerr << "Processor::PMult_Stop_Ext_32 size mismatch between share and product values array." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		PMult_Stop_prep_products(reg, size, products);
+		delete []products;
+		products = NULL;
+		product_count = 0;
+	}
+	else
+	{
+		cerr << "Processor::PMult_Stop_Ext_32 null product values array returned." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	sent += reg.size() * size;
+	rounds++;
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int32_t outward_ui_value;
@@ -763,7 +863,7 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 	Sh_PO.clear();
 	Sh_PO.reserve(sz*size);
 
-	POpen_Start_prep_shares(reg, Sh_PO, size);
+	P_prep_shares(reg, Sh_PO, size);
 
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
@@ -907,6 +1007,81 @@ void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 	delete []inputs;
 }
 
+void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
+{
+	int sz=reg.size();
+
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+
+	P_prep_shares(reg, Sh_PO, size);
+
+	vector<gfp>& PO = get_PO<gfp>();
+	PO.resize(sz*size);
+
+	//the share values are saved as unsigned long
+	std::vector<u_int64_t> ul_share_values;
+	shares2uints(Sh_PO, ul_share_values);
+	if(Sh_PO.size() == ul_share_values.size())
+	{
+		//the extension library is given the shares' values and returns opens' values
+		if(0 != (*the_ext_lib.ext_start_mult)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		{
+			cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		else
+		{
+			cout << "Processor::PMult_Start_Ext_64 extension library start_mult launched." << endl;
+		}
+	}
+	else
+	{
+		cout << "Processor::PMult_Start_Ext_64 ui_share_values size mismatch with PO_shares." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
+{
+	int sz=reg.size();
+
+	size_t product_count = 0;
+	u_int64_t * products = NULL;
+	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_ext_handle, &product_count, &products))
+	{
+		cerr << "Processor::PMult_Stop_Ext_64 extension library stop_mult failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	if(NULL != products)
+	{
+		if((sz*size) != (int)product_count)
+		{
+			cerr << "Processor::PMult_Stop_Ext_64 size mismatch between share and product values array." << endl;
+			dlclose(the_ext_lib.ext_lib_handle);
+			abort();
+		}
+		PMult_Stop_prep_products(reg, size, products);
+		delete []products;
+		products = NULL;
+		product_count = 0;
+	}
+	else
+	{
+		cerr << "Processor::PMult_Stop_Ext_64 null product values array returned." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+
+	sent += reg.size() * size;
+	rounds++;
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int64_t outward_ul_value;
@@ -991,6 +1166,8 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("stop_verify",ext_stop_verify)
 	LOAD_LIB_METHOD("start_input",ext_start_input)
 	LOAD_LIB_METHOD("stop_input",ext_stop_input)
+	LOAD_LIB_METHOD("start_mult",ext_start_mult)
+	LOAD_LIB_METHOD("stop_mult",ext_stop_mult)
 	LOAD_LIB_METHOD("test_conversion",ext_test_conversion)
 }
 

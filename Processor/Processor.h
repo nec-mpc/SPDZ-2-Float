@@ -263,7 +263,7 @@ class Processor : public ProcessorBase
   void POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
 
   template <class T>
-  void POpen_Start_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size);
+  void P_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size);
 
   template <class T>
   void POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
@@ -288,7 +288,9 @@ class Processor : public ProcessorBase
   void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
   void Input_Start_Ext_32(int player, int n_inputs);
   void Input_Stop_Ext_32(int player, vector<int> targets);
- #endif
+  void PMult_Start_Ext_32(const vector<int>& reg, int size);
+  void PMult_Stop_Ext_32(const vector<int>& reg, int size);
+#endif
 
 #if defined(EXTENDED_SPDZ_64)
   void POpen_Start_Ext_64(const vector<int>& reg,int size);
@@ -297,10 +299,15 @@ class Processor : public ProcessorBase
   void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
   void Input_Start_Ext_64(int player, int n_inputs);
   void Input_Stop_Ext_64(int player, vector<int> targets);
+  void PMult_Start_Ext_64(const vector<int>& reg, int size);
+  void PMult_Stop_Ext_64(const vector<int>& reg, int size);
 #endif
 
   template <class T>
   void uint2share(const T in_value, Share<gfp> & out_value);
+
+  template <class T>
+  void PMult_Stop_prep_products(const vector<int>& reg, int size, T * products);
 
   static void test_extension_conversion(const gfp & gfp_value);
 
@@ -343,6 +350,9 @@ public:
 
     int (*ext_start_verify)(void * handle, int * error);
     int (*ext_stop_verify)(void * handle);
+
+    int (*ext_start_mult)(void * handle, const size_t share_count, const SPDZEXT_VALTYPE * shares, int verify);
+    int (*ext_stop_mult)(void * handle, size_t * product_count, SPDZEXT_VALTYPE ** products);
 
     SPDZEXT_VALTYPE (*ext_test_conversion)(const SPDZEXT_VALTYPE);
 

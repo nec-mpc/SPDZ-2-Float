@@ -267,6 +267,8 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       case GSTARTOPEN:
       case GSTOPOPEN:
       case WRITEFILESHARE:
+      case E_STARTMULT:
+      case E_STOPMULT:
         num_var_args = get_int(s);
         get_vector(num_var_args, start, s);
         break;
@@ -1393,6 +1395,26 @@ void Instruction::execute(Processor& Proc) const
         return;
       case GSTOPOPEN:
         Proc.POpen_Stop(start,Proc.P,Proc.MC2,size);
+        return;
+      case E_STARTMULT:
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.PMult_Start_Ext_32(start, size);
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.PMult_Start_Ext_64(start, size);
+#else
+    	  std::cerr << "Start-Mult instruction is not supported." << std::endl;
+    	  abort();
+#endif
+        return;
+      case E_STOPMULT:
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.PMult_Stop_Ext_32(start, size);
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.PMult_Stop_Ext_64(start, size);
+#else
+    	  std::cerr << "Stop-Mult instruction is not supported." << std::endl;
+    	  abort();
+#endif
         return;
       case JMP:
         Proc.PC += (signed int) n;
