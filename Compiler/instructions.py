@@ -1321,6 +1321,29 @@ class stopopen(base.VarArgsInstruction):
             arg.value = program.curr_block.open_queue.pop()
 
 ###
+### 2G START
+###
+@base.gf2n
+@base.vectorize
+class e_startmult(startopen_class):
+    """ Start mult secret register $s_i$. """
+    __slots__ = []
+    code = base.opcodes['E_STARTMULT']
+    arg_format = itertools.repeat('s')
+
+
+@base.gf2n
+@base.vectorize
+class e_stopmult(stopopen_class):
+    """ stop mult secret register $s_i$. """
+    __slots__ = []
+    code = base.opcodes['E_STOPMULT']
+    arg_format = itertools.repeat('sw')
+
+##
+## 2G END
+##
+###
 ### CISC-style instructions
 ###
 
@@ -1345,6 +1368,10 @@ class muls(base.CISC):
     arg_format = ['sw','s','s']
     
     def expand(self):
+#
+# 2G START
+#
+        """
         s = [program.curr_block.new_reg('s') for i in range(9)]
         c = [program.curr_block.new_reg('c') for i in range(3)]
         triple(s[0], s[1], s[2])
@@ -1358,6 +1385,13 @@ class muls(base.CISC):
         adds(s[7], s[2], s[5])
         adds(s[8], s[7], s[6])
         addm(self.args[0], s[8], c[2])
+        """
+        e_startmult(self.args[1],self.args[2])
+        e_stopmult(self.args[0])
+
+#
+# 2G END
+#
 
 @base.gf2n
 @base.vectorize
