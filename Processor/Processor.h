@@ -290,6 +290,9 @@ class Processor : public ProcessorBase
   void Input_Stop_Ext_32(int player, vector<int> targets);
   void PMult_Start_Ext_32(const vector<int>& reg, int size);
   void PMult_Stop_Ext_32(const vector<int>& reg, int size);
+  void addm_32(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void subml_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void submr_Ext_32(gfp& a, Share<gfp>& b, Share<gfp>& c);
 #endif
 
 #if defined(EXTENDED_SPDZ_64)
@@ -301,6 +304,9 @@ class Processor : public ProcessorBase
   void Input_Stop_Ext_64(int player, vector<int> targets);
   void PMult_Start_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_Ext_64(const vector<int>& reg, int size);
+  void addm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void subml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void submr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
 #endif
 
   template <class T>
@@ -353,6 +359,10 @@ public:
 
     int (*ext_start_mult)(void * handle, const size_t share_count, const SPDZEXT_VALTYPE * shares, int verify);
     int (*ext_stop_mult)(void * handle, size_t * product_count, SPDZEXT_VALTYPE ** products);
+
+    int (*ext_mix_add)(void * handle, SPDZEXT_VALTYPE * share, SPDZEXT_VALTYPE scalar);
+    int (*ext_mix_sub_scalar)(void * handle, SPDZEXT_VALTYPE * share, SPDZEXT_VALTYPE scalar);
+    int (*ext_mix_sub_share)(void * handle, SPDZEXT_VALTYPE scalar, SPDZEXT_VALTYPE * share);
 
     SPDZEXT_VALTYPE (*ext_test_conversion)(const SPDZEXT_VALTYPE);
 

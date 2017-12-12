@@ -831,6 +831,57 @@ void Processor::PMult_Stop_Ext_32(const vector<int>& reg, int size)
 	rounds++;
 }
 
+void Processor::addm_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c)
+{
+	u_int32_t share_value, arg;
+	gfp2uint(a.get_share(), share_value);
+	gfp2uint(b, arg);
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_ext_handle, &share_value, arg))
+	{
+		uint2share(share_value, c);
+	}
+	else
+	{
+		cerr << "Processor::addm_Ext_32 extension library mix_add failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::subml_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c)
+{
+	u_int32_t share_value, arg;
+	gfp2uint(a.get_share(), share_value);
+	gfp2uint(b, arg);
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_ext_handle, &share_value, arg))
+	{
+		uint2share(share_value, c);
+	}
+	else
+	{
+		cerr << "Processor::subml_Ext_32 extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::submr_Ext_32(gfp& a, Share<gfp>& b, Share<gfp>& c)
+{
+	u_int32_t share_value, arg;
+	gfp2uint(b.get_share(), share_value);
+	gfp2uint(a, arg);
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_ext_handle, arg, &share_value))
+	{
+		uint2share(share_value, c);
+	}
+	else
+	{
+		cerr << "Processor::submr_Ext_32 extension library mix_sub_share failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int32_t outward_ui_value;
@@ -1082,6 +1133,57 @@ void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
 	rounds++;
 }
 
+void Processor::addm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
+{
+	u_int64_t share_value, arg;
+	gfp2uint(a.get_share(), share_value);
+	gfp2uint(b, arg);
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_ext_handle, &share_value, arg))
+	{
+		uint2share(share_value, c);
+	}
+	else
+	{
+		cerr << "Processor::addm_Ext_64 extension library mix_add failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::subml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
+{
+	u_int64_t share_value, arg;
+	gfp2uint(a.get_share(), share_value);
+	gfp2uint(b, arg);
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_ext_handle, &share_value, arg))
+	{
+		uint2share(share_value, c);
+	}
+	else
+	{
+		cerr << "Processor::subml_Ext_64 extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::submr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
+{
+	u_int64_t share_value, arg;
+	gfp2uint(b.get_share(), share_value);
+	gfp2uint(a, arg);
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_ext_handle, arg, &share_value))
+	{
+		uint2share(share_value, c);
+	}
+	else
+	{
+		cerr << "Processor::submr_Ext_64 extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int64_t outward_ul_value;
@@ -1126,6 +1228,12 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_stop_verify) = NULL;
 	*(void**)(&ext_start_input) = NULL;
 	*(void**)(&ext_stop_input) = NULL;
+	*(void**)(&ext_start_mult) = NULL;
+	*(void**)(&ext_stop_mult) = NULL;
+	*(void**)(&ext_mix_add) = NULL;
+	*(void**)(&ext_mix_sub_scalar) = NULL;
+	*(void**)(&ext_mix_sub_share) = NULL;
+	*(void**)(&ext_test_conversion) = NULL;
 
 	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -1168,6 +1276,9 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("stop_input",ext_stop_input)
 	LOAD_LIB_METHOD("start_mult",ext_start_mult)
 	LOAD_LIB_METHOD("stop_mult",ext_stop_mult)
+	LOAD_LIB_METHOD("mix_add",ext_mix_add)
+	LOAD_LIB_METHOD("mix_sub_scalar",ext_mix_sub_scalar)
+	LOAD_LIB_METHOD("mix_sub_share",ext_mix_sub_share)
 	LOAD_LIB_METHOD("test_conversion",ext_test_conversion)
 }
 
