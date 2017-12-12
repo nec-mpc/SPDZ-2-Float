@@ -946,7 +946,13 @@ void Instruction::execute(Processor& Proc) const
            Sansp.add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
 	   Proc.write_Sp(r[0],Sansp);
         #else
-           Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+#if defined(EXTENDED_SPDZ_32)
+	   Proc.addm_Ext_32(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+#elif defined(EXTENDED_SPDZ_64)
+	   Proc.addm_Ext_64(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+#else
+       Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+#endif
 	#endif
         break;
       case GADDSI:
@@ -982,7 +988,13 @@ void Instruction::execute(Processor& Proc) const
            Sansp.sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
 	   Proc.write_Sp(r[0],Sansp);
         #else
+#if defined(EXTENDED_SPDZ_32)
+	   Proc.subml_Ext_32(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+#elif defined(EXTENDED_SPDZ_64)
+	   Proc.subml_Ext_64(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+#else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+#endif
         #endif
         break;
       case GSUBSI:
@@ -1018,7 +1030,13 @@ void Instruction::execute(Processor& Proc) const
            Sansp.sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 	   Proc.write_Sp(r[0],Sansp);
 	#else
-           Proc.get_Sp_ref(r[0]).sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+#if defined(EXTENDED_SPDZ_32)
+	   Proc.submr_Ext_32(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
+#elif defined(EXTENDED_SPDZ_64)
+	   Proc.submr_Ext_64(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
+#else
+       Proc.get_Sp_ref(r[0]).sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+#endif
 	#endif
         break;
       case GSUBSFI:
