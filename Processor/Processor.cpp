@@ -882,6 +882,22 @@ void Processor::submr_Ext_32(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	}
 }
 
+void Processor::ldsi_Ext_32(gfp& value, Share<gfp>& share)
+{
+	u_int32_t ui_value, ui_share = 0;
+	gfp2uint(value, ui_value);
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_ext_handle, ui_value, &ui_share))
+	{
+		uint2share(ui_share, share);
+	}
+	else
+	{
+		cerr << "Processor::ldsi_Ext_32 extension library share_immediate failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int32_t outward_ui_value;
@@ -1184,6 +1200,22 @@ void Processor::submr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	}
 }
 
+void Processor::ldsi_Ext_64(gfp& value, Share<gfp>& share)
+{
+	u_int64_t ui_value, ui_share = 0;
+	gfp2uint(value, ui_value);
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_ext_handle, ui_value, &ui_share))
+	{
+		uint2share(ui_share, share);
+	}
+	else
+	{
+		cerr << "Processor::ldsi_Ext_64 extension library share_immediate failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
 void Processor::test_extension_conversion(const gfp & original_gfp_value)
 {
 	u_int64_t outward_ul_value;
@@ -1279,7 +1311,9 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("mix_add",ext_mix_add)
 	LOAD_LIB_METHOD("mix_sub_scalar",ext_mix_sub_scalar)
 	LOAD_LIB_METHOD("mix_sub_share",ext_mix_sub_share)
+	LOAD_LIB_METHOD("share_immediate",ext_share_immediate)
 	LOAD_LIB_METHOD("test_conversion",ext_test_conversion)
+
 }
 
 spdz_ext_ifc::~spdz_ext_ifc()

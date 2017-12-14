@@ -293,6 +293,7 @@ class Processor : public ProcessorBase
   void addm_32(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void subml_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void submr_Ext_32(gfp& a, Share<gfp>& b, Share<gfp>& c);
+  void ldsi_Ext_32(gfp& value, Share<gfp>& share);
 #endif
 
 #if defined(EXTENDED_SPDZ_64)
@@ -307,6 +308,7 @@ class Processor : public ProcessorBase
   void addm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void subml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void submr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
+  void ldsi_Ext_64(gfp& value, Share<gfp>& share);
 #endif
 
   template <class T>
@@ -363,6 +365,8 @@ public:
     int (*ext_mix_add)(void * handle, SPDZEXT_VALTYPE * share, SPDZEXT_VALTYPE scalar);
     int (*ext_mix_sub_scalar)(void * handle, SPDZEXT_VALTYPE * share, SPDZEXT_VALTYPE scalar);
     int (*ext_mix_sub_share)(void * handle, SPDZEXT_VALTYPE scalar, SPDZEXT_VALTYPE * share);
+
+    int (*ext_share_immediate)(void * handle, const int immediate, SPDZEXT_VALTYPE * share);
 
     SPDZEXT_VALTYPE (*ext_test_conversion)(const SPDZEXT_VALTYPE);
 

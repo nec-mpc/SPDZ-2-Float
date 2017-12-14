@@ -548,8 +548,13 @@ void Instruction::execute(Processor& Proc) const
         Proc.write_C2(r[0],Proc.temp.ans2);
         break;
       case LDSI:
-        { Proc.temp.ansp.assign(n);
-          if (Proc.P.my_num()==0)
+    	  Proc.temp.ansp.assign(n);
+#if defined(EXTENDED_SPDZ_32)
+    	  Proc.ldsi_Ext_32(Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+#elif defined(EXTENDED_SPDZ_64)
+    	  Proc.ldsi_Ext_64(Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+#else
+        { if (Proc.P.my_num()==0)
             Proc.get_Sp_ref(r[0]).set_share(Proc.temp.ansp);
           else
             Proc.get_Sp_ref(r[0]).assign_zero();
@@ -557,6 +562,7 @@ void Instruction::execute(Processor& Proc) const
           tmp.mul(Proc.MCp.get_alphai(),Proc.temp.ansp);
           Proc.get_Sp_ref(r[0]).set_mac(tmp);
         }
+#endif
         break;
       case GLDSI:
         { Proc.temp.ans2.assign(n);
