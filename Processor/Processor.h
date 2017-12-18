@@ -319,7 +319,7 @@ class Processor : public ProcessorBase
 
   static void test_extension_conversion(const gfp & gfp_value);
 
-  void * spdz_gfp_ext_handle;
+  void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
 
 #endif
 
