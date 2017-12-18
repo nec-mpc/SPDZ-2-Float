@@ -906,28 +906,6 @@ void Processor::ldsi_Ext_32(gfp& value, Share<gfp>& share)
 	}
 }
 
-void Processor::test_extension_conversion(const gfp & original_gfp_value)
-{
-	u_int32_t outward_ui_value;
-	gfp2uint(original_gfp_value, outward_ui_value);
-
-	u_int32_t inward_ui_value = (*the_ext_lib.ext_test_conversion)(outward_ui_value);
-
-	if(inward_ui_value != outward_ui_value)
-	{
-		cerr << "Processor::test_extension_conversion failed at unsigned long level " << inward_ui_value << " != " << outward_ui_value << endl;
-		abort();
-	}
-
-	gfp restored_gfp_value;
-	restored_gfp_value.assign((long)inward_ui_value);
-	if(!original_gfp_value.equal(restored_gfp_value))
-	{
-		cerr << "Processor::test_extension_conversion failed at gfp level " << restored_gfp_value << " != " << original_gfp_value << endl;
-		abort();
-	}
-}
-
 #elif defined(EXTENDED_SPDZ_64)
 
 void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
@@ -1224,28 +1202,6 @@ void Processor::ldsi_Ext_64(gfp& value, Share<gfp>& share)
 	}
 }
 
-void Processor::test_extension_conversion(const gfp & original_gfp_value)
-{
-	u_int64_t outward_ul_value;
-	gfp2uint(original_gfp_value, outward_ul_value);
-
-	u_int64_t inward_ul_value = (*the_ext_lib.ext_test_conversion)(outward_ul_value);
-
-	if(inward_ul_value != outward_ul_value)
-	{
-		cerr << "Processor::test_extension_conversion failed at unsigned long level " << inward_ul_value << " != " << outward_ul_value << endl;
-		abort();
-	}
-
-	gfp restored_gfp_value;
-	restored_gfp_value.assign(inward_ul_value);
-	if(!original_gfp_value.equal(restored_gfp_value))
-	{
-		cerr << "Processor::test_extension_conversion failed at gfp level " << restored_gfp_value << " != " << original_gfp_value << endl;
-		abort();
-	}
-}
-
 #endif
 
 #if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
@@ -1273,7 +1229,6 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_mix_add) = NULL;
 	*(void**)(&ext_mix_sub_scalar) = NULL;
 	*(void**)(&ext_mix_sub_share) = NULL;
-	*(void**)(&ext_test_conversion) = NULL;
 
 	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -1320,7 +1275,6 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("mix_sub_scalar",ext_mix_sub_scalar)
 	LOAD_LIB_METHOD("mix_sub_share",ext_mix_sub_share)
 	LOAD_LIB_METHOD("share_immediate",ext_share_immediate)
-	LOAD_LIB_METHOD("test_conversion",ext_test_conversion)
 
 }
 

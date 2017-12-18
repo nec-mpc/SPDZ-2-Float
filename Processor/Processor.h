@@ -317,8 +317,6 @@ class Processor : public ProcessorBase
   template <class T>
   void PMult_Stop_prep_products(const vector<int>& reg, int size, T * products);
 
-  static void test_extension_conversion(const gfp & gfp_value);
-
   void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
 
 #endif
@@ -367,8 +365,6 @@ public:
     int (*ext_mix_sub_share)(void * handle, SPDZEXT_VALTYPE scalar, SPDZEXT_VALTYPE * share);
 
     int (*ext_share_immediate)(void * handle, const int immediate, SPDZEXT_VALTYPE * share);
-
-    SPDZEXT_VALTYPE (*ext_test_conversion)(const SPDZEXT_VALTYPE);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };
