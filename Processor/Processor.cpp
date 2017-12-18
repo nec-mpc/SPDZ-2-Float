@@ -31,17 +31,15 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
 
 #if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
-    spdz_ext_handle = NULL;
-	cout << "SPDZ extension library initializing." << endl;
-	stringstream ss;
-	ss << gfp::pr();
-	if(0 != (*the_ext_lib.ext_init)(&spdz_ext_handle, P.my_num(), P.num_players(), ss.str().c_str(), 10))
+    spdz_gfp_ext_handle = NULL;
+	cout << "SPDZ GFP extension library initializing." << endl;
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), "gfp", 10))
 	{
 		cerr << "SPDZ extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	cout << "SPDZ extension library initialized." << endl;
+	cout << "SPDZ GFP extension library initialized." << endl;
 #endif
 }
 
@@ -49,7 +47,7 @@ Processor::~Processor()
 {
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
 #if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
-	(*the_ext_lib.ext_term)(spdz_ext_handle);
+	(*the_ext_lib.ext_term)(spdz_gfp_ext_handle);
 #endif
 }
 
@@ -622,7 +620,7 @@ void Processor::POpen_Start_Ext_32(const vector<int>& reg, int size)
 	if(Sh_PO.size() == ui_share_values.size())
 	{
 		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ui_share_values.size(), &ui_share_values[0], 1))
+		if(0 != (*the_ext_lib.ext_start_open)(spdz_gfp_ext_handle, ui_share_values.size(), &ui_share_values[0], 1))
 		{
 			cerr << "Processor::POpen_Start_Ext_32 extension library start_open failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
@@ -651,7 +649,7 @@ void Processor::POpen_Stop_Ext_32(const vector<int>& reg, int size)
 
 	size_t open_count = 0;
 	u_int32_t * opens = NULL;
-	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
+	if(0 != (*the_ext_lib.ext_stop_open)(spdz_gfp_ext_handle, &open_count, &opens))
 	{
 		cerr << "Processor::POpen_Stop_Ext_32 extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -687,7 +685,7 @@ void Processor::POpen_Stop_Ext_32(const vector<int>& reg, int size)
 void Processor::Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
 	u_int32_t ui_a, ui_b, ui_c;
-	if(0 != (*the_ext_lib.ext_triple)(spdz_ext_handle, &ui_a, &ui_b, &ui_c))
+	if(0 != (*the_ext_lib.ext_triple)(spdz_gfp_ext_handle, &ui_a, &ui_b, &ui_c))
 	{
 		cerr << "Processor::Triple_Ext_32 extension library triple failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -701,7 +699,7 @@ void Processor::Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 void Processor::Input_Ext_32(Share<gfp>& input_value, const int input_party_id)
 {
 	u_int32_t ui_input_value;
-	if(0 != (*the_ext_lib.ext_input)(spdz_ext_handle, input_party_id, &ui_input_value))
+	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &ui_input_value))
 	{
 		cerr << "Processor::Input_Ext_32 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -712,7 +710,7 @@ void Processor::Input_Ext_32(Share<gfp>& input_value, const int input_party_id)
 
 void Processor::Input_Start_Ext_32(int player, int n_inputs)
 {
-	if(0 != (*the_ext_lib.ext_start_input)(spdz_ext_handle, player, n_inputs))
+	if(0 != (*the_ext_lib.ext_start_input)(spdz_gfp_ext_handle, player, n_inputs))
 	{
 		cerr << "Processor::Input_Start_Ext_32 extension library start input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -724,7 +722,7 @@ void Processor::Input_Stop_Ext_32(int /*player*/, vector<int> targets)
 {
 	size_t input_count = 0;
 	u_int32_t * inputs = NULL;
-	if(0 != (*the_ext_lib.ext_stop_input)(spdz_ext_handle, &input_count, &inputs))
+	if(0 != (*the_ext_lib.ext_stop_input)(spdz_gfp_ext_handle, &input_count, &inputs))
 	{
 		cerr << "Processor::Input_Stop_Ext_32 extension library stop input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -775,7 +773,7 @@ void Processor::PMult_Start_Ext_32(const vector<int>& reg, int size)
 	if(Sh_PO.size() == ul_share_values.size())
 	{
 		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_mult)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
 		{
 			cerr << "Processor::PMult_Start_Ext_32 extension library start_mult failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
@@ -800,7 +798,7 @@ void Processor::PMult_Stop_Ext_32(const vector<int>& reg, int size)
 
 	size_t product_count = 0;
 	u_int32_t * products = NULL;
-	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_ext_handle, &product_count, &products))
+	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_gfp_ext_handle, &product_count, &products))
 	{
 		cerr << "Processor::PMult_Stop_Ext_32 extension library stop_mult failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -836,7 +834,7 @@ void Processor::addm_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	u_int32_t share_value, arg;
 	gfp2uint(a.get_share(), share_value);
 	gfp2uint(b, arg);
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_ext_handle, &share_value, arg))
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, arg))
 	{
 		uint2share(share_value, c);
 	}
@@ -853,7 +851,7 @@ void Processor::subml_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	u_int32_t share_value, arg;
 	gfp2uint(a.get_share(), share_value);
 	gfp2uint(b, arg);
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_ext_handle, &share_value, arg))
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, arg))
 	{
 		uint2share(share_value, c);
 	}
@@ -870,7 +868,7 @@ void Processor::submr_Ext_32(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	u_int32_t share_value, arg;
 	gfp2uint(b.get_share(), share_value);
 	gfp2uint(a, arg);
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_ext_handle, arg, &share_value))
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, arg, &share_value))
 	{
 		uint2share(share_value, c);
 	}
@@ -886,7 +884,7 @@ void Processor::ldsi_Ext_32(gfp& value, Share<gfp>& share)
 {
 	u_int32_t ui_value, ui_share = 0;
 	gfp2uint(value, ui_value);
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_ext_handle, ui_value, &ui_share))
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, ui_value, &ui_share))
 	{
 		uint2share(ui_share, share);
 	}
@@ -941,7 +939,7 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 	if(Sh_PO.size() == ul_share_values.size())
 	{
 		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_open)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		if(0 != (*the_ext_lib.ext_start_open)(spdz_gfp_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
 		{
 			cerr << "Processor::POpen_Start_Ext_64 extension library start_open failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
@@ -969,7 +967,7 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 
 	size_t open_count = 0;
 	u_int64_t * opens = NULL;
-	if(0 != (*the_ext_lib.ext_stop_open)(spdz_ext_handle, &open_count, &opens))
+	if(0 != (*the_ext_lib.ext_stop_open)(spdz_gfp_ext_handle, &open_count, &opens))
 	{
 		cerr << "Processor::POpen_Stop_Ext_64 extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1005,7 +1003,7 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 void Processor::Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
 	u_int64_t ul_a, ul_b, ul_c;
-	if(0 != (*the_ext_lib.ext_triple)(spdz_ext_handle, &ul_a, &ul_b, &ul_c))
+	if(0 != (*the_ext_lib.ext_triple)(spdz_gfp_ext_handle, &ul_a, &ul_b, &ul_c))
 	{
 		cerr << "Processor::Triple_Ext_64 extension library triple failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1019,7 +1017,7 @@ void Processor::Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 void Processor::Input_Ext_64(Share<gfp>& input_value, const int input_party_id)
 {
 	u_int64_t ul_input_value;
-	if(0 != (*the_ext_lib.ext_input)(spdz_ext_handle, input_party_id, &ul_input_value))
+	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &ul_input_value))
 	{
 		cerr << "Processor::Input_Ext_64 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1030,7 +1028,7 @@ void Processor::Input_Ext_64(Share<gfp>& input_value, const int input_party_id)
 
 void Processor::Input_Start_Ext_64(int player, int n_inputs)
 {
-	if(0 != (*the_ext_lib.ext_start_input)(spdz_ext_handle, player, n_inputs))
+	if(0 != (*the_ext_lib.ext_start_input)(spdz_gfp_ext_handle, player, n_inputs))
 	{
 		cerr << "Processor::Input_Start_Ext_64 extension library start input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1042,7 +1040,7 @@ void Processor::Input_Stop_Ext_64(int /*player*/, vector<int> targets)
 {
 	size_t input_count = 0;
 	u_int64_t * inputs = NULL;
-	if(0 != (*the_ext_lib.ext_stop_input)(spdz_ext_handle, &input_count, &inputs))
+	if(0 != (*the_ext_lib.ext_stop_input)(spdz_gfp_ext_handle, &input_count, &inputs))
 	{
 		cerr << "Processor::Input_Stop_Ext_64 extension library stop input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1093,7 +1091,7 @@ void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
 	if(Sh_PO.size() == ul_share_values.size())
 	{
 		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_mult)(spdz_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
+		if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
 		{
 			cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
 			dlclose(the_ext_lib.ext_lib_handle);
@@ -1118,7 +1116,7 @@ void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
 
 	size_t product_count = 0;
 	u_int64_t * products = NULL;
-	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_ext_handle, &product_count, &products))
+	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_gfp_ext_handle, &product_count, &products))
 	{
 		cerr << "Processor::PMult_Stop_Ext_64 extension library stop_mult failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1154,7 +1152,7 @@ void Processor::addm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	u_int64_t share_value, arg;
 	gfp2uint(a.get_share(), share_value);
 	gfp2uint(b, arg);
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_ext_handle, &share_value, arg))
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, arg))
 	{
 		uint2share(share_value, c);
 	}
@@ -1171,7 +1169,7 @@ void Processor::subml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	u_int64_t share_value, arg;
 	gfp2uint(a.get_share(), share_value);
 	gfp2uint(b, arg);
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_ext_handle, &share_value, arg))
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, arg))
 	{
 		uint2share(share_value, c);
 	}
@@ -1188,7 +1186,7 @@ void Processor::submr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	u_int64_t share_value, arg;
 	gfp2uint(b.get_share(), share_value);
 	gfp2uint(a, arg);
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_ext_handle, arg, &share_value))
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, arg, &share_value))
 	{
 		uint2share(share_value, c);
 	}
@@ -1204,7 +1202,7 @@ void Processor::ldsi_Ext_64(gfp& value, Share<gfp>& share)
 {
 	u_int64_t ui_value, ui_share = 0;
 	gfp2uint(value, ui_value);
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_ext_handle, ui_value, &ui_share))
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, ui_value, &ui_share))
 	{
 		uint2share(ui_share, share);
 	}
