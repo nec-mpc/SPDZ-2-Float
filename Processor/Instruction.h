@@ -92,7 +92,7 @@ enum
     // Open
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
-#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ_64)
     E_STARTMULT = 0xA2,
     E_STOPMULT = 0xA3,
 #endif

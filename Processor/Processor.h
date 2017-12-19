@@ -263,7 +263,7 @@ class Processor : public ProcessorBase
   void POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
 
   template <class T>
-  void P_prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size);
+  void prep_shares(const vector<int>& reg, vector< Share<T> >& shares, int size);
 
   template <class T>
   void POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
@@ -278,25 +278,9 @@ class Processor : public ProcessorBase
     void maybe_decrypt_sequence(int client_id);
     void maybe_encrypt_sequence(int client_id);
 
-#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ_64)
   public:
 
-#if defined(EXTENDED_SPDZ_32)
-  void POpen_Start_Ext_32(const vector<int>& reg, int size);
-  void POpen_Stop_Ext_32(const vector<int>& reg, int size);
-  void Triple_Ext_32(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
-  void Input_Ext_32(Share<gfp>& input_value, const int input_party_id);
-  void Input_Start_Ext_32(int player, int n_inputs);
-  void Input_Stop_Ext_32(int player, vector<int> targets);
-  void PMult_Start_Ext_32(const vector<int>& reg, int size);
-  void PMult_Stop_Ext_32(const vector<int>& reg, int size);
-  void addm_32(Share<gfp>& a, gfp& b, Share<gfp>& c);
-  void subml_Ext_32(Share<gfp>& a, gfp& b, Share<gfp>& c);
-  void submr_Ext_32(gfp& a, Share<gfp>& b, Share<gfp>& c);
-  void ldsi_Ext_32(gfp& value, Share<gfp>& share);
-#endif
-
-#if defined(EXTENDED_SPDZ_64)
   void POpen_Start_Ext_64(const vector<int>& reg,int size);
   void POpen_Stop_Ext_64(const vector<int>& reg,int size);
   void PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
@@ -305,31 +289,35 @@ class Processor : public ProcessorBase
   void PInput_Stop_Ext_64(int player, vector<int> targets);
   void PMult_Start_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_Ext_64(const vector<int>& reg, int size);
+  void PMult_Stop_prep_products(const vector<int>& reg, int size, u_int64_t * products);
   void PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
   void PLdsi_Ext_64(gfp& value, Share<gfp>& share);
-#endif
 
-  template <class T>
-  void uint2sharep(const T in_value, Share<gfp> & out_value);
+  void GOpen_Start_Ext_64(const vector<int>& reg,int size);
+  void GOpen_Stop_Ext_64(const vector<int>& reg,int size);
+  void GTriple_Ext_64(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c);
+  void GInput_Ext_64(Share<gf2n>& input_value, const int input_party_id);
+  void GInput_Start_Ext_64(int player, int n_inputs);
+  void GInput_Stop_Ext_64(int player, vector<int> targets);
+  void GMult_Start_Ext_64(const vector<int>& reg, int size);
+  void GMult_Stop_Ext_64(const vector<int>& reg, int size);
+  void GMult_Stop_prep_products(const vector<int>& reg, int size, u_int64_t * products);
+  void GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
+  void GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
+  void GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c);
+  void GLdsi_Ext_64(gf2n& value, Share<gf2n>& share);
 
-  template <class T>
-  void PMult_Stop_prep_products(const vector<int>& reg, int size, T * products);
+  void uint2sharep(const u_int64_t in_value, Share<gfp> & out_value);
+  void uint2shareg(const u_int64_t in_value, Share<gf2n> & out_value);
+
 
   void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
 
 #endif
 
 };
-
-#if defined(EXTENDED_SPDZ_32) || defined(EXTENDED_SPDZ_64)
-
-#if defined(EXTENDED_SPDZ_32)
-#define SPDZEXT_VALTYPE	u_int32_t
-#elif defined(EXTENDED_SPDZ_64)
-#define SPDZEXT_VALTYPE	u_int64_t
-#endif
 
 class spdz_ext_ifc
 {
@@ -344,31 +332,30 @@ public:
 
     int (*ext_offline)(void * handle, const int offline_size);
 
-    int (*ext_start_open)(void * handle, const size_t share_count, const SPDZEXT_VALTYPE * shares, int verify);
-    int (*ext_stop_open)(void * handle, size_t * open_count, SPDZEXT_VALTYPE ** opens);
+    int (*ext_start_open)(void * handle, const size_t share_count, const u_int64_t * shares, int verify);
+    int (*ext_stop_open)(void * handle, size_t * open_count, u_int64_t ** opens);
 
-    int (*ext_triple)(void * handle, SPDZEXT_VALTYPE * a, SPDZEXT_VALTYPE * b, SPDZEXT_VALTYPE * c);
+    int (*ext_triple)(void * handle, u_int64_t * a, u_int64_t * b, u_int64_t * c);
 
-    int (*ext_input)(void * handle, const int input_of_pid, SPDZEXT_VALTYPE * input_value);
+    int (*ext_input)(void * handle, const int input_of_pid, u_int64_t * input_value);
 
     int (*ext_start_input)(void * handle, const int input_of_pid, const size_t num_of_inputs);
-    int (*ext_stop_input)(void * handle, size_t * input_count, SPDZEXT_VALTYPE ** inputs);
+    int (*ext_stop_input)(void * handle, size_t * input_count, u_int64_t ** inputs);
 
     int (*ext_start_verify)(void * handle, int * error);
     int (*ext_stop_verify)(void * handle);
 
-    int (*ext_start_mult)(void * handle, const size_t share_count, const SPDZEXT_VALTYPE * shares, int verify);
-    int (*ext_stop_mult)(void * handle, size_t * product_count, SPDZEXT_VALTYPE ** products);
+    int (*ext_start_mult)(void * handle, const size_t share_count, const u_int64_t * shares, int verify);
+    int (*ext_stop_mult)(void * handle, size_t * product_count, u_int64_t ** products);
 
-    int (*ext_mix_add)(void * handle, SPDZEXT_VALTYPE * share, SPDZEXT_VALTYPE scalar);
-    int (*ext_mix_sub_scalar)(void * handle, SPDZEXT_VALTYPE * share, SPDZEXT_VALTYPE scalar);
-    int (*ext_mix_sub_share)(void * handle, SPDZEXT_VALTYPE scalar, SPDZEXT_VALTYPE * share);
+    int (*ext_mix_add)(void * handle, u_int64_t * share, u_int64_t scalar);
+    int (*ext_mix_sub_scalar)(void * handle, u_int64_t * share, u_int64_t scalar);
+    int (*ext_mix_sub_share)(void * handle, u_int64_t scalar, u_int64_t * share);
 
-    int (*ext_share_immediate)(void * handle, const int immediate, SPDZEXT_VALTYPE * share);
+    int (*ext_share_immediate)(void * handle, const int immediate, u_int64_t * share);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };
-#endif
 
 template<> inline Share<gf2n>& Processor::get_S_ref(int i) { return get_S2_ref(i); }
 template<> inline gf2n& Processor::get_C_ref(int i)        { return get_C2_ref(i); }
