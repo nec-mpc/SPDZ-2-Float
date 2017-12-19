@@ -299,20 +299,20 @@ class Processor : public ProcessorBase
 #if defined(EXTENDED_SPDZ_64)
   void POpen_Start_Ext_64(const vector<int>& reg,int size);
   void POpen_Stop_Ext_64(const vector<int>& reg,int size);
-  void Triple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
-  void Input_Ext_64(Share<gfp>& input_value, const int input_party_id);
-  void Input_Start_Ext_64(int player, int n_inputs);
-  void Input_Stop_Ext_64(int player, vector<int> targets);
+  void PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+  void PInput_Ext_64(Share<gfp>& input_value, const int input_party_id);
+  void PInput_Start_Ext_64(int player, int n_inputs);
+  void PInput_Stop_Ext_64(int player, vector<int> targets);
   void PMult_Start_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_Ext_64(const vector<int>& reg, int size);
-  void addm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
-  void subml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
-  void submr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
-  void ldsi_Ext_64(gfp& value, Share<gfp>& share);
+  void PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
+  void PLdsi_Ext_64(gfp& value, Share<gfp>& share);
 #endif
 
   template <class T>
-  void uint2share(const T in_value, Share<gfp> & out_value);
+  void uint2sharep(const T in_value, Share<gfp> & out_value);
 
   template <class T>
   void PMult_Stop_prep_products(const vector<int>& reg, int size, T * products);
