@@ -294,6 +294,7 @@ class Processor : public ProcessorBase
   void PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
   void PLdsi_Ext_64(gfp& value, Share<gfp>& share);
+  void PBit_Ext_64(Share<gfp>& share);
 
   void GOpen_Start_Ext_64(const vector<int>& reg,int size);
   void GOpen_Stop_Ext_64(const vector<int>& reg,int size);
@@ -308,6 +309,7 @@ class Processor : public ProcessorBase
   void GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
   void GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c);
   void GLdsi_Ext_64(gf2n& value, Share<gf2n>& share);
+  void GBit_Ext_64(Share<gf2n>& share);
 
   void uint2sharep(const u_int64_t in_value, Share<gfp> & out_value);
   void uint2shareg(const u_int64_t in_value, Share<gf2n> & out_value);
@@ -353,6 +355,7 @@ public:
     int (*ext_mix_sub_share)(void * handle, u_int64_t scalar, u_int64_t * share);
 
     int (*ext_share_immediate)(void * handle, const int immediate, u_int64_t * share);
+    int (*ext_bit)(void * handle, u_int64_t * share);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };

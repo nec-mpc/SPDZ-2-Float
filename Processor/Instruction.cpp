@@ -1128,7 +1128,11 @@ void Instruction::execute(Processor& Proc) const
         Proc.DataF.get_two(DATA_GF2N, DATA_SQUARE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
         break;
       case BIT:
+#if defined(EXTENDED_SPDZ_64)
+    	Proc.PBit_Ext_64(Proc.get_Sp_ref(r[0]));
+#else
         Proc.DataF.get_one(DATA_MODP, DATA_BIT, Proc.get_Sp_ref(r[0]));
+#endif
         break;
       case GBIT:
         Proc.DataF.get_one(DATA_GF2N, DATA_BIT, Proc.get_S2_ref(r[0]));

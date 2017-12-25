@@ -33,7 +33,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ_64)
     spdz_gfp_ext_handle = NULL;
 	cout << "SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), "gfp", 10))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), "gfp", 200))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -43,7 +43,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 
     spdz_gf2n_ext_handle = NULL;
 	cout << "SPDZ GF2N extension library initializing." << endl;
-	if(0 != (*the_ext_lib.ext_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), "gf2n40", 10))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), "gf2n40", 200))
 	{
 		cerr << "SPDZ GF2N extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -678,10 +678,6 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 			dlclose(the_ext_lib.ext_lib_handle);
 			abort();
 		}
-		else
-		{
-			cout << "Processor::POpen_Start_Ext_64 extension start open launched." << endl;
-		}
 	}
 	else
 	{
@@ -942,6 +938,21 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 	else
 	{
 		cerr << "Processor::PLdsi_Ext_64 extension library share_immediate failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::PBit_Ext_64(Share<gfp>& share)
+{
+	u_int64_t ui_share = 0;
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &ui_share))
+	{
+		uint2sharep(ui_share, share);
+	}
+	else
+	{
+		cerr << "Processor::PBit_Ext_64 extension library bit failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
@@ -1230,18 +1241,28 @@ void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 {
 	u_int64_t ui_value, ui_share = 0;
 	ui_value = value.get_word();
-	//char sz[32];
-	//snprintf(sz, 32, "%016lX", ui_value);
-	//std::cout << "Processor::GLdsi_Ext_64: gf2n value = " << sz << std::endl;
 	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, ui_value, &ui_share))
 	{
-		//snprintf(sz, 32, "%016lX", ui_share);
-		//std::cout << "Processor::GLdsi_Ext_64: gf2n share value = " << sz << std::endl;
 		uint2shareg(ui_share, share);
 	}
 	else
 	{
 		cerr << "Processor::GLdsi_Ext_64 extension library share_immediate failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
+void Processor::GBit_Ext_64(Share<gf2n>& share)
+{
+	u_int64_t ui_share = 0;
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &ui_share))
+	{
+		uint2shareg(ui_share, share);
+	}
+	else
+	{
+		cerr << "Processor::GBit_Ext_64 extension library bit failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
@@ -1269,6 +1290,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_mix_add) = NULL;
 	*(void**)(&ext_mix_sub_scalar) = NULL;
 	*(void**)(&ext_mix_sub_share) = NULL;
+	*(void**)(&ext_bit) = NULL;
 
 	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -1315,7 +1337,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("mix_sub_scalar",ext_mix_sub_scalar)
 	LOAD_LIB_METHOD("mix_sub_share",ext_mix_sub_share)
 	LOAD_LIB_METHOD("share_immediate",ext_share_immediate)
-
+	LOAD_LIB_METHOD("bit", ext_bit)
 }
 
 spdz_ext_ifc::~spdz_ext_ifc()
