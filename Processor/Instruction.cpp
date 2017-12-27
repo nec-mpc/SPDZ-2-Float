@@ -1135,13 +1135,25 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GBIT:
+#if defined(EXTENDED_SPDZ_64)
+    	  Proc.GBit_Ext_64(Proc.get_S2_ref(r[0]));
+#else
         Proc.DataF.get_one(DATA_GF2N, DATA_BIT, Proc.get_S2_ref(r[0]));
+#endif
         break;
       case INV:
+#if defined(EXTENDED_SPDZ_64)
+    	Proc.PInverse_Ext_64(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
+#else
         Proc.DataF.get_two(DATA_MODP, DATA_INVERSE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
+#endif
         break;
       case GINV:
+#if defined(EXTENDED_SPDZ_64)
+    	  Proc.GInverse_Ext_64(Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
+#else
         Proc.DataF.get_two(DATA_GF2N, DATA_INVERSE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
+#endif
         break;
       case INPUTMASK:
         Proc.DataF.get_input(Proc.get_Sp_ref(r[0]), Proc.temp.ansp, n);

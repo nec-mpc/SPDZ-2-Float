@@ -958,6 +958,22 @@ void Processor::PBit_Ext_64(Share<gfp>& share)
 	}
 }
 
+void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse)
+{
+	u_int64_t ui_share_value = 0, ui_share_inverse = 0;
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &ui_share_value, &ui_share_inverse))
+	{
+		uint2sharep(ui_share_value, share_value);
+		uint2sharep(ui_share_inverse, share_inverse);
+	}
+	else
+	{
+		cerr << "Processor::PBit_Ext_64 extension library inverse failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
 void Processor::GOpen_Start_Ext_64(const vector<int>& reg,int size)
 {
 	int sz=reg.size();
@@ -1268,6 +1284,22 @@ void Processor::GBit_Ext_64(Share<gf2n>& share)
 	}
 }
 
+void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inverse)
+{
+	u_int64_t ui_share_value = 0, ui_share_inverse = 0;
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &ui_share_value, &ui_share_inverse))
+	{
+		uint2shareg(ui_share_value, share_value);
+		uint2shareg(ui_share_inverse, share_inverse);
+	}
+	else
+	{
+		cerr << "Processor::GInverse_Ext_64 extension library inverse failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
+	}
+}
+
 #define LOAD_LIB_METHOD(Name,Proc)	\
 if(0 != load_extension_method(Name, (void**)(&Proc), ext_lib_handle)) { dlclose(ext_lib_handle); abort(); }
 
@@ -1291,6 +1323,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&ext_mix_sub_scalar) = NULL;
 	*(void**)(&ext_mix_sub_share) = NULL;
 	*(void**)(&ext_bit) = NULL;
+	*(void**)(&ext_inverse) = NULL;
 
 	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -1338,6 +1371,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("mix_sub_share",ext_mix_sub_share)
 	LOAD_LIB_METHOD("share_immediate",ext_share_immediate)
 	LOAD_LIB_METHOD("bit", ext_bit)
+	LOAD_LIB_METHOD("inverse", ext_inverse)
 }
 
 spdz_ext_ifc::~spdz_ext_ifc()
