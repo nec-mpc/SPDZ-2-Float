@@ -1,0 +1,6 @@
+
+a = sint(25)
+
+clr_a = a.reveal()
+
+print_ln('clear a=%s', clr_a)

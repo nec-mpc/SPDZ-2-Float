@@ -1,0 +1,9 @@
+
+a = sint.get_input_from(0)
+b = sint.get_input_from(1)
+x = sfix()
+x = a/b
+c_a = a.reveal()
+c_b = b.reveal()
+c_x = x.reveal()
+print_ln('a=%s; b=%s; x=%s;', c_a, c_b, c_x) 

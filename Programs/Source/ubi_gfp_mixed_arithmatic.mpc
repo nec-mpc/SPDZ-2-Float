@@ -1,0 +1,24 @@
+
+b = sint.get_input_from(1)
+
+clr_b = b.reveal()
+
+a = sint.get_input_from(0)
+
+addml = a+clr_b
+addmr = clr_b+a
+subml = a-clr_b
+submr = clr_b-a
+
+clr_a = a.reveal()
+c_addml = addml.reveal()
+c_addmr = addmr.reveal()
+c_subml = subml.reveal()
+c_submr = submr.reveal()
+
+print_ln('a=%s;', clr_a)
+print_ln('b=%s;', clr_b)
+print_ln('a+b=%s;', c_addml)
+print_ln('b+a=%s;', c_addmr)
+print_ln('a-b=%s;', c_subml)
+print_ln('b-a=%s;', c_submr)

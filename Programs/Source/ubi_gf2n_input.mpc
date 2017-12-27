@@ -1,0 +1,10 @@
+
+a = sgf2n.get_input_from(0)
+b = sgf2n.get_input_from(1)
+c = sgf2n.get_input_from(2)
+
+clr_a = a.reveal()
+clr_b = b.reveal()
+clr_c = c.reveal()
+
+print_ln('clear a=%s, clear b=%s, clear b=%s', clr_a, clr_b, clr_c)

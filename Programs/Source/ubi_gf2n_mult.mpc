@@ -1,0 +1,11 @@
+
+a = sgf2n.get_input_from(0)
+b = sgf2n.get_input_from(1)
+
+product = a*b
+
+clr_product = product.reveal()
+clr_a = a.reveal()
+clr_b = b.reveal()
+
+print_ln('a=%s; b=%s; product=%s', clr_a, clr_b, clr_product)
