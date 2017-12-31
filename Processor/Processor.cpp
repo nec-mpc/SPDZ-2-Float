@@ -22,6 +22,14 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 : thread_num(thread_num),DataF(DataF),P(P),MC2(MC2),MCp(MCp),machine(machine),
   input2(*this,MC2),inputp(*this,MCp),privateOutput2(*this),privateOutputp(*this),sent(0),rounds(0),
   external_clients(ExternalClients(P.my_num(), DataF.prep_data_dir)),binary_file_io(Binary_File_IO())
+#if defined(EXTENDED_SPDZ_64)
+  , po_shares(NULL), po_opens(NULL), po_size(0)
+  , pi_inputs(NULL), pi_size(0)
+  , pm_shares(NULL), pm_products(NULL), pm_size(0)
+  , go_shares(NULL), go_opens(NULL), go_size(0)
+  , gi_inputs(NULL), gi_size(0)
+  , gm_shares(NULL), gm_products(NULL), gm_size(0)
+#endif
 {
   reset(program,0);
 
@@ -542,117 +550,6 @@ void Processor::maybe_encrypt_sequence(int client_id)
 
 #if defined(EXTENDED_SPDZ_64)
 
-void uint2gfps(vector<gfp> & values, const u_int64_t * uint_values, const size_t uint_value_count)
-{
-	values.resize(uint_value_count);
-	for(size_t i = 0; i < uint_value_count; i++)
-	{
-		values[i].assign((u_int64_t)uint_values[i]);
-	}
-}
-
-void uint2gf2ns(vector<gf2n> & values, const u_int64_t * uint_values, const size_t uint_value_count)
-{
-	values.resize(uint_value_count);
-	for(size_t i = 0; i < uint_value_count; i++)
-	{
-		values[i].assign((u_int64_t)uint_values[i]);
-	}
-}
-
-void gfp2uint(const gfp & gfp_value, u_int64_t & t)
-{
-	bigint bi_value;
-	to_bigint(bi_value, gfp_value);
-	t = mpz_get_ui(bi_value.get_mpz_t());
-}
-
-void Processor::uint2sharep(const u_int64_t in_value, Share<gfp> & out_value)
-{
-	gfp mac, value;
-	value.assign(in_value);
-	mac.mul(MCp.get_alphai(), value);
-	out_value.set_share(value);
-	out_value.set_mac(mac);
-}
-
-void Processor::uint2shareg(const u_int64_t in_value, Share<gf2n> & out_value)
-{
-	gf2n mac, value;
-	value.assign(in_value);
-	mac.mul(MC2.get_alphai(), value);
-	out_value.set_share(value);
-	out_value.set_mac(mac);
-}
-
-void pshares2uints(const vector< Share<gfp> > & shares, std::vector< u_int64_t > & uint_values)
-{
-	uint_values.clear();
-	for(vector< Share<gfp> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
-	{
-		u_int64_t v;
-		gfp2uint(i->get_share(), v);
-		uint_values.push_back(v);
-	}
-}
-
-void gshares2uints(const vector< Share<gf2n> > & shares, std::vector< u_int64_t > & uint_values)
-{
-	uint_values.clear();
-	for(vector< Share<gf2n> >::const_iterator i = shares.begin(); i != shares.end(); ++i)
-	{
-		uint_values.push_back(i->get_share().get_word());
-	}
-}
-
-void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size, u_int64_t * products)
-{
-	if (size>1)
-	{
-		size_t product_idx = 0;
-		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
-		{
-			vector<Share<gfp> >::iterator insert_point=get_S<gfp>().begin()+*reg_it;
-			for(int i = 0; i < size; ++i)
-			{
-				uint2sharep(products[product_idx++], *(insert_point + i));
-			}
-		}
-	}
-	else
-	{
-		int sz=reg.size();
-		for(int i = 0; i < sz; ++i)
-		{
-			uint2sharep(products[i], get_S_ref<gfp>(reg[i]));
-		}
-	}
-}
-
-void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size, u_int64_t * products)
-{
-	if (size>1)
-	{
-		size_t product_idx = 0;
-		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
-		{
-			vector<Share<gf2n> >::iterator insert_point=get_S<gf2n>().begin()+*reg_it;
-			for(int i = 0; i < size; ++i)
-			{
-				uint2shareg(products[product_idx++], *(insert_point + i));
-			}
-		}
-	}
-	else
-	{
-		int sz=reg.size();
-		for(int i = 0; i < sz; ++i)
-		{
-			uint2shareg(products[i], get_S_ref<gf2n>(reg[i]));
-		}
-	}
-}
-
 void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 {
 	int sz=reg.size();
@@ -666,22 +563,14 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
 
-	//the share values are saved as unsigned long
-	std::vector<u_int64_t> ul_share_values;
-	pshares2uints(Sh_PO, ul_share_values);
-	if(Sh_PO.size() == ul_share_values.size())
+	//the share values are saved as mpz
+	alloc_po_mpz(Sh_PO.size());
+	PShares2mpz(Sh_PO, po_shares);
+
+	//the extension library is given the shares' values and returns opens' values
+	if(0 != (*the_ext_lib.ext_start_open)(spdz_gfp_ext_handle, po_size, po_shares, po_opens, 1))
 	{
-		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_open)(spdz_gfp_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
-		{
-			cerr << "Processor::POpen_Start_Ext_64 extension library start_open failed." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-	}
-	else
-	{
-		cout << "Processor::POpen_Start_Ext_64 ui_share_values size mismatch with PO_shares." << endl;
+		cerr << "Processor::POpen_Start_Ext_64 extension library start_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
@@ -694,35 +583,15 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 	int sz=reg.size();
 	PO.resize(sz*size);
 
-	size_t open_count = 0;
-	u_int64_t * opens = NULL;
-	if(0 != (*the_ext_lib.ext_stop_open)(spdz_gfp_ext_handle, &open_count, &opens))
+	if(0 != (*the_ext_lib.ext_stop_open)(spdz_gfp_ext_handle))
 	{
 		cerr << "Processor::POpen_Stop_Ext_64 extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if(NULL != opens)
-	{
-		if(PO.size() != open_count)
-		{
-			cerr << "Processor::POpen_Stop_Ext_64 size mismatch between share and open values array." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		uint2gfps(PO, opens, open_count);
-		delete []opens;
-		opens = NULL;
-		open_count = 0;
-	}
-	else
-	{
-		cerr << "Processor::POpen_Stop_Ext_64 null open values array returned." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
-
+	Pmpz2gfps(po_opens, PO);
+	free_po_mpz();
 	POpen_Stop_prep_opens(reg, PO, C, size);
 
 	sent += reg.size() * size;
@@ -731,33 +600,45 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 
 void Processor::PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
-	u_int64_t ul_a, ul_b, ul_c;
-	if(0 != (*the_ext_lib.ext_triple)(spdz_gfp_ext_handle, &ul_a, &ul_b, &ul_c))
+	mpz_t ma, mb, mc;
+
+	mpz_init(ma);
+	mpz_init(mb);
+	mpz_init(mc);
+
+	if(0 != (*the_ext_lib.ext_triple)(spdz_gfp_ext_handle, &ma, &mb, &mc))
 	{
 		cerr << "Processor::PTriple_Ext_64 extension library triple failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	uint2sharep(ul_a, a);
-	uint2sharep(ul_b, b);
-	uint2sharep(ul_c, c);
+	Pmpz2share(&ma, a);
+	Pmpz2share(&mb, b);
+	Pmpz2share(&mc, c);
+
+	mpz_clear(ma);
+	mpz_clear(mb);
+	mpz_clear(mc);
 }
 
 void Processor::PInput_Ext_64(Share<gfp>& input_value, const int input_party_id)
 {
-	u_int64_t ul_input_value;
-	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &ul_input_value))
+	mpz_t mpz_input_value;
+	mpz_init(mpz_input_value);
+	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &mpz_input_value))
 	{
 		cerr << "Processor::PInput_Ext_64 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	uint2sharep(ul_input_value, input_value);
+	Pmpz2share(&mpz_input_value, input_value);
+	mpz_clear(mpz_input_value);
 }
 
 void Processor::PInput_Start_Ext_64(int player, int n_inputs)
 {
-	if(0 != (*the_ext_lib.ext_start_input)(spdz_gfp_ext_handle, player, n_inputs))
+	alloc_pi_mpz(n_inputs);
+	if(0 != (*the_ext_lib.ext_start_input)(spdz_gfp_ext_handle, player, n_inputs, pi_inputs))
 	{
 		cerr << "Processor::PInput_Start_Ext_64 extension library start input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -767,38 +648,28 @@ void Processor::PInput_Start_Ext_64(int player, int n_inputs)
 
 void Processor::PInput_Stop_Ext_64(int /*player*/, vector<int> targets)
 {
-	size_t input_count = 0;
-	u_int64_t * inputs = NULL;
-	if(0 != (*the_ext_lib.ext_stop_input)(spdz_gfp_ext_handle, &input_count, &inputs))
+	if(0 != (*the_ext_lib.ext_stop_input)(spdz_gfp_ext_handle))
 	{
 		cerr << "Processor::PInput_Stop_Ext_64 extension library stop input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if(NULL == inputs)
+	if(targets.size() == pi_size)
 	{
-		cerr << "Processor::PInput_Stop_Ext_64 extension library stop input returned null ptr." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
-
-	if(targets.size() == input_count)
-	{
-		for(size_t i = 0; i < input_count; ++i)
+		for(size_t i = 0; i < pi_size; ++i)
 		{
 			Share<gfp>& share = get_S_ref<gfp>(targets[i]);
-			uint2sharep(inputs[i], share);
+			Pmpz2share(pi_inputs + i, share);
 		}
 	}
 	else
 	{
-		cerr << "Processor::PInput_Stop_Ext_64 extension library stop input returned mismatched number of inputs " << targets.size() << "/" << input_count << endl;
+		cerr << "Processor::PInput_Stop_Ext_64 extension library stop input mismatched number of inputs " << targets.size() << "/" << pi_size << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-
-	delete []inputs;
+	free_pi_mpz();
 }
 
 void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
@@ -814,76 +685,72 @@ void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
 	vector<gfp>& PO = get_PO<gfp>();
 	PO.resize(sz*size);
 
-	//the share values are saved as unsigned long
-	std::vector<u_int64_t> ul_share_values;
-	pshares2uints(Sh_PO, ul_share_values);
-	if(Sh_PO.size() == ul_share_values.size())
+	//the share values are saved as mpz
+	alloc_pm_mpz(Sh_PO.size());
+	PShares2mpz(Sh_PO, pm_shares);
+
+	if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, pm_size, pm_shares, pm_products, 1))
 	{
-		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
-		{
-			cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		else
-		{
-			cout << "Processor::PMult_Start_Ext_64 extension library start_mult launched." << endl;
-		}
+		cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
 	}
 	else
 	{
-		cout << "Processor::PMult_Start_Ext_64 ui_share_values size mismatch with PO_shares." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
+		cout << "Processor::PMult_Start_Ext_64 extension library start_mult launched." << endl;
 	}
 }
 
 void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
 {
-	int sz=reg.size();
-
-	size_t product_count = 0;
-	u_int64_t * products = NULL;
-	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_gfp_ext_handle, &product_count, &products))
+	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_gfp_ext_handle))
 	{
 		cerr << "Processor::PMult_Stop_Ext_64 extension library stop_mult failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if(NULL != products)
-	{
-		if((sz*size) != (int)product_count)
-		{
-			cerr << "Processor::PMult_Stop_Ext_64 size mismatch between share and product values array." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		PMult_Stop_prep_products(reg, size, products);
-		delete []products;
-		products = NULL;
-		product_count = 0;
-	}
-	else
-	{
-		cerr << "Processor::PMult_Stop_Ext_64 null product values array returned." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
+	PMult_Stop_prep_products(reg, size);
+	free_pm_mpz();
 
 	sent += reg.size() * size;
 	rounds++;
 }
 
+void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size)
+{
+	if (size>1)
+	{
+		size_t product_idx = 0;
+		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			vector<Share<gfp> >::iterator insert_point=get_S<gfp>().begin()+*reg_it;
+			for(int i = 0; i < size; ++i)
+			{
+				Pmpz2share(pm_products + (product_idx++), *(insert_point + i));
+			}
+		}
+	}
+	else
+	{
+		int sz=reg.size();
+		for(int i = 0; i < sz; ++i)
+		{
+			Pmpz2share(pm_products + i, get_S_ref<gfp>(reg[i]));
+		}
+	}
+}
+
 void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	u_int64_t share_value, arg;
-	gfp2uint(a.get_share(), share_value);
-	gfp2uint(b, arg);
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, arg))
+	mpz_t share_value, arg;
+	mpz_init(share_value);
+	mpz_init(arg);
+	to_bigint(*((mpz_class*)(&share_value)), a.get_share());
+	to_bigint(*((mpz_class*)(&arg)), b);
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, &arg))
 	{
-		uint2sharep(share_value, c);
+		Pmpz2share(&share_value, c);
 	}
 	else
 	{
@@ -891,16 +758,20 @@ void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(share_value);
+	mpz_clear(arg);
 }
 
 void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	u_int64_t share_value, arg;
-	gfp2uint(a.get_share(), share_value);
-	gfp2uint(b, arg);
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, arg))
+	mpz_t share_value, arg;
+	mpz_init(share_value);
+	mpz_init(arg);
+	to_bigint(*((mpz_class*)(&share_value)), a.get_share());
+	to_bigint(*((mpz_class*)(&arg)), b);
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, &arg))
 	{
-		uint2sharep(share_value, c);
+		Pmpz2share(&share_value, c);
 	}
 	else
 	{
@@ -908,16 +779,20 @@ void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(share_value);
+	mpz_clear(arg);
 }
 
 void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 {
-	u_int64_t share_value, arg;
-	gfp2uint(b.get_share(), share_value);
-	gfp2uint(a, arg);
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, arg, &share_value))
+	mpz_t share_value, arg;
+	mpz_init(share_value);
+	mpz_init(arg);
+	to_bigint(*((mpz_class*)(&share_value)), b.get_share());
+	to_bigint(*((mpz_class*)(&arg)), a);
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, &arg, &share_value))
 	{
-		uint2sharep(share_value, c);
+		Pmpz2share(&share_value, c);
 	}
 	else
 	{
@@ -925,15 +800,19 @@ void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(share_value);
+	mpz_clear(arg);
 }
 
 void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 {
-	u_int64_t ui_value, ui_share = 0;
-	gfp2uint(value, ui_value);
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, ui_value, &ui_share))
+	mpz_t mpz_value, mpz_share;
+	mpz_init(mpz_value);
+	mpz_init(mpz_share);
+	to_bigint(*((mpz_class*)(&mpz_value)), value);
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, &mpz_value, &mpz_share))
 	{
-		uint2sharep(ui_share, share);
+		Pmpz2share(&mpz_share, share);
 	}
 	else
 	{
@@ -941,14 +820,17 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(mpz_value);
+	mpz_clear(mpz_share);
 }
 
 void Processor::PBit_Ext_64(Share<gfp>& share)
 {
-	u_int64_t ui_share = 0;
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &ui_share))
+	mpz_t mpz_share;
+	mpz_init(mpz_share);
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share))
 	{
-		uint2sharep(ui_share, share);
+		Pmpz2share(&mpz_share, share);
 	}
 	else
 	{
@@ -956,15 +838,18 @@ void Processor::PBit_Ext_64(Share<gfp>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(mpz_share);
 }
 
 void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse)
 {
-	u_int64_t ui_share_value = 0, ui_share_inverse = 0;
-	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &ui_share_value, &ui_share_inverse))
+	mpz_t mpz_share_value, mpz_share_inverse;
+	mpz_init(mpz_share_value);
+	mpz_init(mpz_share_inverse);
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &mpz_share_value, &mpz_share_inverse))
 	{
-		uint2sharep(ui_share_value, share_value);
-		uint2sharep(ui_share_inverse, share_inverse);
+		Pmpz2share(&mpz_share_value, share_value);
+		Pmpz2share(&mpz_share_inverse, share_inverse);
 	}
 	else
 	{
@@ -972,6 +857,35 @@ void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inver
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(mpz_share_value);
+	mpz_clear(mpz_share_inverse);
+}
+
+void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values)
+{
+	size_t count = shares.size();
+	for(size_t i = 0; i < count; i++)
+	{
+		to_bigint(*((mpz_class*)(share_values + i)), shares[i].get_share());
+	}
+}
+
+void Processor::Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps)
+{
+	size_t count = gfps.size();
+	for(size_t i = 0; i < count; i++)
+	{
+		to_gfp(gfps[i], *((mpz_class*)(mpz_values + i)));
+	}
+}
+
+void Processor::Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv)
+{
+	gfp mac, value;
+	to_gfp(value, *((mpz_class*)mpzv));
+	mac.mul(MCp.get_alphai(), value);
+	shv.set_share(value);
+	shv.set_mac(mac);
 }
 
 void Processor::GOpen_Start_Ext_64(const vector<int>& reg,int size)
@@ -987,28 +901,18 @@ void Processor::GOpen_Start_Ext_64(const vector<int>& reg,int size)
 	vector<gf2n>& PO = get_PO<gf2n>();
 	PO.resize(sz*size);
 
-	//the share values are saved as unsigned long
-	std::vector<u_int64_t> ul_share_values;
-	gshares2uints(Sh_PO, ul_share_values);
-	if(Sh_PO.size() == ul_share_values.size())
+	alloc_go_mpz(Sh_PO.size());
+	GShares2mpz(Sh_PO, go_shares);
+
+	if(0 != (*the_ext_lib.ext_start_open)(spdz_gf2n_ext_handle, go_size, go_shares, go_opens, 1))
 	{
-		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_open)(spdz_gf2n_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
-		{
-			cerr << "Processor::GOpen_Start_Ext_64 extension library start_open failed." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		else
-		{
-			cout << "Processor::GOpen_Start_Ext_64 extension start open launched." << endl;
-		}
+		cerr << "Processor::GOpen_Start_Ext_64 extension library start_open failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
 	}
 	else
 	{
-		cout << "Processor::GOpen_Start_Ext_64 ui_share_values size mismatch with PO_shares." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
+		cout << "Processor::GOpen_Start_Ext_64 extension start open launched." << endl;
 	}
 }
 
@@ -1019,35 +923,15 @@ void Processor::GOpen_Stop_Ext_64(const vector<int>& reg,int size)
 	int sz=reg.size();
 	PO.resize(sz*size);
 
-	size_t open_count = 0;
-	u_int64_t * opens = NULL;
-	if(0 != (*the_ext_lib.ext_stop_open)(spdz_gf2n_ext_handle, &open_count, &opens))
+	if(0 != (*the_ext_lib.ext_stop_open)(spdz_gf2n_ext_handle))
 	{
 		cerr << "Processor::GOpen_Stop_Ext_64 extension library stop_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if(NULL != opens)
-	{
-		if(PO.size() != open_count)
-		{
-			cerr << "Processor::GOpen_Stop_Ext_64 size mismatch between share and open values array." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		uint2gf2ns(PO, opens, open_count);
-		delete []opens;
-		opens = NULL;
-		open_count = 0;
-	}
-	else
-	{
-		cerr << "Processor::GOpen_Stop_Ext_64 null open values array returned." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
-
+	Gmpz2gf2ns(go_opens, PO);
+	free_go_mpz();
 	POpen_Stop_prep_opens(reg, PO, C, size);
 
 	sent += reg.size() * size;
@@ -1056,33 +940,42 @@ void Processor::GOpen_Stop_Ext_64(const vector<int>& reg,int size)
 
 void Processor::GTriple_Ext_64(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c)
 {
-	u_int64_t ul_a, ul_b, ul_c;
-	if(0 != (*the_ext_lib.ext_triple)(spdz_gf2n_ext_handle, &ul_a, &ul_b, &ul_c))
+	mpz_t mpza, mpzb, mpzc;
+	mpz_init(mpza);
+	mpz_init(mpzb);
+	mpz_init(mpzc);
+	if(0 != (*the_ext_lib.ext_triple)(spdz_gf2n_ext_handle, &mpza, &mpzb, &mpzc))
 	{
 		cerr << "Processor::GTriple_Ext_64 extension library triple failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	uint2shareg(ul_a, a);
-	uint2shareg(ul_b, b);
-	uint2shareg(ul_c, c);
+	Gmpz2share(&mpza, a);
+	Gmpz2share(&mpzb, b);
+	Gmpz2share(&mpzc, c);
+	mpz_clear(mpza);
+	mpz_clear(mpzb);
+	mpz_clear(mpzc);
 }
 
 void Processor::GInput_Ext_64(Share<gf2n>& input_value, const int input_party_id)
 {
-	u_int64_t ul_input_value;
-	if(0 != (*the_ext_lib.ext_input)(spdz_gf2n_ext_handle, input_party_id, &ul_input_value))
+	mpz_t mpzv;
+	mpz_init(mpzv);
+	if(0 != (*the_ext_lib.ext_input)(spdz_gf2n_ext_handle, input_party_id, &mpzv))
 	{
 		cerr << "Processor::GInput_Ext_64 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	uint2shareg(ul_input_value, input_value);
+	Gmpz2share(&mpzv, input_value);
+	mpz_clear(mpzv);
 }
 
 void Processor::GInput_Start_Ext_64(int player, int n_inputs)
 {
-	if(0 != (*the_ext_lib.ext_start_input)(spdz_gf2n_ext_handle, player, n_inputs))
+	alloc_gi_mpz(n_inputs);
+	if(0 != (*the_ext_lib.ext_start_input)(spdz_gf2n_ext_handle, player, n_inputs, &gi_inputs[0]))
 	{
 		cerr << "Processor::GInput_Start_Ext_64 extension library start input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -1092,38 +985,28 @@ void Processor::GInput_Start_Ext_64(int player, int n_inputs)
 
 void Processor::GInput_Stop_Ext_64(int /*player*/, vector<int> targets)
 {
-	size_t input_count = 0;
-	u_int64_t * inputs = NULL;
-	if(0 != (*the_ext_lib.ext_stop_input)(spdz_gf2n_ext_handle, &input_count, &inputs))
+	if(0 != (*the_ext_lib.ext_stop_input)(spdz_gf2n_ext_handle))
 	{
 		cerr << "Processor::GInput_Stop_Ext_64 extension library stop input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if(NULL == inputs)
+	if(targets.size() == gi_size)
 	{
-		cerr << "Processor::GInput_Stop_Ext_64 extension library stop input returned null ptr." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
-
-	if(targets.size() == input_count)
-	{
-		for(size_t i = 0; i < input_count; ++i)
+		for(size_t i = 0; i < gi_size; ++i)
 		{
 			Share<gf2n>& share = get_S_ref<gf2n>(targets[i]);
-			uint2shareg(inputs[i], share);
+			Gmpz2share(gi_inputs + i, share);
 		}
 	}
 	else
 	{
-		cerr << "Processor::GInput_Stop_Ext_64 extension library stop input returned mismatched number of inputs " << targets.size() << "/" << input_count << endl;
+		cerr << "Processor::GInput_Stop_Ext_64 extension library stop input returned mismatched number of inputs " << targets.size() << "/" << gi_size << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-
-	delete []inputs;
+	free_gi_mpz();
 }
 
 void Processor::GMult_Start_Ext_64(const vector<int>& reg, int size)
@@ -1139,76 +1022,72 @@ void Processor::GMult_Start_Ext_64(const vector<int>& reg, int size)
 	vector<gf2n>& PO = get_PO<gf2n>();
 	PO.resize(sz*size);
 
-	//the share values are saved as unsigned long
-	std::vector<u_int64_t> ul_share_values;
-	gshares2uints(Sh_PO, ul_share_values);
-	if(Sh_PO.size() == ul_share_values.size())
+	//the share values are saved as mpz
+	alloc_gm_mpz(Sh_PO.size());
+	GShares2mpz(Sh_PO, gm_shares);
+
+	if(0 != (*the_ext_lib.ext_start_mult)(spdz_gf2n_ext_handle, gm_size, gm_shares, gm_products, 1))
 	{
-		//the extension library is given the shares' values and returns opens' values
-		if(0 != (*the_ext_lib.ext_start_mult)(spdz_gf2n_ext_handle, ul_share_values.size(), &ul_share_values[0], 1))
-		{
-			cerr << "Processor::GMult_Start_Ext_64 extension library start_mult failed." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		else
-		{
-			cout << "Processor::GMult_Start_Ext_64 extension library start_mult launched." << endl;
-		}
+		cerr << "Processor::GMult_Start_Ext_64 extension library start_mult failed." << endl;
+		dlclose(the_ext_lib.ext_lib_handle);
+		abort();
 	}
 	else
 	{
-		cout << "Processor::GMult_Start_Ext_64 ui_share_values size mismatch with PO_shares." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
+		cout << "Processor::GMult_Start_Ext_64 extension library start_mult launched." << endl;
 	}
 }
 
 void Processor::GMult_Stop_Ext_64(const vector<int>& reg, int size)
 {
-	int sz=reg.size();
-
-	size_t product_count = 0;
-	u_int64_t * products = NULL;
-	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_gf2n_ext_handle, &product_count, &products))
+	if(0 != (*the_ext_lib.ext_stop_mult)(spdz_gf2n_ext_handle))
 	{
 		cerr << "Processor::GMult_Stop_Ext_64 extension library stop_mult failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
 
-	if(NULL != products)
-	{
-		if((sz*size) != (int)product_count)
-		{
-			cerr << "Processor::GMult_Stop_Ext_64 size mismatch between share and product values array." << endl;
-			dlclose(the_ext_lib.ext_lib_handle);
-			abort();
-		}
-		GMult_Stop_prep_products(reg, size, products);
-		delete []products;
-		products = NULL;
-		product_count = 0;
-	}
-	else
-	{
-		cerr << "Processor::GMult_Stop_Ext_64 null product values array returned." << endl;
-		dlclose(the_ext_lib.ext_lib_handle);
-		abort();
-	}
+	GMult_Stop_prep_products(reg, size);
+	free_gm_mpz();
 
 	sent += reg.size() * size;
 	rounds++;
 }
 
+void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size)
+{
+	if (size>1)
+	{
+		size_t product_idx = 0;
+		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			vector<Share<gf2n> >::iterator insert_point=get_S<gf2n>().begin()+*reg_it;
+			for(int i = 0; i < size; ++i)
+			{
+				Gmpz2share(gm_products + (product_idx++), *(insert_point + i));
+			}
+		}
+	}
+	else
+	{
+		int sz=reg.size();
+		for(int i = 0; i < sz; ++i)
+		{
+			Gmpz2share(gm_products + i, get_S_ref<gf2n>(reg[i]));
+		}
+	}
+}
+
 void Processor::GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	u_int64_t share_value, arg;
-	share_value = a.get_share().get_word();
-	arg = b.get_word();
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gf2n_ext_handle, &share_value, arg))
+	mpz_t share_value, arg;
+	mpz_init(share_value);
+	mpz_init(arg);
+	mpz_set_ui(share_value, a.get_share().get_word());
+	mpz_set_ui(arg, b.get_word());
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gf2n_ext_handle, &share_value, &arg))
 	{
-		uint2shareg(share_value, c);
+		Gmpz2share(&share_value, c);
 	}
 	else
 	{
@@ -1216,16 +1095,20 @@ void Processor::GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(share_value);
+	mpz_clear(arg);
 }
 
 void Processor::GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	u_int64_t share_value, arg;
-	share_value = a.get_share().get_word();
-	arg = b.get_word();
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gf2n_ext_handle, &share_value, arg))
+	mpz_t share_value, arg;
+	mpz_init(share_value);
+	mpz_init(arg);
+	mpz_set_ui(share_value, a.get_share().get_word());
+	mpz_set_ui(arg, b.get_word());
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gf2n_ext_handle, &share_value, &arg))
 	{
-		uint2shareg(share_value, c);
+		Gmpz2share(&share_value, c);
 	}
 	else
 	{
@@ -1233,16 +1116,20 @@ void Processor::GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(share_value);
+	mpz_clear(arg);
 }
 
 void Processor::GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 {
-	u_int64_t share_value, arg;
-	share_value = a.get_word();
-	arg = b.get_share().get_word();
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gf2n_ext_handle, arg, &share_value))
+	mpz_t share_value, arg;
+	mpz_init(share_value);
+	mpz_init(arg);
+	mpz_set_ui(share_value, b.get_share().get_word());
+	mpz_set_ui(arg, a.get_word());
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gf2n_ext_handle, &arg, &share_value))
 	{
-		uint2shareg(share_value, c);
+		Gmpz2share(&share_value, c);
 	}
 	else
 	{
@@ -1250,16 +1137,19 @@ void Processor::GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-
+	mpz_clear(share_value);
+	mpz_clear(arg);
 }
 
 void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 {
-	u_int64_t ui_value, ui_share = 0;
-	ui_value = value.get_word();
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, ui_value, &ui_share))
+	mpz_t mpz_value, mpz_share;
+	mpz_init(mpz_value);
+	mpz_init(mpz_share);
+	mpz_set_ui(mpz_value, value.get_word());
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, &mpz_value, &mpz_share))
 	{
-		uint2shareg(ui_share, share);
+		Gmpz2share(&mpz_share, share);
 	}
 	else
 	{
@@ -1267,14 +1157,17 @@ void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(mpz_value);
+	mpz_clear(mpz_share);
 }
 
 void Processor::GBit_Ext_64(Share<gf2n>& share)
 {
-	u_int64_t ui_share = 0;
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &ui_share))
+	mpz_t mpz_share;
+	mpz_init(mpz_share);
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &mpz_share))
 	{
-		uint2shareg(ui_share, share);
+		Gmpz2share(&mpz_share, share);
 	}
 	else
 	{
@@ -1282,15 +1175,18 @@ void Processor::GBit_Ext_64(Share<gf2n>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(mpz_share);
 }
 
 void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inverse)
 {
-	u_int64_t ui_share_value = 0, ui_share_inverse = 0;
-	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &ui_share_value, &ui_share_inverse))
+	mpz_t mpz_share_value, mpz_share_inverse;
+	mpz_init(mpz_share_value);
+	mpz_init(mpz_share_inverse);
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &mpz_share_value, &mpz_share_inverse))
 	{
-		uint2shareg(ui_share_value, share_value);
-		uint2shareg(ui_share_inverse, share_inverse);
+		Gmpz2share(&mpz_share_value, share_value);
+		Gmpz2share(&mpz_share_inverse, share_inverse);
 	}
 	else
 	{
@@ -1298,6 +1194,36 @@ void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inv
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
+	mpz_clear(mpz_share_value);
+	mpz_clear(mpz_share_inverse);
+}
+
+void Processor::GShares2mpz(const vector< Share<gf2n> >& shares, mpz_t * share_values)
+{
+	size_t count = shares.size();
+	for(size_t i = 0; i < count; i++)
+	{
+		mpz_set_ui(share_values[i], shares[i].get_share().get_word());
+	}
+}
+
+void Processor::Gmpz2gf2ns(const mpz_t * mpz_values, vector<gf2n>& gf2ns)
+{
+	size_t count = gf2ns.size();
+	for(size_t i = 0; i < count; i++)
+	{
+		gf2ns[i].assign(mpz_get_ui(mpz_values[i]));
+	}
+}
+
+void Processor::Gmpz2share(const mpz_t * mpzv, Share<gf2n> & shv)
+{
+	gf2n mac, value;
+	value.assign(mpz_get_ui(*mpzv));
+	mac.mul(MC2.get_alphai(), value);
+	shv.set_share(value);
+	shv.set_mac(mac);
+
 }
 
 #define LOAD_LIB_METHOD(Name,Proc)	\
