@@ -9,7 +9,7 @@
 #include <sodium.h>
 #include <string>
 
-#if defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ)
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <list>
@@ -22,7 +22,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 : thread_num(thread_num),DataF(DataF),P(P),MC2(MC2),MCp(MCp),machine(machine),
   input2(*this,MC2),inputp(*this,MCp),privateOutput2(*this),privateOutputp(*this),sent(0),rounds(0),
   external_clients(ExternalClients(P.my_num(), DataF.prep_data_dir)),binary_file_io(Binary_File_IO())
-#if defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ)
   , po_shares(NULL), po_opens(NULL), po_size(0)
   , pi_inputs(NULL), pi_size(0)
   , pm_shares(NULL), pm_products(NULL), pm_size(0)
@@ -38,10 +38,10 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   public_output.open(get_filename("Player-Data/Public-Output-",true).c_str(), ios_base::out);
   private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
 
-#if defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), "gfp", 200))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), "gfp61", 200))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -64,7 +64,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 Processor::~Processor()
 {
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
-#if defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ)
 	(*the_ext_lib.ext_term)(spdz_gfp_ext_handle);
 #endif
 }
@@ -548,7 +548,7 @@ void Processor::maybe_encrypt_sequence(int client_id)
   }
 }
 
-#if defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ)
 
 void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 {

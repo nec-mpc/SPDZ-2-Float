@@ -11,7 +11,7 @@ OPTIM= -O3
 PREP_DIR = '-DPREP_DIR="Player-Data/"'
 
 # set this to configure extension flags
-EXT_FLAGS = '-DEXTENDED_SPDZ_64'
+#EXT_FLAGS = '-DEXTENDED_SPDZ'
 
 # set for 128-bit GF(2^n) and/or OT preprocessing
 USE_GF2N_LONG = 0

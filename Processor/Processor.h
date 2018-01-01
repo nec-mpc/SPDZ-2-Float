@@ -278,7 +278,7 @@ class Processor : public ProcessorBase
     void maybe_decrypt_sequence(int client_id);
     void maybe_encrypt_sequence(int client_id);
 
-#if defined(EXTENDED_SPDZ_64)
+#if defined(EXTENDED_SPDZ)
   public:
 
   void POpen_Start_Ext_64(const vector<int>& reg,int size);

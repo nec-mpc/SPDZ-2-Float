@@ -28,7 +28,7 @@ void SPDZ_Data_Setup_Primes(bigint& p,int lgp,int& idx,int& m)
         m=8192;
         idx=0;
         break;
-#ifdef EXTENDED_SPDZ_64
+#ifdef EXTENDED_SPDZ
       case 61:
         m=8192;
         idx=0;
@@ -43,11 +43,20 @@ void SPDZ_Data_Setup_Primes(bigint& p,int lgp,int& idx,int& m)
       	cout << "\t p = " << p << "  :   ";
       	cout << lgp << " <= " << numBits(p) << endl;
       	return;
-#endif //EXTENDED_SPDZ_64
+#endif //EXTENDED_SPDZ
       case 64:
         m=16384;
         idx=1;
         break;
+#ifdef EXTENDED_SPDZ
+      case 127:
+        m=32768;
+        idx=2;
+        mpz_set_str(*((mpz_t *)(&p)), "170141183460469231731687303715884105727", 10);
+      	cout << "\t p = " << p << "  :   ";
+      	cout << lgp << " <= " << numBits(p) << endl;
+      	return;
+#endif //EXTENDED_SPDZ
       case 128:
         m=32768; 
         idx=2;
