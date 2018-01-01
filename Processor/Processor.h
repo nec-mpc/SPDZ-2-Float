@@ -320,7 +320,6 @@ class Processor : public ProcessorBase
   void GShares2mpz(const vector< Share<gf2n> >& shares, mpz_t * share_values);
   void Gmpz2gf2ns(const mpz_t * mpz_values, vector<gf2n>& gf2ns);
   void Gmpz2share(const mpz_t * mpzv, Share<gf2n> & shv);
-  //void Ggf2n2mpz(const gf2n & gfpv, mpz_t * mpzv);
 
   void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
 
