@@ -59,6 +59,8 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 		abort();
 	}
 	cout << "SPDZ GF2N extension library initialized." << endl;
+
+	alloc_po_mpz(5000);
 #endif
 }
 
@@ -69,6 +71,8 @@ Processor::~Processor()
 	(*the_ext_lib.ext_term)(spdz_gfp_ext_handle);
 	(*the_ext_lib.ext_term)(spdz_gf2n_ext_handle);
 	dlclose(the_ext_lib.ext_lib_handle);
+
+	free_po_mpz();
 #endif
 }
 
@@ -567,11 +571,15 @@ void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 	PO.resize(sz*size);
 
 	//the share values are saved as mpz
-	alloc_po_mpz(Sh_PO.size());
+	if(Sh_PO.size() > po_size)
+	{
+		free_po_mpz();
+		alloc_po_mpz(Sh_PO.size());
+	}
 	PShares2mpz(Sh_PO, po_shares);
 
 	//the extension library is given the shares' values and returns opens' values
-	if(0 != (*the_ext_lib.ext_start_open)(spdz_gfp_ext_handle, po_size, po_shares, po_opens, 1))
+	if(0 != (*the_ext_lib.ext_start_open)(spdz_gfp_ext_handle, Sh_PO.size(), po_shares, po_opens, 1))
 	{
 		cerr << "Processor::POpen_Start_Ext_64 extension library start_open failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -594,7 +602,6 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 	}
 
 	Pmpz2gfps(po_opens, PO);
-	free_po_mpz();
 	POpen_Stop_prep_opens(reg, PO, C, size);
 
 	sent += reg.size() * size;
