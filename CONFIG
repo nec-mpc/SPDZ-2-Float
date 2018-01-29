@@ -10,6 +10,9 @@ OPTIM= -O3
 # set this to your preferred local storage directory
 PREP_DIR = '-DPREP_DIR="Player-Data/"'
 
+# set this to configure extension flags
+EXT_FLAGS = '-DEXTENDED_SPDZ'
+
 # set for 128-bit GF(2^n) and/or OT preprocessing
 USE_GF2N_LONG = 0
 
@@ -28,7 +31,7 @@ endif
 # Default is 3, which suffices for 128-bit p
 # MOD = -DMAX_MOD_SZ=3
 
-LDLIBS = -lmpirxx -lmpir -lsodium $(MY_LDLIBS) -lm -lpthread -ldl
+LDLIBS = -lmpirxx -lmpir -lsodium $(MY_LDLIBS) -lm -lpthread -ldl 
 
 ifeq ($(USE_NTL),1)
 LDLIBS := -lntl $(LDLIBS)

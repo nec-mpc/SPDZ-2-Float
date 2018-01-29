@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <list>
+#include <gperftools/profiler.h>
 spdz_ext_ifc the_ext_lib;
 #endif
 
@@ -66,6 +67,8 @@ Processor::~Processor()
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
 #if defined(EXTENDED_SPDZ)
 	(*the_ext_lib.ext_term)(spdz_gfp_ext_handle);
+	(*the_ext_lib.ext_term)(spdz_gf2n_ext_handle);
+	dlclose(the_ext_lib.ext_lib_handle);
 #endif
 }
 
