@@ -34,43 +34,43 @@ features_set_size = 48                  #!the number of features must be >= the 
 ##############################################################################################
 # Reading feature set from user 1 (the evaluee)
 
-print_ln('user 1: please enter feature set offset value (will be deducted from all feature values):')
+#print_ln('user 1: please enter feature set offset value (will be deducted from all feature values):')
 feature_set_offset = sint.get_input_from(1)
 
-print_ln('user 1: please enter feature set (%s feature values):', features_set_size)
+#print_ln('user 1: please enter feature set (%s feature values):', features_set_size)
 features_set = Array(features_set_size, sint)
 @for_range(features_set_size)
 def init_features_set(i):
     features_set[i] = sint.get_input_from(1)
     features_set[i] = features_set[i] - feature_set_offset
     #debug-print
-    print_ln('feature_set[%s] = %s', i, features_set[i].reveal())
+    #print_ln('feature_set[%s] = %s', i, features_set[i].reveal())
 
 ##############################################################################################
 # Read tree data function
 
 def read_tree_data():
     feature_idxs = Array(layers_num, sint)
-    print_ln('user 0: please enter layer-feature-indices (%s of them are expected):', layers_num)
+    #print_ln('user 0: please enter layer-feature-indices (%s of them are expected):', layers_num)
     @for_range(layers_num)
     def init_feature_idxs(i):
         feature_idxs[i] = sint.get_input_from(0)
 
-    print_ln('user 0: please enter node-threshold-offset (will be deducted from all node-threshold values):')
+    #print_ln('user 0: please enter node-threshold-offset (will be deducted from all node-threshold values):')
     node_threshold_offset = sint.get_input_from(0)
 
     thresholds = Array(nodes_count, sint)
-    print_ln('user 0: please enter node-thresholds (%s of them are expected):', nodes_count)
+    #print_ln('user 0: please enter node-thresholds (%s of them are expected):', nodes_count)
     @for_range(nodes_count)
     def init_thresholds(i):
         thresholds[i] = sint.get_input_from(0)
         thresholds[i] = thresholds[i] - node_threshold_offset
 
-    print_ln('user 0: please enter leaf offset (will be deducted from all leaf values):')
+    #print_ln('user 0: please enter leaf offset (will be deducted from all leaf values):')
     leaf_offset = sint.get_input_from(0)
 
     values = Array(value_count, sint)
-    print_ln('user 0: please enter leaf values (%s of them are expected):', value_count)
+    #print_ln('user 0: please enter leaf values (%s of them are expected):', value_count)
     @for_range(value_count)
     def init_values(i):
         values[i] = sint.get_input_from(0)
