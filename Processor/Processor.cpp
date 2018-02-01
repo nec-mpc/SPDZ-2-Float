@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <list>
-#include <gperftools/profiler.h>
+
 spdz_ext_ifc the_ext_lib;
 #endif
 
