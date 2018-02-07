@@ -1,0 +1,109 @@
+#------------------------------------------------------------------------------
+'''
+FeatureSet: {0, 10, 20, 30, 40, 50, 60, 70, 80, 90}
+user 1 input:
+0           //offset
+0           //feature 0
+10          //feature 1
+20          //feature 2
+30          //feature 3
+40          //feature 4
+50          //feature 5
+60          //feature 6
+70          //feature 7
+80          //feature 8
+90          //feature 9
+Features 0-5 are tested with '<' while features 6-9 are tested with '=='
+'''
+#------------------------------------------------------------------------------
+'''
+Tree Nodes
+==========
+Node:		[0	    ] [1	] [2    ] [3    ]
+Feature:	[3	    ] [4	] [7    ] [2    ]
+Threshold:	[70	    ] [400	] [70   ] [50   ]
+GT/EQ:	    [1      ] [-2  	] [-3   ] [-4   ]
+LTE/NEQ:	[2	    ] [3	] [-1   ] [-5   ]
+user 0 input:
+5          	//offset
+8           //node 0 feature index
+75          //node 0 threshold
+6           //node 0 GT/EQ
+7           //node 0 LTE/NEQ
+9           //node 1 feature index
+405         //node 1 threshold
+3           //node 1 GT/EQ
+8         	//node 1 LTE/NEQ
+12          //node 2 feature index
+75          //node 2 threshold
+2           //node 2 GT/EQ
+4           //node 2 LTE/NEQ
+7           //node 3 feature index
+55          //node 3 threshold
+1           //node 3 GT/EQ
+0           //node 3 LTE/NEQ
+'''
+#------------------------------------------------------------------------------
+#definitions
+c_FeaturesSetSize = 10
+c_FeaturesGTSetSize = 6
+c_TreeDepth = 3
+c_NodeSetSize = 4
+
+#user 0 the evaluator
+#user 1 is the evaluee
+#------------------------------------------------------------------------------
+# Reading feature set from user 1 (the evaluee)
+print_ln('user 1: please enter input offset:')
+User1InputOffset = sint.get_input_from(1)
+print_ln('user 1: please enter feature set (%s feature values):', c_FeaturesSetSize)
+FeaturesSet = Array(c_FeaturesSetSize, sint)
+@for_range(c_FeaturesSetSize)
+def init_features_set(i):
+    FeaturesSet[i] = sint.get_input_from(1) - User1InputOffset
+    #debug-print
+    print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
+#------------------------------------------------------------------------------
+print_ln('user 0: please enter input offset:')
+User0InputOffset = sint.get_input_from(0)
+def read_node(i):
+    print_ln('user 0: please enter node %s feature index:', i)
+    FeatureIdx = sint.get_input_from(0) - User0InputOffset
+    #debug-print
+    print_ln('FeatureIdx[%s] = %s', i, FeatureIdx.reveal())
+
+    print_ln('user 0: please enter node %s Threshold:', i)
+    Threshold = sint.get_input_from(0) - User0InputOffset
+    #debug-print
+    print_ln('Threshold[%s] = %s', i, Threshold.reveal())
+    
+    print_ln('user 0: please enter node %s GT/EQ:', i)
+    GT_or_EQ = sint.get_input_from(0) - User0InputOffset
+    #debug-print
+    print_ln('GT_or_EQ[%s] = %s', i, GT_or_EQ.reveal())
+
+    print_ln('user 0: please enter node %s LTE/NEQ:', i)
+    LTE_or_NEQ = sint.get_input_from(0) - User0InputOffset
+    #debug-print
+    print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
+
+    NodePass = sum([((FeatureIdx == j)*(FeaturesSet[j] > Threshold)) for j in range(c_FeaturesGTSetSize)]) \
+             + sum([((FeatureIdx == j)*(FeaturesSet[j] == Threshold)) for j in range(c_FeaturesGTSetSize, c_FeaturesSetSize)])
+    #debug-print
+    print_ln('Node[%s] passage = %s', i, NodePass.reveal())
+    
+    return (NodePass == 1)*GT_or_EQ + (NodePass == 0)*LTE_or_NEQ
+#------------------------------------------------------------------------------
+# Reading node set from user 0 (the evaluator)
+NodeSet = [read_node(i) for i in range(c_NodeSetSize)]
+#------------------------------------------------------------------------------
+#evaluation
+NodePtr = sint(0)
+for c_CurrLyr in range(c_TreeDepth):
+    NextNodePtr = sum([(NodePtr == i)*NodeSet[i] for i in range(c_NodeSetSize)])
+    CycleBack = (NextNodePtr < 0) * (c_CurrLyr < (c_TreeDepth-1))
+    NodePtr = (CycleBack == 1) * NodePtr + (CycleBack == 0) * NextNodePtr
+    #debug-print
+    print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
+
+print_ln('evaluation result = %s', NodePtr.reveal())
