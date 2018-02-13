@@ -1,57 +1,8 @@
 #------------------------------------------------------------------------------
-'''
-FeatureSet: {0, 10, 20, 30, 40, 50, 60, 70, 80, 90}
-user 1 input:
-0           //offset
-0           //feature 0
-10          //feature 1
-20          //feature 2
-30          //feature 3
-40          //feature 4
-50          //feature 5
-60          //feature 6
-70          //feature 7
-80          //feature 8
-90          //feature 9
-'''
-#------------------------------------------------------------------------------
-'''
-Tree Nodes
-==========
-Node:		[0	    ] [1	] [2    ] [3    ]
-Feature:	[3	    ] [4	] [7    ] [2    ]
-Operator:   [1      ] [1    ] [0    ] [1    ] 1='>', 0='='
-Threshold:	[70	    ] [400	] [70   ] [50   ]
-GT/EQ:	    [1      ] [-2  	] [-3   ] [-4   ]
-LTE/NEQ:	[2	    ] [3	] [-1   ] [-5   ]
-user 0 input:
-5          	//offset
-8           //node 0 feature index
-6           //node 0 operator
-75          //node 0 threshold
-6           //node 0 GT/EQ
-7           //node 0 LTE/NEQ
-9           //node 1 feature index
-6           //node 1 operator
-405         //node 1 threshold
-3           //node 1 GT/EQ
-8         	//node 1 LTE/NEQ
-12          //node 2 feature index
-5           //node 2 operator
-75          //node 2 threshold
-2           //node 2 GT/EQ
-4           //node 2 LTE/NEQ
-7           //node 3 feature index
-6           //node 3 operator
-55          //node 3 threshold
-1           //node 3 GT/EQ
-0           //node 3 LTE/NEQ
-'''
-#------------------------------------------------------------------------------
 #definitions
-c_FeaturesSetSize = 10
-c_TreeDepth = 3
-c_NodeSetSize = 4
+c_FeaturesSetSize = 17
+c_TreeDepth = 31
+c_NodeSetSize = 2511
 
 #user 0 the evaluator
 #user 1 is the evaluee
@@ -113,4 +64,5 @@ for c_CurrLyr in range(c_TreeDepth):
     #debug-print
     print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
 
+NodePtr = (NodePtr + 1) * (-1)
 print_ln('evaluation result = %s', NodePtr.reveal())
