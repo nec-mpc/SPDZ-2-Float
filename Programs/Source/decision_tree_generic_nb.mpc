@@ -1,8 +1,8 @@
 #------------------------------------------------------------------------------
 #definitions
 c_FeaturesSetSize = 17
-c_TreeDepth = 31
-c_NodeSetSize = 2511
+c_TreeDepth = 23
+c_NodeSetSize = 315
 
 #user 0 the evaluator
 #user 1 is the evaluee
@@ -16,7 +16,7 @@ FeaturesSet = Array(c_FeaturesSetSize, sint)
 def init_features_set(i):
     FeaturesSet[i] = sint.get_input_from(1) - User1InputOffset
     #debug-print
-    print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
+    #print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
 #------------------------------------------------------------------------------
 print_ln('user 0: please enter input offset:')
 User0InputOffset = sint.get_input_from(0)
@@ -24,31 +24,31 @@ def read_node(i):
     print_ln('user 0: please enter node %s feature index:', i)
     FeatureIdx = sint.get_input_from(0) - User0InputOffset
     #debug-print
-    print_ln('FeatureIdx[%s] = %s', i, FeatureIdx.reveal())
+    #print_ln('FeatureIdx[%s] = %s', i, FeatureIdx.reveal())
 
     print_ln('user 0: please enter node %s operator:', i)
     Operator = sint.get_input_from(0) - User0InputOffset
     #debug-print
-    print_ln('Operator[%s] = %s', i, Operator.reveal())
+    #print_ln('Operator[%s] = %s', i, Operator.reveal())
 
     print_ln('user 0: please enter node %s Threshold:', i)
     Threshold = sint.get_input_from(0) - User0InputOffset
     #debug-print
-    print_ln('Threshold[%s] = %s', i, Threshold.reveal())
+    #print_ln('Threshold[%s] = %s', i, Threshold.reveal())
     
     print_ln('user 0: please enter node %s GT/EQ:', i)
     GT_or_EQ = sint.get_input_from(0) - User0InputOffset
     #debug-print
-    print_ln('GT_or_EQ[%s] = %s', i, GT_or_EQ.reveal())
+    #print_ln('GT_or_EQ[%s] = %s', i, GT_or_EQ.reveal())
 
     print_ln('user 0: please enter node %s LTE/NEQ:', i)
     LTE_or_NEQ = sint.get_input_from(0) - User0InputOffset
     #debug-print
-    print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
+    #print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
 
     NodePass = sum([(FeatureIdx == j)*((FeaturesSet[j] > Threshold)*(Operator == 1) + (FeaturesSet[j] == Threshold)*(Operator == 0)) for j in range(c_FeaturesSetSize)])
     #debug-print
-    print_ln('Node[%s] passage = %s', i, NodePass.reveal())
+    #print_ln('Node[%s] passage = %s', i, NodePass.reveal())
     
     return (NodePass == 1)*GT_or_EQ + (NodePass == 0)*LTE_or_NEQ
 #------------------------------------------------------------------------------
