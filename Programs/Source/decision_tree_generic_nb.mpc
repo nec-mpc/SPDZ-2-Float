@@ -1,8 +1,8 @@
 #------------------------------------------------------------------------------
 #definitions
 c_FeaturesSetSize = 17
-c_TreeDepth = 23
-c_NodeSetSize = 315
+c_TreeDepth = 7
+c_NodeSetSize = 100
 
 #user 0 the evaluator
 #user 1 is the evaluee
@@ -46,14 +46,17 @@ def read_node(i):
     #debug-print
     #print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
 
-    NodePass = sum([(FeatureIdx == j)*((FeaturesSet[j] > Threshold)*(Operator == 1) + (FeaturesSet[j] == Threshold)*(Operator == 0)) for j in range(c_FeaturesSetSize)])
+    NodePass = sum([(FeatureIdx == j)*(Operator*(FeaturesSet[j] > Threshold) + (1 - Operator)*(FeaturesSet[j] == Threshold)) for j in range(c_FeaturesSetSize)])
     #debug-print
     #print_ln('Node[%s] passage = %s', i, NodePass.reveal())
     
-    return (NodePass == 1)*GT_or_EQ + (NodePass == 0)*LTE_or_NEQ
+    return NodePass*GT_or_EQ + (1 - NodePass)*LTE_or_NEQ
 #------------------------------------------------------------------------------
 # Reading node set from user 0 (the evaluator)
-NodeSet = [read_node(i) for i in range(c_NodeSetSize)]
+NodeSet = Array(c_NodeSetSize, sint)
+@for_range(c_NodeSetSize)
+def read_node_loop(i):
+    NodeSet[i] = read_node(i)
 #------------------------------------------------------------------------------
 #evaluation
 NodePtr = sint(0)
