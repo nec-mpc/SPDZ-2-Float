@@ -2,7 +2,7 @@
 #definitions
 c_FeaturesSetSize = 17
 c_TreeDepth = 7
-c_NodeSetSize = 100
+c_NodeSetSize = 70
 
 #user 0 the evaluator
 #user 1 is the evaluee
@@ -17,6 +17,15 @@ def init_features_set(i):
     FeaturesSet[i] = sint.get_input_from(1) - User1InputOffset
     #debug-print
     #print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
+#------------------------------------------------------------------------------
+def test (FeatureIdx, Operator, Threshold):
+    Pass = MemValue(sint(0))
+    @for_range(c_FeaturesSetSize)
+    def test_loop(j):
+        acceptance = (FeatureIdx == j)
+        candidate = (Operator*(FeaturesSet[j] > Threshold) + (1 - Operator)*(FeaturesSet[j] == Threshold))
+        Pass.write(Pass + (acceptance * candidate))
+    return Pass
 #------------------------------------------------------------------------------
 print_ln('user 0: please enter input offset:')
 User0InputOffset = sint.get_input_from(0)
@@ -46,7 +55,8 @@ def read_node(i):
     #debug-print
     #print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
 
-    NodePass = sum([(FeatureIdx == j)*(Operator*(FeaturesSet[j] > Threshold) + (1 - Operator)*(FeaturesSet[j] == Threshold)) for j in range(c_FeaturesSetSize)])
+    NodePass = test(FeatureIdx, Operator, Threshold)
+
     #debug-print
     #print_ln('Node[%s] passage = %s', i, NodePass.reveal())
     
