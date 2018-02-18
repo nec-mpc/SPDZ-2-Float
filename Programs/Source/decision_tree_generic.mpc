@@ -107,7 +107,7 @@ def evaluate_user( tree ):
         #debug-print
         #print_ln('LFI=%s; LF=%s; LT=%s; PS=%s;', layer_feature_idx.reveal(), layer_feature.reveal(), layer_threshold.reveal(), thld_pass.reveal())
 
-        node_ptr = ( (thld_pass == 1) * (2*node_ptr+2) ) + ( (thld_pass == 0) * (2*node_ptr+1) )
+        node_ptr = ( (thld_pass) * (2*node_ptr+2) ) + ( (1 - thld_pass) * (2*node_ptr+1) )
 
         #debug-print
         #print_ln('next node %s', node_ptr.reveal())
