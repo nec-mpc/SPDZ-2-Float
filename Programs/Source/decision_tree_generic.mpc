@@ -32,6 +32,16 @@ value_count = nodes_count + 1
 features_set_size = 48                  #!the number of features must be >= the nodes_count
 
 ##############################################################################################
+# Comparing a secure value to a clear value using bit decomposition
+def bitcomp(secval, clrval, bit_count):
+    bts = secval.bit_decompose(bit_count)
+    result = 1
+    for i in range(bit_count):
+        cbit = ((clrval >> i) & 1)
+        result = result * ( (bts[i] * cbit) + (1 - bts[i]) * (1 - cbit) )
+    return result
+
+##############################################################################################
 # Reading feature set from user 1 (the evaluee)
 
 #print_ln('user 1: please enter feature set offset value (will be deducted from all feature values):')
@@ -94,7 +104,7 @@ def evaluate_user( tree ):
         layer_feature_idx = sint(0)
         layer_threshold = sint(0)
         for curr_nd in range(layer_start_node_idx, layer_stop_node_idx):
-            key = (node_ptr == curr_nd)
+            key = bitcomp(node_ptr, curr_nd, curr_lyr + 1)
             layer_feature_idx = layer_feature_idx + ( key * tree[0][curr_nd] )
             layer_threshold = layer_threshold + ( key * tree[1][curr_nd] )
 
