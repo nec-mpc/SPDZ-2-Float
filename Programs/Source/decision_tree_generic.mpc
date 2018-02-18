@@ -110,14 +110,15 @@ def evaluate_user( tree ):
 
         layer_feature = sint(0)
         for curr_ft in range(0, features_set_size):
-            layer_feature = layer_feature + ( (layer_feature_idx == curr_ft) * features_set[curr_ft] )
+            key = bitcomp(layer_feature_idx, curr_ft, 6)
+            layer_feature = layer_feature + ( key * features_set[curr_ft] )
 
         thld_pass = (layer_feature > layer_threshold)
         
         #debug-print
         #print_ln('LFI=%s; LF=%s; LT=%s; PS=%s;', layer_feature_idx.reveal(), layer_feature.reveal(), layer_threshold.reveal(), thld_pass.reveal())
 
-        node_ptr = ( (thld_pass) * (2*node_ptr+2) ) + ( (1 - thld_pass) * (2*node_ptr+1) )
+        node_ptr = 2*node_ptr + 1 + thld_pass
 
         #debug-print
         #print_ln('next node %s', node_ptr.reveal())
@@ -125,7 +126,8 @@ def evaluate_user( tree ):
     value_idx = node_ptr - nodes_count
     result = sint(0)
     for curr_val_idx in range(0, nodes_count):
-        result = result + ( (curr_val_idx == value_idx) * tree[2][curr_val_idx] )
+        key = bitcomp(value_idx, curr_val_idx, 5)
+        result = result + ( key * tree[2][curr_val_idx] )
 
     #print_ln('evaluation result: %s', result.reveal())
     return result
