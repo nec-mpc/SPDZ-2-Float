@@ -28,9 +28,10 @@ layers_num = 4                          #!the leaves (values) layer is not inclu
 
 nodes_count = 2 ** layers_num - 1
 value_count = nodes_count + 1
+value_idx_bit_size = 5
 
 features_set_size = 48                  #!the number of features must be >= the nodes_count
-
+feature_idx_bit_size = 6
 ##############################################################################################
 # Comparing a secure value to a clear value using bit decomposition
 def bitcomp(secval, clrval, bit_count):
@@ -110,7 +111,7 @@ def evaluate_user( tree ):
 
         layer_feature = sint(0)
         for curr_ft in range(0, features_set_size):
-            key = bitcomp(layer_feature_idx, curr_ft, 6)
+            key = bitcomp(layer_feature_idx, curr_ft, feature_idx_bit_size)
             layer_feature = layer_feature + ( key * features_set[curr_ft] )
 
         thld_pass = (layer_feature > layer_threshold)
@@ -126,7 +127,7 @@ def evaluate_user( tree ):
     value_idx = node_ptr - nodes_count
     result = sint(0)
     for curr_val_idx in range(0, nodes_count):
-        key = bitcomp(value_idx, curr_val_idx, 5)
+        key = bitcomp(value_idx, curr_val_idx, value_idx_bit_size)
         result = result + ( key * tree[2][curr_val_idx] )
 
     #print_ln('evaluation result: %s', result.reveal())
