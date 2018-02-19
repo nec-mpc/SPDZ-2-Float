@@ -1,16 +1,20 @@
 #------------------------------------------------------------------------------
 #definitions
-c_FeaturesSetSize = 17
-c_TreeDepth = 7
-c_NodeSetSize = 70
+c_FeaturesSetSize = 10
+c_FeatureIdxBits = 4
+
+c_TreeDepth = 30
+
+c_NodeSetSize = 1255
+c_NodeSetIdxBitSize = 11
 
 #user 0 the evaluator
 #user 1 is the evaluee
 #------------------------------------------------------------------------------
 # Reading feature set from user 1 (the evaluee)
-print_ln('user 1: please enter input offset:')
+#print_ln('user 1: please enter input offset:')
 User1InputOffset = sint.get_input_from(1)
-print_ln('user 1: please enter feature set (%s feature values):', c_FeaturesSetSize)
+#print_ln('user 1: please enter feature set (%s feature values):', c_FeaturesSetSize)
 FeaturesSet = Array(c_FeaturesSetSize, sint)
 @for_range(c_FeaturesSetSize)
 def init_features_set(i):
@@ -18,39 +22,49 @@ def init_features_set(i):
     #debug-print
     #print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
 #------------------------------------------------------------------------------
-def test (FeatureIdx, Operator, Threshold):
+# Comparing a secure value to a clear value using bit decomposition
+def bitcomp(secval, clrval, bit_count):
+    bts = secval.bit_decompose(bit_count)
+    result = 1
+    for i in range(bit_count):
+        cbit = ((clrval >> i) & 1)
+        result = result * ( (bts[i] * cbit) + (1 - bts[i]) * (1 - cbit) )
+    return result
+
+#------------------------------------------------------------------------------
+def test(FeatureIdx, Operator, Threshold):
     Pass = MemValue(sint(0))
     @for_range(c_FeaturesSetSize)
     def test_loop(j):
-        acceptance = (FeatureIdx == j)
-        candidate = (Operator*(FeaturesSet[j] > Threshold) + (1 - Operator)*(FeaturesSet[j] == Threshold))
-        Pass.write(Pass + (acceptance * candidate))
+        IsFeature = bitcomp(FeatureIdx, j, c_FeatureIdxBits)
+        OpResult = Operator * (FeaturesSet[j] > Threshold) + (1 - Operator) * (FeaturesSet[j] == Threshold)
+        Pass.write(Pass + (IsFeature * OpResult))
     return Pass
 #------------------------------------------------------------------------------
-print_ln('user 0: please enter input offset:')
+#print_ln('user 0: please enter input offset:')
 User0InputOffset = sint.get_input_from(0)
 def read_node(i):
-    print_ln('user 0: please enter node %s feature index:', i)
+    #print_ln('user 0: please enter node %s feature index:', i)
     FeatureIdx = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('FeatureIdx[%s] = %s', i, FeatureIdx.reveal())
 
-    print_ln('user 0: please enter node %s operator:', i)
+    #print_ln('user 0: please enter node %s operator:', i)
     Operator = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('Operator[%s] = %s', i, Operator.reveal())
 
-    print_ln('user 0: please enter node %s Threshold:', i)
+    #print_ln('user 0: please enter node %s Threshold:', i)
     Threshold = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('Threshold[%s] = %s', i, Threshold.reveal())
     
-    print_ln('user 0: please enter node %s GT/EQ:', i)
+    #print_ln('user 0: please enter node %s GT/EQ:', i)
     GT_or_EQ = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('GT_or_EQ[%s] = %s', i, GT_or_EQ.reveal())
 
-    print_ln('user 0: please enter node %s LTE/NEQ:', i)
+    #print_ln('user 0: please enter node %s LTE/NEQ:', i)
     LTE_or_NEQ = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
@@ -69,13 +83,18 @@ def read_node_loop(i):
     NodeSet[i] = read_node(i)
 #------------------------------------------------------------------------------
 #evaluation
-NodePtr = sint(0)
-for c_CurrLyr in range(c_TreeDepth):
-    NextNodePtr = sum([(NodePtr == i)*NodeSet[i] for i in range(c_NodeSetSize)])
+NodePtr = MemValue(sint(0))
+@for_range(c_TreeDepth)
+def evaluation_loop(c_CurrLyr):
+    NextNodePtr = MemValue(sint(0))
+    @for_range(c_NodeSetSize)
+    def layer_loop(i):
+        key = bitcomp(NodePtr, i, c_NodeSetIdxBitSize)
+        NextNodePtr.write(NextNodePtr + key*NodeSet[i])
     CycleBack = (NextNodePtr < 0) * (c_CurrLyr < (c_TreeDepth-1))
-    NodePtr = (CycleBack == 1) * NodePtr + (CycleBack == 0) * NextNodePtr
+    NodePtr.write((CycleBack)*NodePtr + (1 - CycleBack)*NextNodePtr)
     #debug-print
-    print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
+    #print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
 
 NodePtr = (NodePtr + 1) * (-1)
 print_ln('evaluation result = %s', NodePtr.reveal())
