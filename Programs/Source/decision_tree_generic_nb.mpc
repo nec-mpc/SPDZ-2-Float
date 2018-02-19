@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 #definitions
-c_FeaturesSetSize = 10
-c_FeatureIdxBits = 4
+c_FeaturesSetSize = 17
+c_FeatureIdxBits = 5
 
 c_TreeDepth = 30
 
@@ -28,7 +28,7 @@ def bitcomp(secval, clrval, bit_count):
     result = 1
     for i in range(bit_count):
         cbit = ((clrval >> i) & 1)
-        result = result * ( (bts[i] * cbit) + (1 - bts[i]) * (1 - cbit) )
+        result = result * ( bts[i] * (cbit - (1 - cbit)) + (1 - cbit) )
     return result
 
 #------------------------------------------------------------------------------
@@ -37,7 +37,9 @@ def test(FeatureIdx, Operator, Threshold):
     @for_range(c_FeaturesSetSize)
     def test_loop(j):
         IsFeature = bitcomp(FeatureIdx, j, c_FeatureIdxBits)
-        OpResult = Operator * (FeaturesSet[j] > Threshold) + (1 - Operator) * (FeaturesSet[j] == Threshold)
+        EQ = (FeaturesSet[j] == Threshold)
+        GT = (FeaturesSet[j] > Threshold)
+        OpResult = Operator * (GT - EQ) + EQ
         Pass.write(Pass + (IsFeature * OpResult))
     return Pass
 #------------------------------------------------------------------------------
@@ -92,7 +94,7 @@ def evaluation_loop(c_CurrLyr):
         key = bitcomp(NodePtr, i, c_NodeSetIdxBitSize)
         NextNodePtr.write(NextNodePtr + key*NodeSet[i])
     CycleBack = (NextNodePtr < 0) * (c_CurrLyr < (c_TreeDepth-1))
-    NodePtr.write((CycleBack)*NodePtr + (1 - CycleBack)*NextNodePtr)
+    NodePtr.write(CycleBack*(NodePtr - NextNodePtr) + NextNodePtr)
     #debug-print
     #print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
 

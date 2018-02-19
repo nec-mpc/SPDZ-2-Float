@@ -34,14 +34,14 @@ features_set_size = 48                  #!the number of features must be >= the 
 feature_idx_bit_size = 6
 ##############################################################################################
 # Comparing a secure value to a clear value using bit decomposition
-def bitcomp(secval, clrval, bit_count):
-    bts = secval.bit_decompose(bit_count)
+def bitcomp(sbits, clrval, bit_count):
     result = 1
     for i in range(bit_count):
         cbit = ((clrval >> i) & 1)
-        result = result * ( (bts[i] * cbit) + (1 - bts[i]) * (1 - cbit) )
+        result = result * ( (sbits[i] * cbit) + (1 - sbits[i]) * (1 - cbit) )
     return result
 
+    #bts = secval.bit_decompose(bit_count)
 ##############################################################################################
 # Reading feature set from user 1 (the evaluee)
 
@@ -102,16 +102,18 @@ def evaluate_user( tree ):
         #debug-print
         #print_ln('L%s: %s - %s', curr_lyr, layer_start_node_idx, layer_stop_node_idx)
 
+        node_ptr_bits = node_ptr.bit_decompose(curr_lyr + 1)
         layer_feature_idx = sint(0)
         layer_threshold = sint(0)
         for curr_nd in range(layer_start_node_idx, layer_stop_node_idx):
-            key = bitcomp(node_ptr, curr_nd, curr_lyr + 1)
+            key = bitcomp(node_ptr_bits, curr_nd, curr_lyr + 1)
             layer_feature_idx = layer_feature_idx + ( key * tree[0][curr_nd] )
             layer_threshold = layer_threshold + ( key * tree[1][curr_nd] )
 
+        layer_feature_idx_bits = layer_feature_idx.bit_decompose(feature_idx_bit_size)
         layer_feature = sint(0)
         for curr_ft in range(0, features_set_size):
-            key = bitcomp(layer_feature_idx, curr_ft, feature_idx_bit_size)
+            key = bitcomp(layer_feature_idx_bits, curr_ft, feature_idx_bit_size)
             layer_feature = layer_feature + ( key * features_set[curr_ft] )
 
         thld_pass = (layer_feature > layer_threshold)
@@ -125,9 +127,10 @@ def evaluate_user( tree ):
         #print_ln('next node %s', node_ptr.reveal())
         
     value_idx = node_ptr - nodes_count
+    value_idx_bits = value_idx.bit_decompose(value_idx_bit_size)
     result = sint(0)
     for curr_val_idx in range(0, nodes_count):
-        key = bitcomp(value_idx, curr_val_idx, value_idx_bit_size)
+        key = bitcomp(value_idx_bits, curr_val_idx, value_idx_bit_size)
         result = result + ( key * tree[2][curr_val_idx] )
 
     #print_ln('evaluation result: %s', result.reveal())
