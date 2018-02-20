@@ -20,6 +20,8 @@ GT = 2*n+2
 
 '''
 
+import util
+
 ##############################################################################################
 # Definition of the number of trees, the depth of a tree and the feature set size
 
@@ -30,6 +32,26 @@ nodes_count = 2 ** layers_num - 1
 value_count = nodes_count + 1
 
 features_set_size = 48                  #!the number of features must be >= the nodes_count
+
+##############################################################################################
+# Code for oblivious selection of an array member by a secure index
+def oblivious_selection(sec_array, array_size, sec_index):
+    bitcnt = util.log2(array_size)
+    sec_index_bits = sec_index.bit_decompose(bitcnt)
+    return obliviously_select(sec_array, array_size, 0, sec_index_bits, len(sec_index_bits) - 1)
+
+def obliviously_select(array, size, offset, bits, bits_index):
+    #print('size={}; offset={}; bi={};'.format(size, offset, bits_index))
+    if offset >= size:
+        return 0
+    elif bits_index < 0:
+        return array[offset]
+    else:
+        half_size = 2**(bits_index)
+        msb = bits[bits_index]
+        return msb.if_else(
+            obliviously_select(array, size, offset + half_size, bits, bits_index-1) , 
+            obliviously_select(array, size, offset, bits, bits_index-1) )
 
 ##############################################################################################
 # Reading feature set from user 1 (the evaluee)
@@ -82,36 +104,26 @@ def read_tree_data():
 # User features evaluation by tree function
 
 def evaluate_user( tree ):
-    node_ptr = sint(0)
+    node_ptr = MemValue(sint(0))
 
-    for curr_lyr in range(0, layers_num):
-        layer_start_node_idx = (2**curr_lyr)-1
-        layer_stop_node_idx = (2**(curr_lyr+1))-1 #!one above the last idx in the layer
-
+    @for_range(layers_num)
+    def evaluate_layer(curr_lyr):
+        #layer_start_node_idx = (2**curr_lyr)-1
+        #layer_stop_node_idx = (2**(curr_lyr+1))-1 #!one above the last idx in the layer
         #debug-print
         #print_ln('L%s: %s - %s', curr_lyr, layer_start_node_idx, layer_stop_node_idx)
 
-        layer_threshold = sint(0)
-        for curr_nd in range(layer_start_node_idx, layer_stop_node_idx):
-            layer_threshold = layer_threshold + ( (node_ptr == curr_nd) * tree[1][curr_nd] )
-
+        layer_threshold = oblivious_selection(tree[1], nodes_count, node_ptr)
         layer_feature_idx = tree[0][curr_lyr]
-
-        layer_feature = sint(0)
-        for curr_ft in range(0, features_set_size):
-            layer_feature = layer_feature + ( (layer_feature_idx == curr_ft) * features_set[curr_ft] )
-
-        thld_pass = layer_threshold < layer_feature
-        node_ptr = (thld_pass == 1) + (2*node_ptr+1)
-
+        layer_feature = oblivious_selection(features_set, features_set_size, layer_feature_idx)
+        node_ptr.write((layer_threshold < layer_feature) + (2*node_ptr+1))
+    
         #debug-print
         #print_ln('LFI=%s; LF=%s; LT=%s; PS=%s;', layer_feature_idx.reveal(), layer_feature.reveal(), layer_threshold.reveal(), thld_pass.reveal())
         #print_ln('next node %s', node_ptr.reveal())
         
     value_idx = node_ptr - nodes_count
-    result = sint(0)
-    for curr_val_idx in range(0, nodes_count):
-        result = result + ( (curr_val_idx == value_idx) * tree[2][curr_val_idx] )
+    result = oblivious_selection(tree[2], value_count, value_idx)
 
     #debug-print
     #print_ln('evaluation result: %s', result.reveal())
@@ -120,8 +132,7 @@ def evaluate_user( tree ):
 ##############################################################################################
 # Perform the evaluation for each tree
 evaluation_result_set = Array(tree_num, sint)
-@for_range(tree_num)
-def evaluate(i):
+for i in range(0, tree_num):
     #print_ln('reading tree %s data', i)
     tree = read_tree_data()
     #print_ln('evaluating user by tree %s', i)
