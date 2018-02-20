@@ -1,15 +1,32 @@
+import util
 #------------------------------------------------------------------------------
 #definitions
 c_FeaturesSetSize = 17
-c_FeatureIdxBits = 5
-
 c_TreeDepth = 30
-
 c_NodeSetSize = 1255
-c_NodeSetIdxBitSize = 11
 
 #user 0 the evaluator
 #user 1 is the evaluee
+#------------------------------------------------------------------------------
+# Code for oblivious selection of an array member by a secure index
+def oblivious_selection(sec_array, array_size, sec_index):
+    bitcnt = util.log2(array_size)
+    sec_index_bits = sec_index.bit_decompose(bitcnt)
+    return obliviously_select(sec_array, array_size, 0, sec_index_bits, len(sec_index_bits) - 1)
+
+def obliviously_select(array, size, offset, bits, bits_index):
+    #print('size={}; offset={}; bi={};'.format(size, offset, bits_index))
+    if offset >= size:
+        return 0
+    elif bits_index < 0:
+        return array[offset]
+    else:
+        half_size = 2**(bits_index)
+        msb = bits[bits_index]
+        return msb.if_else(
+            obliviously_select(array, size, offset + half_size, bits, bits_index-1) , 
+            obliviously_select(array, size, offset, bits, bits_index-1) )
+
 #------------------------------------------------------------------------------
 # Reading feature set from user 1 (the evaluee)
 #print_ln('user 1: please enter input offset:')
@@ -21,27 +38,12 @@ def init_features_set(i):
     FeaturesSet[i] = sint.get_input_from(1) - User1InputOffset
     #debug-print
     #print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
-#------------------------------------------------------------------------------
-# Comparing a secure value to a clear value using bit decomposition
-def bitcomp(secval, clrval, bit_count):
-    bts = secval.bit_decompose(bit_count)
-    result = 1
-    for i in range(bit_count):
-        cbit = ((clrval >> i) & 1)
-        result = result * ( bts[i] * (cbit - (1 - cbit)) + (1 - cbit) )
-    return result
 
 #------------------------------------------------------------------------------
 def test(FeatureIdx, Operator, Threshold):
-    Pass = MemValue(sint(0))
-    @for_range(c_FeaturesSetSize)
-    def test_loop(j):
-        IsFeature = bitcomp(FeatureIdx, j, c_FeatureIdxBits)
-        EQ = (FeaturesSet[j] == Threshold)
-        GT = (FeaturesSet[j] > Threshold)
-        OpResult = Operator * (GT - EQ) + EQ
-        Pass.write(Pass + (IsFeature * OpResult))
-    return Pass
+    feature_value = oblivious_selection(FeaturesSet, c_FeaturesSetSize, FeatureIdx)
+    return Operator.if_else(feature_value > Threshold, feature_value == Threshold)
+    
 #------------------------------------------------------------------------------
 #print_ln('user 0: please enter input offset:')
 User0InputOffset = sint.get_input_from(0)
@@ -88,13 +90,9 @@ def read_node_loop(i):
 NodePtr = MemValue(sint(0))
 @for_range(c_TreeDepth)
 def evaluation_loop(c_CurrLyr):
-    NextNodePtr = MemValue(sint(0))
-    @for_range(c_NodeSetSize)
-    def layer_loop(i):
-        key = bitcomp(NodePtr, i, c_NodeSetIdxBitSize)
-        NextNodePtr.write(NextNodePtr + key*NodeSet[i])
+    NextNodePtr = oblivious_selection(NodeSet, c_NodeSetSize, NodePtr)
     CycleBack = (NextNodePtr < 0) * (c_CurrLyr < (c_TreeDepth-1))
-    NodePtr.write(CycleBack*(NodePtr - NextNodePtr) + NextNodePtr)
+    NodePtr.write(CycleBack.if_else(NodePtr, NextNodePtr))
     #debug-print
     #print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
 

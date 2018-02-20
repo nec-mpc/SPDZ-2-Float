@@ -39,18 +39,18 @@ def oblivious_selection(sec_array, array_size, sec_index):
     sec_index_bits = sec_index.bit_decompose(bitcnt)
     return obliviously_select(sec_array, array_size, 0, sec_index_bits, len(sec_index_bits) - 1)
 
-def obliviously_select(array, size, base, bits, bits_index):
-    #print('size={}; base={}; bi={};'.format(size, base, bits_index))
-    if size < 1:
+def obliviously_select(array, size, offset, bits, bits_index):
+    #print('size={}; offset={}; bi={};'.format(size, offset, bits_index))
+    if offset >= size:
         return 0
-    elif size == 1:
-        return array[base]
+    elif bits_index < 0:
+        return array[offset]
     else:
         half_size = 2**(bits_index)
         msb = bits[bits_index]
         return msb.if_else(
-            obliviously_select(array, size - half_size, base + half_size, bits, bits_index-1), 
-            obliviously_select(array, half_size, base, bits, bits_index-1) )
+            obliviously_select(array, size, offset + half_size, bits, bits_index-1) , 
+            obliviously_select(array, size, offset, bits, bits_index-1) )
 
 ##############################################################################################
 # Reading feature set from user 1 (the evaluee)
