@@ -19,6 +19,7 @@ LTE = 2*n+1
 GT = 2*n+2
 
 '''
+import util
 
 ##############################################################################################
 # Definition of the number of trees, the depth of a tree and the feature set size
@@ -28,20 +29,29 @@ layers_num = 4                          #!the leaves (values) layer is not inclu
 
 nodes_count = 2 ** layers_num - 1
 value_count = nodes_count + 1
-value_idx_bit_size = 5
 
 features_set_size = 48                  #!the number of features must be >= the nodes_count
-feature_idx_bit_size = 6
-##############################################################################################
-# Comparing a secure value to a clear value using bit decomposition
-def bitcomp(sbits, clrval, bit_count):
-    result = 1
-    for i in range(bit_count):
-        cbit = ((clrval >> i) & 1)
-        result = result * ( (sbits[i] * cbit) + (1 - sbits[i]) * (1 - cbit) )
-    return result
 
-    #bts = secval.bit_decompose(bit_count)
+##############################################################################################
+# Code for oblivious selection of an array member by a secure index
+def oblivious_selection(sec_array, array_size, sec_index):
+    bitcnt = util.log2(array_size)
+    sec_index_bits = sec_index.bit_decompose(bitcnt)
+    return obliviously_select(sec_array, array_size, 0, sec_index_bits, len(sec_index_bits) - 1)
+
+def obliviously_select(array, size, base, bits, bits_index):
+    #print('size={}; base={}; bi={};'.format(size, base, bits_index))
+    if size < 1:
+        return 0
+    elif size == 1:
+        return array[base]
+    else:
+        half_size = 2**(bits_index)
+        msb = bits[bits_index]
+        return msb.if_else(
+            obliviously_select(array, size - half_size, base + half_size, bits, bits_index-1), 
+            obliviously_select(array, half_size, base, bits, bits_index-1) )
+
 ##############################################################################################
 # Reading feature set from user 1 (the evaluee)
 
@@ -102,19 +112,9 @@ def evaluate_user( tree ):
         #debug-print
         #print_ln('L%s: %s - %s', curr_lyr, layer_start_node_idx, layer_stop_node_idx)
 
-        node_ptr_bits = node_ptr.bit_decompose(curr_lyr + 1)
-        layer_feature_idx = sint(0)
-        layer_threshold = sint(0)
-        for curr_nd in range(layer_start_node_idx, layer_stop_node_idx):
-            key = bitcomp(node_ptr_bits, curr_nd, curr_lyr + 1)
-            layer_feature_idx = layer_feature_idx + ( key * tree[0][curr_nd] )
-            layer_threshold = layer_threshold + ( key * tree[1][curr_nd] )
-
-        layer_feature_idx_bits = layer_feature_idx.bit_decompose(feature_idx_bit_size)
-        layer_feature = sint(0)
-        for curr_ft in range(0, features_set_size):
-            key = bitcomp(layer_feature_idx_bits, curr_ft, feature_idx_bit_size)
-            layer_feature = layer_feature + ( key * features_set[curr_ft] )
+        layer_threshold = oblivious_selection(tree[1], nodes_count, node_ptr)
+        layer_feature_idx = oblivious_selection(tree[0], nodes_count, node_ptr)
+        layer_feature = oblivious_selection(features_set, features_set_size, layer_feature_idx)
 
         thld_pass = (layer_feature > layer_threshold)
         
@@ -127,11 +127,7 @@ def evaluate_user( tree ):
         #print_ln('next node %s', node_ptr.reveal())
         
     value_idx = node_ptr - nodes_count
-    value_idx_bits = value_idx.bit_decompose(value_idx_bit_size)
-    result = sint(0)
-    for curr_val_idx in range(0, nodes_count):
-        key = bitcomp(value_idx_bits, curr_val_idx, value_idx_bit_size)
-        result = result + ( key * tree[2][curr_val_idx] )
+    result = oblivious_selection(tree[2], value_count, value_idx)
 
     #print_ln('evaluation result: %s', result.reveal())
     return result
