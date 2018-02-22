@@ -431,7 +431,7 @@ public:
 
 	void * ext_lib_handle;
 
-	int (*ext_init)(void ** handle, const int pid, const int num_of_parties, const char * field,
+	int (*ext_init)(void ** handle, const int pid, const int num_of_parties, const int thread_id, const char * field,
 					const int open_count, const int mult_count, const int bits_count);
     int (*ext_term)(void * handle);
 

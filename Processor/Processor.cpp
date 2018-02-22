@@ -42,7 +42,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), "gfp61", 100000, 1000, 100000))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 100000, 1000, 100000))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -52,7 +52,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 
     spdz_gf2n_ext_handle = NULL;
 	cout << "SPDZ GF2N extension library initializing." << endl;
-	if(0 != (*the_ext_lib.ext_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), "gf2n40", 200, 200, 200))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), thread_num, "gf2n40", 200, 200, 200))
 	{
 		cerr << "SPDZ GF2N extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
