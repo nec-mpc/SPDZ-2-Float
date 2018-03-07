@@ -1,8 +1,10 @@
-arr1 = Array(100, sint)
 
-@for_range_multithread(5, 10, 100)
-def initialization(i):
-    arr1[i] = sint(i)
+x = sint(5)
 
-for j in range(100):
-    print_ln('arr1[%s] = %s', j, arr1[j].reveal())
+v = (1+x).if_else( 1 , 0 )
+print_ln('x-valid=%s', v.reveal())
+
+x = sint(0)
+
+v = (1+x).if_else( 1 , 0 )
+print_ln('x-valid=%s', v.reveal())

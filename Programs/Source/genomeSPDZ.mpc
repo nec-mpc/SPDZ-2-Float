@@ -1,26 +1,21 @@
 #import random
 
-'''
 def validate(input):
     temp = input * (input - 1) * (input + 1)
     check = temp.reveal()
     if (not (check == 0)):
         runtime_error('Aborting; invalid input %s', check)
 
-'''
 
-numInputs = 100000 #1543109
+numInputs = 1543109
 sum = MemValue(sint(0))
-
-i1 = sint(1)
-i2 = sint(0)
 
 @for_range_parallel(10000, numInputs)
 def _(i):
     input0 = sint.get_input_from(0) - 1
-    #validate(input0)
+    validate(input0)
     input1 = sint.get_input_from(1) - 1
-    #validate(input1)
+    validate(input1)
     match = (input0 * input1) + 1
     #debug-only:     print_ln('@%s: input0=%s; input1=%s; match=%s;', i, input0.reveal(), input1.reveal(), match.reveal())
     sum.write(sum + match)
