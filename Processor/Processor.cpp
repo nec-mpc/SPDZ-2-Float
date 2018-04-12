@@ -705,10 +705,6 @@ void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	else
-	{
-		cout << "Processor::PMult_Start_Ext_64 extension library start_mult launched." << endl;
-	}
 }
 
 void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
