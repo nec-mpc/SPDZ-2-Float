@@ -1,0 +1,84 @@
+#Based on "Algorithm 173 SQL Query"
+
+#-----------------------------------------------------------------------------#
+def read_row():
+    sInteger_0 = sint.get_input_from(0)
+    sInteger_1 = sint.get_input_from(0)
+    sInteger_2 = sint.get_input_from(0)
+    sInteger_3 = sint.get_input_from(0)
+    sInteger_4 = sint.get_input_from(0)
+    
+    s20BitArray_5 = Array(20, sint)
+    for i in range(20):
+        s20BitArray_5[i] = sint.get_input_from(0)
+    
+    s20BitArray_6 = Array(20, sint)
+    for i in range(20):
+        s20BitArray_6[i] = sint.get_input_from(0)
+    
+    s20BitArray_7 = Array(20, sint)
+    for i in range(20):
+        s20BitArray_7[i] = sint.get_input_from(0)
+    
+    s20BitArray_8 = Array(20, sint)
+    for i in range(20):
+        s20BitArray_8[i] = sint.get_input_from(0)
+    
+    s20BitArray_9 = Array(20, sint)
+    for i in range(20):
+        s20BitArray_9[i] = sint.get_input_from(0)
+    
+    s83BitArray_10 = Array(83, sint)
+    for i in range(83):
+        s83BitArray_10[i] = sint.get_input_from(0)
+    
+    s20BitArray_11 = Array(20, sint)
+    for i in range(20):
+        s20BitArray_11[i] = sint.get_input_from(0)
+    
+    s2BitArray_12 = Array(2, sint)
+    for i in range(2):
+        s2BitArray_12[i] = sint.get_input_from(0)
+    
+    s10BitArray_13 = Array(10, sint)
+    for i in range(10):
+        s10BitArray_13[i] = sint.get_input_from(0)
+    
+    s50BitArray_14 = Array(50, sint)
+    for i in range(50):
+        s50BitArray_14[i] = sint.get_input_from(0)
+
+    return (sInteger_0, sInteger_1, sInteger_2, sInteger_3, sInteger_4, s20BitArray_5, s20BitArray_6, s20BitArray_7, s20BitArray_8, s20BitArray_9, s83BitArray_10, s20BitArray_11, s2BitArray_12, s10BitArray_13, s50BitArray_14)
+
+#-----------------------------------------------------------------------------#
+t = read_row()
+
+print_ln('showing 5 integers')
+for i in range(5):
+    print_ln('int %s = %s', i, t[i].reveal())
+
+for i in range(5, 10):
+    print_ln('showing 20-bit array %s', i)
+    for j in range(20):
+        print_ln('bit %s = %s', j, t[i][j].reveal())
+
+print_ln('showing 83-bit array')
+for i in range(83):
+    print_ln('bit %s = %s', i, t[10][i].reveal())
+
+print_ln('showing 20-bit array')
+for i in range(20):
+    print_ln('bit %s = %s', i, t[11][i].reveal())
+
+print_ln('showing 2-bit array')
+for i in range(2):
+    print_ln('bit %s = %s', i, t[12][i].reveal())
+
+print_ln('showing 50-bit array')
+for i in range(50):
+    print_ln('bit %s = %s', i, t[14][i].reveal())
+#-----------------------------------------------------------------------------#
+#-----------------------------------------------------------------------------#
+#-----------------------------------------------------------------------------#
+#-----------------------------------------------------------------------------#
+print_ln('Algorithm 173 SQL Query test done')
