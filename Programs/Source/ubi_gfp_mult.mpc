@@ -6,4 +6,4 @@ c = sint.get_input_from(2)
 product = a*b*c
 clr_product = product.reveal()
 
-print_ln('product=%s', clr_product)
+print_ln('a = %s; b = %s; c = %s; product = %s;', a.reveal(), b.reveal(), c.reveal(), clr_product)

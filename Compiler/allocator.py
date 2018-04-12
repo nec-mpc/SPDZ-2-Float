@@ -376,10 +376,12 @@ class Merger:
                 print 'Merging %d opens in round %d/%d' % (len(merge), i, len(merges))
             nodes = defaultdict(lambda: None)
             for b in (False, True):
-                my_merge = (m for m in merge if instructions[m] is not None and instructions[m].is_gf2n() is b)
+                #my_merge = (m for m in merge if instructions[m] is not None and instructions[m].is_gf2n() is b)
+                my_merge = (m for m in merge if instructions[m] is not None and isinstance(instructions[m], e_startmult_class) is b)
                 
                 if merge_stopopens:
-                    my_stopopen = [G.get_attr(m, 'stop') for m in merge if instructions[m] is not None and instructions[m].is_gf2n() is b]
+                    #my_stopopen = [G.get_attr(m, 'stop') for m in merge if instructions[m] is not None and instructions[m].is_gf2n() is b]
+                    my_stopopen = [G.get_attr(m, 'stop') for m in merge if instructions[m] is not None and isinstance(instructions[m], e_startmult_class ) is b]
                     
                 mc, nodes[0,b] = self.do_merge(iter(my_merge))
 
