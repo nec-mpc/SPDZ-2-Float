@@ -1,0 +1,116 @@
+#Based on "Algorithm 173 SQL Query"
+
+#-----------------------------------------------------------------------------#
+L = (20, 20, 20, 20, 20, 83, 20, 2, 10, 50)
+a1 = 5              # 5 <= a1 <= 14
+a2 = 7              # 5 <= a2 <= 14
+a3 = 10             # 10 <= a3 <= 14
+v = 0               # 0 <= v <= 4
+alpha = 3           # 0 <= alpha
+beta = 2            # 0 <= beta <= L[a3-5]
+N0 = 1
+N1 = 1
+N2 = 1
+
+S = Matrix(L[a1-5], L[a2-5], sint)
+C = Matrix(L[a1-5], L[a2-5], sint)
+
+#-----------------------------------------------------------------------------#
+def read_row(pid):
+    sInteger_0 = sint.get_input_from(pid)
+    sInteger_1 = sint.get_input_from(pid)
+    sInteger_2 = sint.get_input_from(pid)
+    sInteger_3 = sint.get_input_from(pid)
+    sInteger_4 = sint.get_input_from(pid)
+    
+    s20BitArray_5 = Array(L[0], sint)
+    for i in range(L[0]):
+        s20BitArray_5[i] = sint.get_input_from(pid)
+    
+    s20BitArray_6 = Array(L[1], sint)
+    for i in range(L[1]):
+        s20BitArray_6[i] = sint.get_input_from(pid)
+    
+    s20BitArray_7 = Array(L[2], sint)
+    for i in range(L[2]):
+        s20BitArray_7[i] = sint.get_input_from(pid)
+    
+    s20BitArray_8 = Array(L[3], sint)
+    for i in range(L[3]):
+        s20BitArray_8[i] = sint.get_input_from(pid)
+    
+    s20BitArray_9 = Array(L[4], sint)
+    for i in range(L[4]):
+        s20BitArray_9[i] = sint.get_input_from(pid)
+    
+    s83BitArray_10 = Array(L[5], sint)
+    for i in range(L[5]):
+        s83BitArray_10[i] = sint.get_input_from(pid)
+    
+    s20BitArray_11 = Array(L[6], sint)
+    for i in range(L[6]):
+        s20BitArray_11[i] = sint.get_input_from(pid)
+    
+    s2BitArray_12 = Array(L[7], sint)
+    for i in range(L[7]):
+        s2BitArray_12[i] = sint.get_input_from(pid)
+    
+    s10BitArray_13 = Array(L[8], sint)
+    for i in range(L[8]):
+        s10BitArray_13[i] = sint.get_input_from(pid)
+    
+    s50BitArray_14 = Array(L[9], sint)
+    for i in range(L[9]):
+        s50BitArray_14[i] = sint.get_input_from(pid)
+
+    return (sInteger_0, sInteger_1, sInteger_2, sInteger_3, sInteger_4, s20BitArray_5, s20BitArray_6, s20BitArray_7, s20BitArray_8,
+            s20BitArray_9, s83BitArray_10, s20BitArray_11, s2BitArray_12, s10BitArray_13, s50BitArray_14)
+
+#-----------------------------------------------------------------------------#
+def print_tup(t):
+    print_ln('showing 5 integers')
+    for i in range(5):
+        print_ln('int %s = %s', i, t[i].reveal())
+
+    for i in range(5, 15):
+        print_ln('showing bit array %s', i)
+        for j in range(L[i-5]):
+            print_ln('bit %s = %s', j, t[i][j].reveal())
+
+#-----------------------------------------------------------------------------#
+def calc_tup(Ti):
+    for j in range(L[a1-5]):
+        for k in range(L[a2-5]):
+            A = Ti[a3][beta]*Ti[a1][j]*Ti[a2][k]
+            S[j][k] = S[j][k] + Ti[v]*A
+            C[j][k] = C[j][k] + A
+
+#-----------------------------------------------------------------------------#
+
+@for_range(N0)
+def perform_row(i):
+    Ti = read_row(0)
+    #print_tup(Ti)
+    calc_tup(Ti)
+
+@for_range(N1)
+def perform_row(i):
+    Ti = read_row(1)
+    #print_tup(Ti)
+    calc_tup(Ti)
+
+@for_range(N2)
+def perform_row(i):
+    Ti = read_row(2)
+    #print_tup(Ti)
+    calc_tup(Ti)
+
+for j in range(L[a1-5]):
+    for k in range(L[a2-5]):
+        openSjk = S[j][k].reveal()
+        openCjk = C[j][k].reveal()
+        avg = (openCjk >= alpha) * ( openSjk / (openCjk + (openCjk == 0) ) )
+        print_ln('Average[%s][%s] = %s; C[%s][%s] = %s;', j, k, avg, j, k, openCjk)
+
+#-----------------------------------------------------------------------------#
+print_ln('Algorithm 173 SQL Query test done')
