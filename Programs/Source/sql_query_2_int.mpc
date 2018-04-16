@@ -4,7 +4,7 @@
 L = (20, 20, 20, 20, 20, 83, 20, 2, 10, 50)
 a = 5              # 5 <= a <= 14
 v = 0              # 0 <= v <= 4
-alpha = 3          # 0 <= alpha
+alpha = 2          # 0 <= alpha
 N0 = 1
 N1 = 1
 N2 = 1
@@ -100,14 +100,11 @@ def perform_row(i):
         S[j] = S[j] + Ti[v]*Ti[a][j]
         C[j] = C[j] + Ti[a][j]
 
-R = Array(L[a-5], sfix)
 for j in range(L[a-5]):
-    sfSj = sfix(0)
-    sfSj.load_int(S[j])
-    sfCj = sfix(0)
-    sfCj.load_int(C[j])
-    R[j] =(C[j] >= alpha)*(sfSj/sfCj)
-    print_ln('R[%s] = %s; C[%s] = %s;', j, R[j].reveal(), j, C[j].reveal())
+    sjo = S[j].reveal()
+    cjo = C[j].reveal()
+    avg = ( sjo * (cjo >= alpha) ) / ( cjo + (cjo == 0) )
+    print_ln('Average[%s] = %s; C[%s] = %s;', j, avg, j, cjo)
 
 #-----------------------------------------------------------------------------#
 print_ln('Algorithm 173 SQL Query test done')
