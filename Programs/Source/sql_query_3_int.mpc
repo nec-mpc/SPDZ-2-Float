@@ -105,7 +105,8 @@ def perform_row(i):
     #print_tup(Ti)
     calc_tup(Ti)
 
-for j in range(L[a1-5]):
+@for_range(L[a1-5])
+def _(j):
     for k in range(L[a2-5]):
         openSjk = S[j][k].reveal()
         openCjk = C[j][k].reveal()
