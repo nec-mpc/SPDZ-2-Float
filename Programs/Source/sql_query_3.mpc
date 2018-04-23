@@ -15,6 +15,7 @@ N2 = 1
 S = Matrix(L[a1-5], L[a2-5], sint)
 C = Matrix(L[a1-5], L[a2-5], sint)
 R = Matrix(L[a1-5], L[a2-5], sfix)
+H = Matrix(L[a1-5], L[a2-5], sint)
 
 #-----------------------------------------------------------------------------#
 def read_row(pid):
@@ -113,8 +114,9 @@ def _(j):
         sfSjk.load_int(S[j][k])
         sfCjk = sfix(0)
         sfCjk.load_int(C[j][k])
-        R[j][k] =(C[j][k] >= alpha)*(sfSjk/sfCjk)
-        print_ln('R[%s][%s] = %s; C[%s][%s] = %s;', j, k, R[j][k].reveal(), j, k, C[j][k].reveal())
+        H[j][k] = (C[j][k] >= alpha)
+        R[j][k] = H[j][k]*(sfSjk/sfCjk)
+        print_ln('R[%s][%s] = %s; H[%s][%s] = %s;', j, k, R[j][k].reveal(), j, k, H[j][k].reveal())
 
 #-----------------------------------------------------------------------------#
 print_ln('Algorithm 173 SQL Query test done')
