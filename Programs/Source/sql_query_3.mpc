@@ -8,7 +8,7 @@ a3 = 10             # 10 <= a3 <= 14
 v = 0               # 0 <= v <= 4
 alpha = 3           # 0 <= alpha
 beta = 2            # 0 <= beta <= L[a3-5]
-N0 = 1
+N0 = 1000
 N1 = 1
 N2 = 1
 
@@ -95,6 +95,7 @@ def perform_row(i):
     #print_tup(Ti)
     calc_tup(Ti)
 
+'''
 @for_range(N1)
 def perform_row(i):
     Ti = read_row(1)
@@ -106,6 +107,7 @@ def perform_row(i):
     Ti = read_row(2)
     #print_tup(Ti)
     calc_tup(Ti)
+'''
 
 @for_range(L[a1-5])
 def _(j):
