@@ -94,9 +94,11 @@ enum
     // Open
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
+    OPEN = 0xA5,
 #if defined(EXTENDED_SPDZ)
     E_STARTMULT = 0xA2,
     E_STOPMULT = 0xA3,
+    E_MULT = 0xA4,
 #endif
     // Data access
     TRIPLE = 0x50,
@@ -218,6 +220,7 @@ enum
     // Open
     GSTARTOPEN = 0x1A0,
     GSTOPOPEN = 0x1A1,
+    GOPEN = 0x1A5,
     // Data access
     GTRIPLE = 0x150,
     GBIT = 0x151,

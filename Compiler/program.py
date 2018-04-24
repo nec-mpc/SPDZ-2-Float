@@ -66,8 +66,9 @@ class Program(object):
         self.free_threads = set()
         self.public_input_file = open(self.programs_dir + '/Public-Input/%s' % self.name, 'w')
         self.types = {}
-        self.to_merge = [Compiler.instructions.startopen_class]
-        self.stop_class = Compiler.instructions.stopopen_class
+        self.to_merge = [Compiler.instructions.asm_open_class, \
+                         Compiler.instructions.gasm_open_class, \
+                         Compiler.instructions.e_mult_class]
         Program.prog = self
         
         self.reset_values()
@@ -538,8 +539,7 @@ class Tape:
                          len(block.instructions))
                 # the next call is necessary for allocation later even without merging
                 merger = al.Merger(block, options, \
-                                   tuple(self.program.to_merge), \
-                                   self.program.stop_class)
+                                   tuple(self.program.to_merge))
                 if options.dead_code_elimination:
                     if len(block.instructions) > 10000:
                         print 'Eliminate dead code...'
@@ -551,10 +551,10 @@ class Tape:
                         continue
                     if len(block.instructions) > 10000:
                         print 'Merging instructions...'
-                    numrounds = merger.longest_paths_merge(self.program.stop_class != type(None))
+                    numrounds = merger.longest_paths_merge()
                     if numrounds > 0:
                         print 'Program requires %d rounds of communication' % numrounds
-                    numinv = sum(len(i.args) for i in block.instructions if isinstance(i, Compiler.instructions.startopen_class))
+                    numinv = sum(len(i.args) for i in block.instructions if isinstance(i, Compiler.instructions.asm_open_class))
                     if numinv > 0:
                         print 'Program requires %d invocations' % numinv
                 if options.dead_code_elimination:
