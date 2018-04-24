@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _Data
 #define _Data
@@ -22,24 +22,30 @@ typedef unsigned char octet;
 #define TERMINATE 2
 #define GO        3
 
-void encode_length(octet *buff,int len);
-int  decode_length(octet *buff);
 
-
-inline void encode_length(octet *buff,int len)
+inline void encode_length(octet *buff, size_t len, size_t n_bytes)
 {
-  if (len<0) { throw invalid_length(); }
-  buff[0]=len&255;
-  buff[1]=(len>>8)&255;
-  buff[2]=(len>>16)&255;
-  buff[3]=(len>>24)&255;
+    if (n_bytes > 8)
+        throw invalid_length("length field cannot be more than 64 bits");
+    if (n_bytes < 8)
+    {
+        long long upper = len;
+        upper >>= (8 * n_bytes);
+        if (upper != 0 and upper != -1)
+            throw invalid_length("length too large for length field");
+    }
+    for (size_t i = 0; i < n_bytes; i++)
+        buff[i] = len >> (8 * i);
 }
 
-inline int  decode_length(octet *buff)
+inline size_t decode_length(octet *buff, size_t n_bytes)
 {
-  int len=buff[0]+256*buff[1]+65536*buff[2]+16777216*buff[3];
-  if (len<0) { throw invalid_length(); }
-  return len;
+    size_t len = 0;
+    for (size_t i = 0; i < n_bytes; i++)
+    {
+        len += (size_t) buff[i] << (8 * i);
+    }
+    return len;
 }
 
 #endif

@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #ifndef _Processor
@@ -92,6 +92,8 @@ class Processor : public ProcessorBase
   MAC_Check<gf2n>& MC2;
   MAC_Check<gfp>& MCp;
   Machine& machine;
+
+  string private_input_filename;
 
   Input<gf2n> input2;
   Input<gfp> inputp;

@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #include "Math/gf2n.h"
@@ -68,7 +68,14 @@ void gf2n_short::init_field(int nn)
   int i,j=-1;
   for (i=0; i<num_2_fields && j==-1; i++)
     { if (nn==fields_2[i][0]) { j=i; } }
-  if (j==-1) { throw invalid_params(); }
+  if (j==-1)
+    {
+      if (nn == 128)
+	throw runtime_error("need to compile with USE_GF2N_LONG = 1; "
+			    "remember to make clean");
+      else
+	throw runtime_error("field size not supported");
+    }
 
   n=nn;
   nterms=1;
@@ -334,12 +341,7 @@ void gf2n_short::input(istream& s,bool human)
         { cout << "IO problem. Empty file?" << endl;
           throw file_error();
         }
-      //throw end_of_file();
-      s.clear(); // unset EOF flag
-      s.seekg(0);
-      if (!rewind)
-        cout << "REWINDING - ONLY FOR BENCHMARKING" << endl;
-      rewind = true;
+      throw end_of_file("gf2n_short");
     }
 
   if (human)

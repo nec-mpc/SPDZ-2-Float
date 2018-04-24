@@ -1,4 +1,4 @@
-(C) 2017 University of Bristol. See License.txt
+(C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 Suppose we want to add 2 integers mod p in clear, where p has 128 bits and compute over 2 parties inputs: P0, P1.
 
@@ -147,7 +147,7 @@ and the message to party 1.
 For example, say that we have a key equal to
 
 ```
-28aed2a6abf7158809cf4f3c
+2b7e151628aed2a6abf7158809cf4f3c
 ```
 
 We have to convert this into SPDZ datatypes so we use the scripts

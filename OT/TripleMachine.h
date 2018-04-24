@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * TripleMachine.h
@@ -10,15 +10,15 @@
 
 #include "Math/gf2n.h"
 #include "Math/gfp.h"
+#include "Tools/OfflineMachineBase.h"
 
-class TripleMachine
+class TripleMachine : public OfflineMachineBase
 {
     gf2n mac_key2;
     gfp mac_keyp;
 
 public:
-    int my_num, nplayers, nthreads, ntriples, nloops;
-    int nTriplesPerThread;
+    int nloops;
     string prep_data_dir;
     bool generateMACs;
     bool amplify;
@@ -26,7 +26,6 @@ public:
     bool primeField;
     bool bonding;
     bool generateBits;
-    bool output;
     struct timeval start, stop;
 
     TripleMachine(int argc, const char** argv);

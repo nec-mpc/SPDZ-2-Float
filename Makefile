@@ -1,4 +1,4 @@
-# (C) 2017 University of Bristol. See License.txt
+# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 include CONFIG
@@ -13,6 +13,12 @@ AUTH = $(patsubst %.cpp,%.o,$(wildcard Auth/*.cpp))
 
 PROCESSOR = $(patsubst %.cpp,%.o,$(wildcard Processor/*.cpp))
 
+ifeq ($(USE_NTL),1)
+FHEOFFLINE = $(patsubst %.cpp,%.o,$(wildcard FHEOffline/*.cpp FHE/*.cpp))
+endif
+
+GC = $(patsubst %.cpp,%.o,$(wildcard GC/*.cpp))
+
 # OT stuff needs GF2N_LONG, so only compile if this is enabled
 ifeq ($(USE_GF2N_LONG),1)
 OT = $(patsubst %.cpp,%.o,$(filter-out OT/OText_main.cpp,$(wildcard OT/*.cpp)))
@@ -20,13 +26,28 @@ OT_EXE = ot.x ot-offline.x
 endif
 
 COMMON = $(MATH) $(TOOLS) $(NETWORK) $(AUTH)
-COMPLETE = $(COMMON) $(PROCESSOR) $(FHEOFFLINE) $(TINYOTOFFLINE)
+COMPLETE = $(COMMON) $(PROCESSOR) $(FHEOFFLINE) $(TINYOTOFFLINE) $(OT)
+BMR = $(patsubst %.cpp,%.o,$(wildcard BMR/*.cpp BMR/network/*.cpp)) $(COMMON) $(PROCESSOR) $(GC)
+
 
 LIB = libSPDZ.a
 LIBSIMPLEOT = SimpleOT/libsimpleot.a
 
+# used for dependency generation
+OBJS = $(BMR) $(FHEOFFLINE) $(TINYOTOFFLINE)
+DEPS := $(OBJS:.o=.d)
+
 
 all: gen_input online offline externalIO
+
+ifeq ($(USE_NTL),1)
+all: overdrive she-offline
+endif
+
+-include $(DEPS)
+
+%.o: %.cpp
+	$(CXX) $(CFLAGS) -MMD -c -o $@ $<
 
 online: Fake-Offline.x Server.x Player-Online.x Check-Offline.x
 
@@ -35,6 +56,12 @@ offline: $(OT_EXE) Check-Offline.x
 gen_input: gen_input_f2n.x gen_input_fp.x
 
 externalIO: client-setup.x bankers-bonus-client.x bankers-bonus-commsec-client.x
+
+bmr: bmr-program-party.x bmr-program-tparty.x
+
+she-offline: Check-Offline.x spdz2-offline.x
+
+overdrive: simple-offline.x pairwise-offline.x cnc-offline.x
 
 Fake-Offline.x: Fake-Offline.cpp $(COMMON) $(PROCESSOR)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
@@ -71,6 +98,18 @@ gen_input_f2n.x: Scripts/gen_input_f2n.cpp $(COMMON)
 gen_input_fp.x: Scripts/gen_input_fp.cpp $(COMMON)
 	$(CXX) $(CFLAGS) Scripts/gen_input_fp.cpp	-o gen_input_fp.x $(COMMON) $(LDLIBS)
 
+gc-emulate.x: $(GC) $(COMMON) $(PROCESSOR) gc-emulate.cpp $(BMR)
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS) $(BOOST)
+
+bmr-program-party.x: $(BMR) bmr-program-party.cpp
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS) $(BOOST)
+
+bmr-program-tparty.x: $(BMR) bmr-program-tparty.cpp
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS) $(BOOST)
+
+bmr-clean:
+	-rm BMR/*.o BMR/*/*.o GC/*.o
+
 client-setup.x: client-setup.cpp $(COMMON) $(PROCESSOR)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -80,5 +119,19 @@ bankers-bonus-client.x: ExternalIO/bankers-bonus-client.cpp $(COMMON) $(PROCESSO
 bankers-bonus-commsec-client.x: ExternalIO/bankers-bonus-commsec-client.cpp $(COMMON) $(PROCESSOR)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+ifeq ($(USE_NTL),1)
+simple-offline.x: $(COMMON) $(FHEOFFLINE) simple-offline.cpp
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+pairwise-offline.x: $(COMMON) $(FHEOFFLINE) pairwise-offline.cpp
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+cnc-offline.x: $(COMMON) $(FHEOFFLINE) cnc-offline.cpp
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+spdz2-offline.x: $(COMMON) $(FHEOFFLINE) spdz2-offline.cpp
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
+endif
+
 clean:
-	-rm */*.o *.o */*.d *.d *.x core.* *.a gmon.out
+	-rm */*.o *.o */*.d *.d *.x core.* *.a gmon.out */*/*.o
