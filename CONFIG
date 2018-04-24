@@ -2,6 +2,8 @@
 
 ROOT = .
 
+MY_CFLAGS = -DINSECURE
+
 OPTIM= -O3
 #PROF = -pg
 #DEBUG = -DDEBUG
@@ -22,7 +24,7 @@ ARCH = -mtune=native -mavx
 
 # defaults for BMR, change number of parties here
 CFLAGS = -DN_PARTIES=2 -DFREE_XOR -DKEY_SIGNAL -DSPDZ_AUTH -DNO_INPUT -DMAX_INLINE
-USE_GF2N_LONG = 1
+#USE_GF2N_LONG = 1
 
 #use CONFIG.mine to overwrite DIR settings
 -include CONFIG.mine

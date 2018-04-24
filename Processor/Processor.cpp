@@ -39,7 +39,6 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   private_input.open(private_input_filename.c_str());
   public_output.open(get_filename(PREP_DIR "Public-Output-",true).c_str(), ios_base::out);
   private_output.open(get_filename(PREP_DIR "Private-Output-",true).c_str(), ios_base::out);
-}
 
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
@@ -754,8 +753,8 @@ void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	mpz_t share_value, arg;
 	mpz_init(share_value);
 	mpz_init(arg);
-	to_bigint(*((mpz_class*)(&share_value)), a.get_share());
-	to_bigint(*((mpz_class*)(&arg)), b);
+	to_bigint(*((bigint*)(&share_value)), a.get_share());
+	to_bigint(*((bigint*)(&arg)), b);
 	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, &arg))
 	{
 		Pmpz2share(&share_value, c);
@@ -775,8 +774,8 @@ void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	mpz_t share_value, arg;
 	mpz_init(share_value);
 	mpz_init(arg);
-	to_bigint(*((mpz_class*)(&share_value)), a.get_share());
-	to_bigint(*((mpz_class*)(&arg)), b);
+	to_bigint(*((bigint*)(&share_value)), a.get_share());
+	to_bigint(*((bigint*)(&arg)), b);
 	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, &arg))
 	{
 		Pmpz2share(&share_value, c);
@@ -796,8 +795,8 @@ void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	mpz_t share_value, arg;
 	mpz_init(share_value);
 	mpz_init(arg);
-	to_bigint(*((mpz_class*)(&share_value)), b.get_share());
-	to_bigint(*((mpz_class*)(&arg)), a);
+	to_bigint(*((bigint*)(&share_value)), b.get_share());
+	to_bigint(*((bigint*)(&arg)), a);
 	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, &arg, &share_value))
 	{
 		Pmpz2share(&share_value, c);
@@ -817,7 +816,7 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 	mpz_t mpz_value, mpz_share;
 	mpz_init(mpz_value);
 	mpz_init(mpz_share);
-	to_bigint(*((mpz_class*)(&mpz_value)), value);
+	to_bigint(*((bigint*)(&mpz_value)), value);
 	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, &mpz_value, &mpz_share))
 	{
 		Pmpz2share(&mpz_share, share);
@@ -874,7 +873,7 @@ void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_va
 	size_t count = shares.size();
 	for(size_t i = 0; i < count; i++)
 	{
-		to_bigint(*((mpz_class*)(share_values + i)), shares[i].get_share());
+		to_bigint(*((bigint*)(share_values + i)), shares[i].get_share());
 	}
 }
 
