@@ -511,6 +511,28 @@ void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& 
 	rounds++;
 }
 
+void unzip_open(vector<int>& dest, vector<int>& source, const vector<int>& reg)
+{
+	int n = reg.size() / 2;
+	source.resize(n);
+	dest.resize(n);
+	for (int i = 0; i < n; i++)
+	{
+		source[i] = reg[2 * i + 1];
+		dest[i] = reg[2 * i];
+	}
+}
+
+template<class T>
+void Processor::POpen(const vector<int>& reg, const Player& P, MAC_Check<T>& MC,
+		int size)
+{
+	vector<int> source, dest;
+	unzip_open(dest, source, reg);
+	POpen_Start(source, P, MC, size);
+	POpen_Stop(dest, P, MC, size);
+}
+
 ostream& operator<<(ostream& s,const Processor& P)
 {
   s << "Processor State" << endl;
@@ -557,6 +579,14 @@ void Processor::maybe_encrypt_sequence(int client_id)
 }
 
 #if defined(EXTENDED_SPDZ)
+
+void Processor::POpen_Ext_64(const vector<int>& reg, int size)
+{
+	vector<int> dest, source;
+	unzip_open(dest, source, reg);
+	POpen_Start_Ext_64(source, size);
+	POpen_Stop_Ext_64(dest, size);
+}
 
 void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 {
@@ -681,6 +711,22 @@ void Processor::PInput_Stop_Ext_64(int /*player*/, vector<int> targets)
 		abort();
 	}
 	free_pi_mpz();
+}
+
+void Processor::PMult_Ext_64(const vector<int>& reg, int size)
+{
+	vector<int> sources, dest;
+	int n = reg.size() / 3;
+	sources.reserve(2 * n);
+	dest.reserve(n);
+	for (int i = 0; i < n; i++)
+	{
+		dest.push_back(reg[3 * i]);
+		sources.push_back(reg[3 * i + 1]);
+		sources.push_back(reg[3 * i + 2]);
+	}
+	PMult_Start_Ext_64(sources, size);
+	PMult_Stop_Ext_64(dest, size);
 }
 
 void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
@@ -893,6 +939,14 @@ void Processor::Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv)
 	mac.mul(MCp.get_alphai(), value);
 	shv.set_share(value);
 	shv.set_mac(mac);
+}
+
+void Processor::GOpen_Ext_64(const vector<int>& reg, int size)
+{
+	vector<int> dest, source;
+	unzip_open(dest, source, reg);
+	GOpen_Start_Ext_64(source, size);
+	GOpen_Stop_Ext_64(dest, size);
 }
 
 void Processor::GOpen_Start_Ext_64(const vector<int>& reg,int size)
@@ -1330,6 +1384,8 @@ template void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_
 template void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
 template void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<gf2n>& MC,int size);
 template void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+template void Processor::POpen(const vector<int>& reg,const Player& P,MAC_Check<gf2n>& MC,int size);
+template void Processor::POpen(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
 template void Processor::read_socket_private<gfp>(int client_id, const vector<int>& registers, bool send_macs);
 template void Processor::read_socket_vector<gfp>(int client_id, const vector<int>& registers);
 template void Processor::read_shares_from_file<gfp>(int start_file_pos, int end_file_pos_register, const vector<int>& data_registers);

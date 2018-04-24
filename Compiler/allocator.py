@@ -151,7 +151,7 @@ def determine_scope(block, options):
     block.defined_registers = set(last_def.iterkeys())
 
 class Merger:
-    def __init__(self, block, options, merge_classes, stop_class=stopopen_class):
+    def __init__(self, block, options, merge_classes):
         self.block = block
         self.instructions = block.instructions
         self.options = options
@@ -159,7 +159,7 @@ class Merger:
             self.max_parallel_open = int(options.max_parallel_open)
         else:
             self.max_parallel_open = float('inf')
-        self.dependency_graph(merge_classes, stop_class)
+        self.dependency_graph(merge_classes)
 
     def do_merge(self, merges_iter):
         """ Merge an iterable of nodes in G, returning the number of merged
@@ -341,13 +341,12 @@ class Merger:
         preorder.extend(reversed(startinputs))
         return preorder
 
-    def longest_paths_merge(self, merge_stopopens=True):
+    def longest_paths_merge(self):
         """ Attempt to merge instructions of type instruction_type (which are given in
         merge_nodes) using longest paths algorithm.
 
         Returns the no. of rounds of communication required after merging (assuming 1 round/instruction).
 
-        If merge_stopopens is True, will also merge associated stop_open instructions.
         If reorder_between_opens is True, will attempt to place non-opens between start/stop opens.
 
         Doesn't use networkx.
@@ -374,15 +373,9 @@ class Merger:
             nodes = defaultdict(lambda: None)
             for b in (False, True):
                 #my_merge = (m for m in merge if instructions[m] is not None and instructions[m].is_gf2n() is b)
-                my_merge = (m for m in merge if instructions[m] is not None and isinstance(instructions[m], e_startmult_class) is b)
+                my_merge = (m for m in merge if instructions[m] is not None and isinstance(instructions[m], e_mult_class) is b)
                 
-                if merge_stopopens:
-                    #my_stopopen = [G.get_attr(m, 'stop') for m in merge if instructions[m] is not None and instructions[m].is_gf2n() is b]
-                    my_stopopen = filter(lambda x: x != -1, (G.get_attr(m, 'stop') for m in merge if instructions[m] is not None and isinstance(instructions[m], e_startmult_class) is b))
                 mc, nodes[0,b] = self.do_merge(iter(my_merge))
-
-                if merge_stopopens:
-                    mc, nodes[1,b] = self.do_merge(iter(my_stopopen))
 
             # add edges to retain order of gf2n/modp start/stop opens
             for j in (0,1):
@@ -398,16 +391,7 @@ class Merger:
 
         self.merge_inputs()
 
-        # compute preorder for topological sort
-        if merge_stopopens and self.options.reorder_between_opens:
-            if self.options.continuous or not merge_nodes:
-                rev_depths = self.compute_max_depths(self.real_depths)
-                preorder = self.compute_continuous_preorder(merges, rev_depths)
-            else:
-                rev_depths = self.compute_max_depths(self.depths)
-                preorder = self.compute_preorder(merges, rev_depths)
-        else:
-            preorder = None
+        preorder = None
 
         if len(instructions) > 100000:
             print "Topological sort ..."
@@ -418,12 +402,9 @@ class Merger:
 
         return len(merges)
 
-    def dependency_graph(self, merge_classes, stop_class):
+    def dependency_graph(self, merge_classes):
         """ Create the program dependency graph. """
         if len(merge_classes) != 1:
-            if stop_class is not type(None):
-                raise NotImplementedError('stop merging only implemented ' \
-                                          'for single instruction')
             if int(self.options.max_parallel_open):
                 raise NotImplementedError('parallel limit only implemented ' \
                                           'for single instruction')
@@ -433,7 +414,7 @@ class Merger:
         open_nodes = set()
         self.open_nodes = open_nodes
         self.input_nodes = []
-        colordict = defaultdict(lambda: 'gray', startopen='red', stopopen='red',\
+        colordict = defaultdict(lambda: 'gray', asm_open='red',\
                                 ldi='lightblue', ldm='lightblue', stm='blue',\
                                 mov='yellow', mulm='orange', mulc='orange',\
                                 triple='green', square='green', bit='green',\
@@ -540,8 +521,6 @@ class Merger:
             if isinstance(instr, merge_classes):
                 open_nodes.add(n)
                 G.add_node(n, merges=[])
-                if stop_class != type(None):
-                    last_open.append(n)
                 # the following must happen after adding the edge
                 self.real_depths[n] += 1
                 depth = depths[n] + 1
@@ -561,13 +540,6 @@ class Merger:
                     self.real_depths[n] = depth
                 parallel_open[depth] += len(instr.args) * instr.get_size()
                 depths[n] = depth
-
-            if isinstance(instr, stop_class):
-                startopen = last_open.popleft()
-                add_edge(startopen, n)
-                G.set_attr(startopen, 'stop', n)
-                G.set_attr(n, 'start', last_open)
-                G.add_node(n, merges=[])
 
             if isinstance(instr, ReadMemoryInstruction):
                 if options.preserve_mem_order:

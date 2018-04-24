@@ -5,9 +5,11 @@ from random import randint
 import time
 import inspect
 import functools
+import copy
 from Compiler.exceptions import *
 from Compiler.config import *
 from Compiler import util
+from Compiler import tools
 
 
 ###
@@ -86,8 +88,10 @@ opcodes = dict(
     # Open
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
+    OPEN = 0xA5,
     E_STARTMULT = 0xA2,
     E_STOPMULT = 0xA3,
+    E_MULT = 0xA4,
     # Data access
     TRIPLE = 0x50,
     BIT = 0x51,
@@ -277,6 +281,19 @@ def gf2n(instruction):
         except KeyError:
             raise CompilerError('Cannot decorate instruction %s' % instruction)
 
+    def reformat(arg_format):
+        if isinstance(arg_format, list):
+            __format = []
+            for __f in arg_format:
+                if __f in ('int', 'p', 'ci', 'str'):
+                    __format.append(__f)
+                else:
+                    __format.append(__f[0] + 'g' + __f[1:])
+            arg_format[:] = __format
+        else:
+            for __f in arg_format.args:
+                reformat(__f)
+
     class GF2N_Instruction(instruction_cls):
         __doc__ = instruction_cls.__doc__.replace('c_', 'c^g_').replace('s_', 's^g_')
         __slots__ = []
@@ -292,13 +309,8 @@ def gf2n(instruction):
             if __f != 'int' and __f != 'p':
                 arg_format = itertools.repeat(__f[0] + 'g' + __f[1:])
         else:
-            __format = []
-            for __f in instruction_cls.arg_format:
-                if __f in ('int', 'p', 'ci', 'str'):
-                    __format.append(__f)
-                else:
-                    __format.append(__f[0] + 'g' + __f[1:])
-            arg_format = __format
+            arg_format = copy.deepcopy(instruction_cls.arg_format)
+            reformat(arg_format)
 
         def is_gf2n(self):
             return True
@@ -524,7 +536,7 @@ class Instruction(object):
                 raise CompilerError('Invalid argument "%s" to instruction: %s'
                     % (e.arg, self) + '\n' + e.msg)
             except KeyError as e:
-                raise CompilerError('Incorrect number of arguments for instruction %s' % (self))
+                raise CompilerError('Unknown argument %s for instruction %s' % (f, self))
     
     def get_used(self):
         """ Return the set of registers that are read in this instruction. """

@@ -1307,73 +1307,31 @@ class gconvgf2n(base.Instruction):
     arg_format = ['ciw', 'cg']
 
 ###
-### Other instructions
-###
-
-@base.gf2n
-@base.vectorize
-class startopen(base.VarArgsInstruction):
-    """ Start opening secret register $s_i$. """
-    __slots__ = []
-    code = base.opcodes['STARTOPEN']
-    arg_format = itertools.repeat('s')
-    
-    def execute(self):
-        for arg in self.args[::-1]:
-            program.curr_block.open_queue.append(arg.value)
-
-@base.gf2n
-@base.vectorize
-class stopopen(base.VarArgsInstruction):
-    """ Store previous opened value in $c_i$. """
-    __slots__ = []
-    code = base.opcodes['STOPOPEN']
-    arg_format = itertools.repeat('cw')
-    
-    def execute(self):
-        for arg in self.args:
-            arg.value = program.curr_block.open_queue.pop()
-
-###
 ### 2G START
 ###
-@base.gf2n
 @base.vectorize
-class e_startmult(startopen_class):
+class e_mult(base.VarArgsInstruction):
     """ Start mult secret register $s_i$. """
     __slots__ = []
-    code = base.opcodes['E_STARTMULT']
-    arg_format = itertools.repeat('s')
-
-
-@base.gf2n
-@base.vectorize
-class e_stopmult(stopopen_class):
-    """ stop mult secret register $s_i$. """
-    __slots__ = []
-    code = base.opcodes['E_STOPMULT']
-    arg_format = itertools.repeat('sw')
+    code = base.opcodes['E_MULT']
+    arg_format = tools.cycle(['sw', 's', 's'])
 
 ##
 ## 2G END
 ##
-###
-### CISC-style instructions
-###
 
 # rename 'open' to avoid conflict with built-in open function
 @base.gf2n
 @base.vectorize
-class asm_open(base.CISC):
+class asm_open(base.VarArgsInstruction):
     """ Open the value in $s_j$ and assign it to $c_i$. """
     __slots__ = []
-    arg_format = ['cw','s']
-    
-    def expand(self):
-        startopen(self.args[1])
-        stopopen(self.args[0])
+    code = base.opcodes['OPEN']
+    arg_format = tools.cycle(['cw','s'])
 
-
+###
+### CISC-style instructions
+###
 @base.gf2n
 @base.vectorize
 class muls(base.CISC):
@@ -1391,8 +1349,8 @@ class muls(base.CISC):
         triple(s[0], s[1], s[2])
         subs(s[3], self.args[1], s[0])
         subs(s[4], self.args[2], s[1])
-        startopen(s[3], s[4])
-        stopopen(c[0], c[1])
+        asm_open(c[0], s[3])
+        asm_open(c[1], s[4])
         mulm(s[5], s[1], c[0])
         mulm(s[6], s[0], c[1])
         mulc(c[2], c[0], c[1])
@@ -1400,8 +1358,7 @@ class muls(base.CISC):
         adds(s[8], s[7], s[6])
         addm(self.args[0], s[8], c[2])
         """
-        e_startmult(self.args[1],self.args[2])
-        e_stopmult(self.args[0])
+        e_mult(self.args[0], self.args[1],self.args[2])
         """
 
 #
@@ -1452,8 +1409,8 @@ class g2muls(base.CISC):
         gbittriple(s[0], s[1], s[2])
         gsubs(s[3], self.args[1], s[0])
         gsubs(s[4], self.args[2], s[1])
-        gstartopen(s[3], s[4])
-        gstopopen(c[0], c[1])
+        gasm_open(c[0], s[3])
+        gasm_open(c[1], s[4])
         gmulbitm(s[5], s[1], c[0])
         gmulbitm(s[6], s[0], c[1])
         gmulbitc(c[2], c[0], c[1])

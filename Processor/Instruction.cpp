@@ -272,9 +272,12 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       case GSTARTOPEN:
       case GSTOPOPEN:
       case WRITEFILESHARE:
+      case OPEN:
+      case GOPEN:
 #if defined(EXTENDED_SPDZ)
       case E_STARTMULT:
       case E_STOPMULT:
+      case E_MULT:
 #endif
         num_var_args = get_int(s);
         get_vector(num_var_args, start, s);
@@ -1498,6 +1501,20 @@ void Instruction::execute(Processor& Proc) const
         Proc.POpen_Stop(start,Proc.P,Proc.MC2,size);
 #endif
         return;
+      case OPEN:
+#if defined(EXTENDED_SPDZ)
+          Proc.POpen_Ext_64(start, size);
+#else
+          Proc.POpen(start, Proc.P, Proc.MCp, size);
+#endif
+        break;
+      case GOPEN:
+#if defined(EXTENDED_SPDZ)
+          Proc.GOpen_Ext_64(start, size);
+#else
+          Proc.POpen(start, Proc.P, Proc.MC2, size);
+#endif
+        break;
 #if defined(EXTENDED_SPDZ)
       case E_STARTMULT:
     	  Proc.PMult_Start_Ext_64(start, size);
@@ -1505,6 +1522,9 @@ void Instruction::execute(Processor& Proc) const
       case E_STOPMULT:
     	  Proc.PMult_Stop_Ext_64(start, size);
         return;
+      case E_MULT:
+        Proc.PMult_Ext_64(start, size);
+        break;
 #endif
       case JMP:
         Proc.PC += (signed int) n;
