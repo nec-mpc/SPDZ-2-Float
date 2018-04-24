@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _random
 #define _random
@@ -61,12 +61,18 @@ class PRNG
 
    // Set seed from array
    void SetSeed(unsigned char*);
+   void SetSeed(PRNG& G);
    void InitSeed();
    
    double get_double();
+   bool get_bit() { return get_uchar() & 1; }
    unsigned char get_uchar();
    unsigned int get_uint();
-   bigint randomBnd(const bigint& B);
+   void get_bigint(bigint& res, int n_bits, bool positive = true);
+   void get(bigint& res, int n_bits, bool positive = true);
+   void get(int& res, int n_bits, bool positive = true);
+   void randomBnd(bigint& res, const bigint& B, bool positive=true);
+   bigint randomBnd(const bigint& B, bool positive=true);
    word get_word()
      { word a=get_uint();
        a<<=32; 
@@ -80,5 +86,42 @@ class PRNG
    const octet* get_seed() const
      { return seed; }
 };
+
+
+inline unsigned char PRNG::get_uchar()
+{
+  if (cnt>=RAND_SIZE) { next(); }
+  unsigned char ans=random[cnt];
+  cnt++;
+  // print_state(); cout << " UCHA " << (int) ans << endl;
+  return ans;
+}
+
+
+inline __m128i PRNG::get_doubleword()
+{
+    if (cnt > RAND_SIZE - 16)
+        next();
+    __m128i ans = _mm_loadu_si128((__m128i*)&random[cnt]);
+    cnt += 16;
+    return ans;
+}
+
+
+inline void PRNG::get_octets(octet* ans,int len)
+{
+  int pos=0;
+  while (len)
+    {
+      int step=min(len,RAND_SIZE-cnt);
+      avx_memcpy(ans+pos,random+cnt,step);
+      pos+=step;
+      len-=step;
+      cnt+=step;
+      if (cnt==RAND_SIZE)
+        next();
+    }
+}
+
 
 #endif

@@ -1,7 +1,8 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #include "Tools/random.h"
+#include "Math/bigint.h"
 #include <stdio.h>
 #include <sodium.h>
 
@@ -28,6 +29,13 @@ void PRNG::SetSeed(octet* inp)
 {
   memcpy(seed,inp,SEED_SIZE*sizeof(octet));
   InitSeed();
+}
+
+void PRNG::SetSeed(PRNG& G)
+{
+  octet tmp[SEED_SIZE];
+  G.get_octets(tmp, sizeof(tmp));
+  SetSeed(tmp);
 }
 
 void PRNG::InitSeed()
@@ -130,26 +138,6 @@ unsigned int PRNG::get_uint()
 
 
 
-unsigned char PRNG::get_uchar()
-{
-  if (cnt>=RAND_SIZE) { next(); }
-  unsigned char ans=random[cnt];
-  cnt++;
-  // print_state(); cout << " UCHA " << (int) ans << endl;
-  return ans;
-}
-
-
-__m128i PRNG::get_doubleword()
-{
-    if (cnt > RAND_SIZE - 16)
-        next();
-    __m128i ans = _mm_loadu_si128((__m128i*)&random[cnt]);
-    cnt += 16;
-    return ans;
-}
-
-
 void PRNG::get_octetStream(octetStream& ans,int len)
 {
   ans.resize(len);
@@ -160,35 +148,59 @@ void PRNG::get_octetStream(octetStream& ans,int len)
 }
 
 
-void PRNG::get_octets(octet* ans,int len)
+bigint PRNG::randomBnd(const bigint& B, bool positive)
 {
-  int pos=0;
-  while (len)
+  bigint x;
+#ifdef REALLOC_POLICE
+  x = B;
+#endif
+  randomBnd(x, B, positive);
+  return x;
+}
+
+void PRNG::randomBnd(bigint& x, const bigint& B, bool positive)
+{
+  int i = 0;
+  do
     {
-      int step=min(len,RAND_SIZE-cnt);
-      memcpy(ans+pos,random+cnt,step);
-      pos+=step;
-      len-=step;
-      cnt+=step;
-      if (cnt==RAND_SIZE)
-        next();
+      get_bigint(x, numBits(B), true);
+      if (i++ > 1000)
+        {
+          cout << x << " - " << B << " = " << x - B << endl;
+          throw runtime_error("bounded randomness error");
+        }
+    }
+  while (x >= B);
+  if (!positive)
+    {
+      if (get_bit())
+        mpz_neg(x.get_mpz_t(), x.get_mpz_t());
     }
 }
 
-
-bigint PRNG::randomBnd(const bigint& B)
+void PRNG::get_bigint(bigint& res, int n_bits, bool positive)
 {
-  bigint x;
-  // Hash the seed again and again until we have a lot of len bytes
-  int len=((2*numBytes(B))/RAND_SIZE+1)*RAND_SIZE;
-  octet *bytes=new octet[len];
-  if (cnt!=0) { next(); }
-  for (int i=0; i<len/RAND_SIZE; i++)
-     { memcpy(bytes+RAND_SIZE*i,random,RAND_SIZE*sizeof(octet));
-       next();
-     }
-  bigintFromBytes(x,bytes,len);
-  x=x%B;
-  delete[] bytes;
-  return x;
+  int n_bytes = (n_bits + 7) / 8;
+  if (n_bytes > 1000)
+    throw not_implemented();
+  octet bytes[1000];
+  get_octets(bytes, n_bytes);
+  octet mask = (1 << (n_bits % 8)) - 1;
+  bytes[0] &= mask;
+  bigintFromBytes(res, bytes, n_bytes);
+  if (not positive and (get_bit()))
+    mpz_neg(res.get_mpz_t(), res.get_mpz_t());
+}
+
+void PRNG::get(bigint& res, int n_bits, bool positive)
+{
+  get_bigint(res, n_bits, positive);
+}
+
+void PRNG::get(int& res, int n_bits, bool positive)
+{
+  res = get_uint();
+  res &= (1 << n_bits) - 1;
+  if (positive and get_bit())
+    res = -res;
 }

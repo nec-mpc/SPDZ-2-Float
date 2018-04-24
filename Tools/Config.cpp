@@ -1,3 +1,5 @@
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
+
 // Client key file format:
 //      X25519  Public Key
 //      X25519  Secret Key

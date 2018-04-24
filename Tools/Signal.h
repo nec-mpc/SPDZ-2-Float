@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * Signal.h
@@ -21,6 +21,7 @@ public:
     void lock();
     void unlock();
     void wait();
+    int wait(int seconds);
     void broadcast();
 };
 

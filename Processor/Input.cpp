@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * Input.cpp
@@ -12,7 +12,7 @@ template<class T>
 Input<T>::Input(Processor& proc, MAC_Check<T>& mc) :
         proc(proc), MC(mc), shares(proc.P.num_players()), values_input(0)
 {
-    buffer.setup(&proc.private_input, -1, "private input");
+    buffer.setup(&proc.private_input, -1, proc.private_input_filename);
 }
 
 template<class T>
@@ -47,7 +47,14 @@ void Input<T>::start(int player, int n_inputs)
             Share<T>& share = shares[player][i];
             proc.DataF.get_input(share, rr, player);
             T xi;
-            buffer.input(t);
+            try
+            {
+                buffer.input(t);
+            }
+            catch (not_enough_to_buffer& e)
+            {
+                throw runtime_error("Insufficient input data to buffer");
+            }
             t.sub(t, rr);
             t.pack(o);
             xi.add(t, share.get_share());

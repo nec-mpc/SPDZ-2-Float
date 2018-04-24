@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * Signal.cpp
@@ -32,6 +32,14 @@ void Signal::unlock()
 void Signal::wait()
 {
     pthread_cond_wait(&cond, &mutex);
+}
+
+int Signal::wait(int seconds)
+{
+    timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += seconds;
+    return pthread_cond_timedwait(&cond, &mutex, &ts);
 }
 
 void Signal::broadcast()

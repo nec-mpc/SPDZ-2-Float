@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * int.h
@@ -43,7 +43,7 @@ inline int FLOOR_LOG2(int x)
 }
 
 // ceil(n / k)
-inline int DIV_CEIL(long n, int k)
+inline long long DIV_CEIL(long long n, long long k)
 {
     return (n + k - 1)/k;
 }

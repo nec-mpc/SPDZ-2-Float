@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _timer
 #define _timer
@@ -11,19 +11,7 @@
 
 long long timeval_diff(struct timeval *start_time, struct timeval *end_time);
 double timeval_diff_in_seconds(struct timeval *start_time, struct timeval *end_time);
-
-// no clock_gettime() on OS X
-#ifdef __MACH__
-#define timespec timeval
-#define clockid_t int
-#define CLOCK_MONOTONIC 0
-#define CLOCK_PROCESS_CPUTIME_ID 0
-#define CLOCK_THREAD_CPUTIME_ID 0
-#define timespec_diff timeval_diff
-#define clock_gettime(x,y) gettimeofday(y,0)
-#else
 long long timespec_diff(struct timespec *start_time, struct timespec *end_time);
-#endif
 
 class Timer
 {
@@ -32,6 +20,8 @@ class Timer
       { clock_gettime(clock_id, &startv); }
   Timer& start();
   void stop();
+  void reset();
+
   double elapsed();
   double idle();
 
@@ -42,6 +32,15 @@ class Timer
   clockid_t clock_id;
 
   long long elapsed_since_last_start();
+};
+
+class TimeScope
+{
+  Timer& timer;
+
+public:
+  TimeScope(Timer& timer) : timer(timer) { timer.start(); }
+  ~TimeScope() { timer.stop(); }
 };
 
 inline Timer& Timer::start()
@@ -61,6 +60,12 @@ inline void Timer::stop()
   elapsed_time += elapsed_since_last_start();
 
   running = false;
+  clock_gettime(clock_id, &startv);
+}
+
+inline void Timer::reset()
+{
+  elapsed_time = 0;
   clock_gettime(clock_id, &startv);
 }
 

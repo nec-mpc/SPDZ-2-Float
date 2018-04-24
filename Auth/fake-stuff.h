@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #ifndef _fake_stuff
@@ -22,6 +22,9 @@ void collapse_byte(int& b,const gf2n_short& a);
 
 // Generate MAC key shares
 void generate_keys(const string& directory, int nplayers);
+
+template <class T>
+void write_mac_keys(const string& directory, int player_num, int nplayers, gfp keyp, T key2);
 
 // Read MAC key shares and compute keys
 void read_keys(const string& directory, gfp& keyp, gf2n& key2, int nplayers);
