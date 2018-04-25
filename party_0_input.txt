@@ -1,5 +1,3 @@
-!!!SQL Query Test Data Generation!!!
-Going to trace 1000 records.
 519
 264
 972
