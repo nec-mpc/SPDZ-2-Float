@@ -62,6 +62,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 	cout << "SPDZ GF2N extension library initialized." << endl;
 
 	alloc_po_mpz(5000);
+	alloc_pm_mpz(5000);
 #endif
 }
 
@@ -74,6 +75,7 @@ Processor::~Processor()
 	dlclose(the_ext_lib.ext_lib_handle);
 
 	free_po_mpz();
+	free_pm_mpz();
 #endif
 }
 
@@ -743,10 +745,14 @@ void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
 	PO.resize(sz*size);
 
 	//the share values are saved as mpz
-	alloc_pm_mpz(Sh_PO.size());
+	if(Sh_PO.size() > pm_size)
+	{
+		free_pm_mpz();
+		alloc_pm_mpz(Sh_PO.size());
+	}
 	PShares2mpz(Sh_PO, pm_shares);
 
-	if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, pm_size, pm_shares, pm_products, 1))
+	if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, Sh_PO.size(), pm_shares, pm_products, 1))
 	{
 		cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -764,7 +770,6 @@ void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
 	}
 
 	PMult_Stop_prep_products(reg, size);
-	free_pm_mpz();
 
 	sent += reg.size() * size;
 	rounds++;

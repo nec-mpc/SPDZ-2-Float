@@ -341,10 +341,13 @@ class Processor : public ProcessorBase
   }
   void free_po_mpz()
   {
-	  for(size_t i = 0; i < po_size; i++) { mpz_clear(po_shares[i]); mpz_clear(po_opens[i]); }
-	  delete po_shares; po_shares = NULL;
-	  delete po_opens; po_opens = NULL;
-	  po_size = 0;
+	  if(po_size > 0)
+	  {
+		  for(size_t i = 0; i < po_size; i++) { mpz_clear(po_shares[i]); mpz_clear(po_opens[i]); }
+		  delete po_shares; po_shares = NULL;
+		  delete po_opens; po_opens = NULL;
+		  po_size = 0;
+	  }
   }
 
   mpz_t * pi_inputs;
@@ -365,18 +368,31 @@ class Processor : public ProcessorBase
   size_t pm_size;
   void alloc_pm_mpz(const size_t required_size)
   {
-	  pm_shares = new mpz_t[pm_size = required_size];
-	  for(size_t i = 0; i < pm_size; i++) mpz_init(pm_shares[i]);
+	  assert(required_size%2 == 0);
+	  pm_size = required_size;
+	  pm_shares = new mpz_t[pm_size];
 	  pm_products = new mpz_t[pm_size/2];
-	  for(size_t i = 0; i < pm_size/2; i++) mpz_init(pm_products[i]);
+	  for(size_t i = 0; i < pm_size/2; i++)
+	  {
+		  mpz_init(pm_products[i]);
+		  mpz_init(pm_shares[2*i]);
+		  mpz_init(pm_shares[2*i+1]);
+	  }
   }
   void free_pm_mpz()
   {
-	  for(size_t i = 0; i < pm_size; i++) mpz_clear(pm_shares[i]);
-	  for(size_t i = 0; i < pm_size/2; i++) mpz_clear(pm_products[i]);
-	  delete pm_shares; pm_shares = NULL;
-	  delete pm_products; pm_products = NULL;
-	  pm_size = 0;
+	  if(pm_size > 0)
+	  {
+		  for(size_t i = 0; i < pm_size/2; i++)
+		  {
+			  mpz_clear(pm_products[i]);
+			  mpz_clear(pm_shares[2*i]);
+			  mpz_clear(pm_shares[2*i+1]);
+		  }
+		  delete pm_shares; pm_shares = NULL;
+		  delete pm_products; pm_products = NULL;
+		  pm_size = 0;
+	  }
   }
 
   mpz_t * go_shares, * go_opens;
