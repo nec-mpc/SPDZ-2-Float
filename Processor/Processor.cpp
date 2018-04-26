@@ -63,7 +63,8 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 
 	alloc_po_mpz(5000);
 	alloc_pm_mpz(5000);
-	mpz_init(mpz_share_4bit);
+	mpz_init(mpz_share_aux);
+	mpz_init(mpz_arg_aux);
 #endif
 }
 
@@ -77,7 +78,8 @@ Processor::~Processor()
 
 	free_po_mpz();
 	free_pm_mpz();
-	mpz_clear(mpz_share_4bit);
+	mpz_clear(mpz_share_aux);
+	mpz_clear(mpz_arg_aux);
 #endif
 }
 
@@ -668,16 +670,13 @@ void Processor::PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 
 void Processor::PInput_Ext_64(Share<gfp>& input_value, const int input_party_id)
 {
-	mpz_t mpz_input_value;
-	mpz_init(mpz_input_value);
-	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &mpz_input_value))
+	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &mpz_share_aux))
 	{
 		cerr << "Processor::PInput_Ext_64 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	Pmpz2share(&mpz_input_value, input_value);
-	mpz_clear(mpz_input_value);
+	Pmpz2share(&mpz_share_aux, input_value);
 }
 
 void Processor::PInput_Start_Ext_64(int player, int n_inputs)
@@ -803,14 +802,11 @@ void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size)
 
 void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	to_bigint(*((bigint*)(&share_value)), a.get_share());
-	to_bigint(*((bigint*)(&arg)), b);
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, &arg))
+	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Pmpz2share(&share_value, c);
+		Pmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -818,20 +814,15 @@ void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	to_bigint(*((bigint*)(&share_value)), a.get_share());
-	to_bigint(*((bigint*)(&arg)), b);
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, &arg))
+	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Pmpz2share(&share_value, c);
+		Pmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -839,20 +830,15 @@ void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	to_bigint(*((bigint*)(&share_value)), b.get_share());
-	to_bigint(*((bigint*)(&arg)), a);
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, &arg, &share_value))
+	to_bigint(*((bigint*)(&mpz_share_aux)), b.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), a);
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Pmpz2share(&share_value, c);
+		Pmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -860,19 +846,14 @@ void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 {
-	mpz_t mpz_value, mpz_share;
-	mpz_init(mpz_value);
-	mpz_init(mpz_share);
-	to_bigint(*((bigint*)(&mpz_value)), value);
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, &mpz_value, &mpz_share))
+	to_bigint(*((bigint*)(&mpz_arg_aux)), value);
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Pmpz2share(&mpz_share, share);
+		Pmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -880,15 +861,13 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_value);
-	mpz_clear(mpz_share);
 }
 
 void Processor::PBit_Ext_64(Share<gfp>& share)
 {
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share_4bit))
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share_aux))
 	{
-		Pmpz2share(&mpz_share_4bit, share);
+		Pmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -900,13 +879,10 @@ void Processor::PBit_Ext_64(Share<gfp>& share)
 
 void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse)
 {
-	mpz_t mpz_share_value, mpz_share_inverse;
-	mpz_init(mpz_share_value);
-	mpz_init(mpz_share_inverse);
-	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &mpz_share_value, &mpz_share_inverse))
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Pmpz2share(&mpz_share_value, share_value);
-		Pmpz2share(&mpz_share_inverse, share_inverse);
+		Pmpz2share(&mpz_share_aux, share_value);
+		Pmpz2share(&mpz_arg_aux, share_inverse);
 	}
 	else
 	{
@@ -914,8 +890,6 @@ void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inver
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share_value);
-	mpz_clear(mpz_share_inverse);
 }
 
 void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values)
@@ -1145,14 +1119,11 @@ void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size)
 
 void Processor::GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	mpz_set_ui(share_value, a.get_share().get_word());
-	mpz_set_ui(arg, b.get_word());
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gf2n_ext_handle, &share_value, &arg))
+	mpz_set_ui(mpz_share_aux, a.get_share().get_word());
+	mpz_set_ui(mpz_arg_aux, b.get_word());
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gf2n_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Gmpz2share(&share_value, c);
+		Gmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -1160,20 +1131,15 @@ void Processor::GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	mpz_set_ui(share_value, a.get_share().get_word());
-	mpz_set_ui(arg, b.get_word());
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gf2n_ext_handle, &share_value, &arg))
+	mpz_set_ui(mpz_share_aux, a.get_share().get_word());
+	mpz_set_ui(mpz_arg_aux, b.get_word());
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gf2n_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Gmpz2share(&share_value, c);
+		Gmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -1181,20 +1147,15 @@ void Processor::GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	mpz_set_ui(share_value, b.get_share().get_word());
-	mpz_set_ui(arg, a.get_word());
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gf2n_ext_handle, &arg, &share_value))
+	mpz_set_ui(mpz_share_aux, b.get_share().get_word());
+	mpz_set_ui(mpz_arg_aux, a.get_word());
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gf2n_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Gmpz2share(&share_value, c);
+		Gmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -1202,19 +1163,14 @@ void Processor::GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 {
-	mpz_t mpz_value, mpz_share;
-	mpz_init(mpz_value);
-	mpz_init(mpz_share);
-	mpz_set_ui(mpz_value, value.get_word());
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, &mpz_value, &mpz_share))
+	mpz_set_ui(mpz_arg_aux, value.get_word());
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Gmpz2share(&mpz_share, share);
+		Gmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -1222,17 +1178,13 @@ void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_value);
-	mpz_clear(mpz_share);
 }
 
 void Processor::GBit_Ext_64(Share<gf2n>& share)
 {
-	mpz_t mpz_share;
-	mpz_init(mpz_share);
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &mpz_share))
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &mpz_share_aux))
 	{
-		Gmpz2share(&mpz_share, share);
+		Gmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -1240,18 +1192,14 @@ void Processor::GBit_Ext_64(Share<gf2n>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share);
 }
 
 void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inverse)
 {
-	mpz_t mpz_share_value, mpz_share_inverse;
-	mpz_init(mpz_share_value);
-	mpz_init(mpz_share_inverse);
-	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &mpz_share_value, &mpz_share_inverse))
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Gmpz2share(&mpz_share_value, share_value);
-		Gmpz2share(&mpz_share_inverse, share_inverse);
+		Gmpz2share(&mpz_share_aux, share_value);
+		Gmpz2share(&mpz_arg_aux, share_inverse);
 	}
 	else
 	{
@@ -1259,8 +1207,6 @@ void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inv
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share_value);
-	mpz_clear(mpz_share_inverse);
 }
 
 void Processor::GShares2mpz(const vector< Share<gf2n> >& shares, mpz_t * share_values)

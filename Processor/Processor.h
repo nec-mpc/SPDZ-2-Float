@@ -330,7 +330,7 @@ class Processor : public ProcessorBase
   void Gmpz2share(const mpz_t * mpzv, Share<gf2n> & shv);
 
   void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
-  mpz_t mpz_share_4bit;
+  mpz_t mpz_share_aux, mpz_arg_aux;
 
   mpz_t * po_shares, * po_opens;
   size_t po_size;
