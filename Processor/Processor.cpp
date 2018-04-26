@@ -63,6 +63,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 
 	alloc_po_mpz(5000);
 	alloc_pm_mpz(5000);
+	mpz_init(mpz_share_4bit);
 #endif
 }
 
@@ -76,6 +77,7 @@ Processor::~Processor()
 
 	free_po_mpz();
 	free_pm_mpz();
+	mpz_clear(mpz_share_4bit);
 #endif
 }
 
@@ -884,11 +886,9 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 
 void Processor::PBit_Ext_64(Share<gfp>& share)
 {
-	mpz_t mpz_share;
-	mpz_init(mpz_share);
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share))
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share_4bit))
 	{
-		Pmpz2share(&mpz_share, share);
+		Pmpz2share(&mpz_share_4bit, share);
 	}
 	else
 	{
@@ -896,7 +896,6 @@ void Processor::PBit_Ext_64(Share<gfp>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share);
 }
 
 void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse)
