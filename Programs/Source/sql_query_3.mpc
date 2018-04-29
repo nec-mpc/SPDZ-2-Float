@@ -8,7 +8,7 @@ a3 = 10             # 10 <= a3 <= 14
 v = 0               # 0 <= v <= 4
 alpha = 3           # 0 <= alpha
 beta = 2            # 0 <= beta <= L[a3-5]
-N0 = 100
+N0 = 10
 N1 = 1
 N2 = 1
 
@@ -88,6 +88,8 @@ def calc_tup(Ti):
             C[j][k] = C[j][k] + A
 
 #-----------------------------------------------------------------------------#
+print_ln('start')
+time()
 
 @for_range(N0)
 def perform_row(i):
@@ -109,6 +111,9 @@ def perform_row(i):
     calc_tup(Ti)
 '''
 
+print_ln('mid')
+time()
+
 @for_range(L[a1-5])
 def _(j):
     for k in range(L[a2-5]):
@@ -119,6 +124,9 @@ def _(j):
         H[j][k] = (C[j][k] >= alpha)
         R[j][k] = H[j][k]*(sfSjk/sfCjk)
         print_ln('R[%s][%s] = %s; H[%s][%s] = %s;', j, k, R[j][k].reveal(), j, k, H[j][k].reveal())
+
+print_ln('stop')
+time()
 
 #-----------------------------------------------------------------------------#
 print_ln('Algorithm 173 SQL Query test done')
