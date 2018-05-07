@@ -7,15 +7,13 @@ a2 = 7              # 5 <= a2 <= 14
 a3 = 10             # 10 <= a3 <= 14
 v = 0               # 0 <= v <= 4
 alpha = 3           # 0 <= alpha
-beta = 2            # 0 <= beta <= L[a3-5]
-N0 = 1000
-N1 = 1
-N2 = 1
+beta = 1            # 0 <= beta <= L[a3-5]
+N0 = 10
 
-S = Matrix(L[a1-5], L[a2-5], sint)
-C = Matrix(L[a1-5], L[a2-5], sint)
-R = Matrix(L[a1-5], L[a2-5], sfix)
-H = Matrix(L[a1-5], L[a2-5], sint)
+S = [[sint(0) for i in range(L[a1-5])] for j in range(L[a2-5])]
+C = [[sint(0) for i in range(L[a1-5])] for j in range(L[a2-5])]
+R = [[sfix(0) for i in range(L[a1-5])] for j in range(L[a2-5])]
+H = [[sint(0) for i in range(L[a1-5])] for j in range(L[a2-5])]
 
 #-----------------------------------------------------------------------------#
 def read_row(pid):
@@ -25,43 +23,43 @@ def read_row(pid):
     sInteger_3 = sint.get_input_from(pid)
     sInteger_4 = sint.get_input_from(pid)
     
-    s20BitArray_5 = Array(L[0], sint)
+    s20BitArray_5 = [sint(0) for i in range(L[0])]
     for i in range(L[0]):
         s20BitArray_5[i] = sint.get_input_from(pid)
     
-    s20BitArray_6 = Array(L[1], sint)
+    s20BitArray_6 = [sint(0) for i in range(L[1])]
     for i in range(L[1]):
         s20BitArray_6[i] = sint.get_input_from(pid)
     
-    s20BitArray_7 = Array(L[2], sint)
+    s20BitArray_7 = [sint(0) for i in range(L[2])]
     for i in range(L[2]):
         s20BitArray_7[i] = sint.get_input_from(pid)
     
-    s20BitArray_8 = Array(L[3], sint)
+    s20BitArray_8 = [sint(0) for i in range(L[3])]
     for i in range(L[3]):
         s20BitArray_8[i] = sint.get_input_from(pid)
     
-    s20BitArray_9 = Array(L[4], sint)
+    s20BitArray_9 = [sint(0) for i in range(L[4])]
     for i in range(L[4]):
         s20BitArray_9[i] = sint.get_input_from(pid)
     
-    s83BitArray_10 = Array(L[5], sint)
+    s83BitArray_10 = [sint(0) for i in range(L[5])]
     for i in range(L[5]):
         s83BitArray_10[i] = sint.get_input_from(pid)
     
-    s20BitArray_11 = Array(L[6], sint)
+    s20BitArray_11 = [sint(0) for i in range(L[6])]
     for i in range(L[6]):
         s20BitArray_11[i] = sint.get_input_from(pid)
     
-    s2BitArray_12 = Array(L[7], sint)
+    s2BitArray_12 = [sint(0) for i in range(L[7])]
     for i in range(L[7]):
         s2BitArray_12[i] = sint.get_input_from(pid)
     
-    s10BitArray_13 = Array(L[8], sint)
+    s10BitArray_13 = [sint(0) for i in range(L[8])]
     for i in range(L[8]):
         s10BitArray_13[i] = sint.get_input_from(pid)
     
-    s50BitArray_14 = Array(L[9], sint)
+    s50BitArray_14 = [sint(0) for i in range(L[9])]
     for i in range(L[9]):
         s50BitArray_14[i] = sint.get_input_from(pid)
 
@@ -81,6 +79,8 @@ def print_tup(t):
 
 #-----------------------------------------------------------------------------#
 def calc_tup(Ti):
+    global S
+    global C
     for j in range(L[a1-5]):
         for k in range(L[a2-5]):
             A = Ti[a3][beta]*Ti[a1][j]*Ti[a2][k]
@@ -88,34 +88,12 @@ def calc_tup(Ti):
             C[j][k] = C[j][k] + A
 
 #-----------------------------------------------------------------------------#
-print_ln('start')
-time()
 
-@for_range(N0)
-def perform_row(i):
+for i in range(N0):
     Ti = read_row(0)
-    #print_tup(Ti)
     calc_tup(Ti)
 
-'''
-@for_range(N1)
-def perform_row(i):
-    Ti = read_row(1)
-    #print_tup(Ti)
-    calc_tup(Ti)
-
-@for_range(N2)
-def perform_row(i):
-    Ti = read_row(2)
-    #print_tup(Ti)
-    calc_tup(Ti)
-'''
-
-print_ln('mid')
-time()
-
-@for_range(L[a1-5])
-def _(j):
+for j in range(L[a1-5]):
     for k in range(L[a2-5]):
         sfSjk = sfix(0)
         sfSjk.load_int(S[j][k])
@@ -124,9 +102,6 @@ def _(j):
         H[j][k] = (C[j][k] >= alpha)
         R[j][k] = H[j][k]*(sfSjk/sfCjk)
         print_ln('R[%s][%s] = %s; H[%s][%s] = %s;', j, k, R[j][k].reveal(), j, k, H[j][k].reveal())
-
-print_ln('stop')
-time()
 
 #-----------------------------------------------------------------------------#
 print_ln('Algorithm 173 SQL Query test done')
