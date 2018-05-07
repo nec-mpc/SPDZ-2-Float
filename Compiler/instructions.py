@@ -1343,7 +1343,7 @@ class muls(base.CISC):
 #
 # 2G START
 #
-        """
+        """ """
         s = [program.curr_block.new_reg('s') for i in range(9)]
         c = [program.curr_block.new_reg('c') for i in range(3)]
         triple(s[0], s[1], s[2])
@@ -1359,7 +1359,7 @@ class muls(base.CISC):
         addm(self.args[0], s[8], c[2])
         """
         e_mult(self.args[0], self.args[1],self.args[2])
-        """ """
+        """
 
 #
 # 2G END
