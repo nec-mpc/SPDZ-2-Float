@@ -10,6 +10,20 @@ See also https://www.cs.bris.ac.uk/Research/CryptographySecurity/SPDZ
 The SPDZ-2 extensions is a mechanism that enables substitution of the original implementation of various operations with an alternate external implementation. This is done by dynamically loading a configured library and prescribed API function pointers. 
 In runtime, the SPDZ-2 processor will call the loaded API functions instead of the original implementation and provide it with the required parameters.
 
+### Detecting code changes
+Code changes in the fork can be detected by searching for ```EXTENDED_SPDZ``` compiler directive. 
+If this directive is swiched off, the original SPDZ-2 code will be compiled.
+Here is an example of a code change, in [Instruction.cpp](https://github.com/cryptobiu/SPDZ-2/edit/master/Processor/Instruction.cpp)
+```
+      case STARTOPEN:
+#if defined(EXTENDED_SPDZ)
+    	  Proc.POpen_Start_Ext_64(start, size);
+#else
+    	  Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
+#endif
+```
+
+if the directive is defined, the code will call the SPDZ extension code instrad of the standard processing for a open.
 ### Extension API
 
 The API for an extension is defined [in the following include file](https://github.com/cryptobiu/SPDZ-2-Extension-MpcHonestMajority/blob/master/spdzext.h)
