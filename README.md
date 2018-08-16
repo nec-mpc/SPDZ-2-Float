@@ -18,25 +18,25 @@ The API for an extension is defined [in the following include file](https://gith
 int init(void ** handle, const int pid, const int num_of_parties, const int thread_id,
 			const char * field, const int open_count, const int mult_count, const int bits_count)
 
-int term(void * handle)
+int term(void * handle);
 
-int offline(void * handle, const int offline_size)
+int offline(void * handle, const int offline_size);
 
-int start_open(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify)
+int start_open(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify);
 
-int stop_open(void * handle)
+int stop_open(void * handle);
 
-int triple(void * handle, mpz_t * a, mpz_t * b, mpz_t * c)
+int triple(void * handle, mpz_t * a, mpz_t * b, mpz_t * c);
 
-int input(void * handle, const int input_of_pid, mpz_t * input_value)
+int input(void * handle, const int input_of_pid, mpz_t * input_value);
 
-int start_verify(void * handle, int * error)
+int start_verify(void * handle, int * error);
 
-int stop_verify(void * handle)
+int stop_verify(void * handle);
 
-int start_input(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs)
+int start_input(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs);
 
-int stop_input(void * handle)
+int stop_input(void * handle);
 
 int start_mult(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
 
