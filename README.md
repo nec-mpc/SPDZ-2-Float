@@ -1,11 +1,12 @@
-A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Copyright for the minor changes to SPDZ-2 in this fork are held by [2018, Bar Ilan Cryptography Research Group, NEC  Security Research Labs All rights reserved]  All other copyright held by: 
+A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Changes performed by Bar Ilan Cryptography Research Group, NEC  Security Research Labs, and Data61 (Marcel Keller). This code is used in the publication "Generalizing the SPDZ Compiler For Other Protocols" accpeted for ACM-CCS 2018. A link to the eprint will follow once available.
 
 (C) 2017 University of Bristol. See License.txt
 Software for the SPDZ and MASCOT secure multi-party computation protocols.
 See `Programs/Source/` for some example MPC programs, and `tutorial.md` for
 a basic tutorial.
-
 See also https://www.cs.bris.ac.uk/Research/CryptographySecurity/SPDZ
+
+#### SPDZ-2 With Extensions
 
 
 #### Requirements:
