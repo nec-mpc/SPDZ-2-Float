@@ -1,8 +1,8 @@
 # SPDZ-2 With Extensions
 
-A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Changes performed by Bar Ilan Cryptography Research Group, NEC  Security Research Labs, and Data61 (Marcel Keller). This code is used in the publication "Generalizing the SPDZ Compiler For Other Protocols" accpeted for ACM-CCS 2018. A link to the eprint will follow once available.
+A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Changes performed by Bar Ilan Cryptography Research Group and NEC Security Research Labs. This code is used in the publication "Generalizing the SPDZ Compiler For Other Protocols" accpeted for ACM-CCS 2018. A link to the eprint will follow once available.
 
-We would like to thank to the team behind the SPDZ-2 framework, which is an extensive effort and an excellent contribution to the MPC community. Special thanks to Marcel Keller (now at data61) for his numerous contributions ,insights and explanantions making this work possible.   
+We would like to thank to the team behind the SPDZ-2 framework, which is an extensive effort and an excellent contribution to the MPC community. Special thanks to Marcel Keller for his numerous insights and explanantions making this work possible.   
 
 (C) 2017 University of Bristol. See License.txt
 Software for the SPDZ and MASCOT secure multi-party computation protocols.
