@@ -8,7 +8,58 @@ See also https://www.cs.bris.ac.uk/Research/CryptographySecurity/SPDZ
 
 ## SPDZ-2 With Extensions
 The SPDZ-2 extensions is a mechanism that enables substitution of the original implementation of various operations with an alternate external implementation. This is done by dynamically loading a configured library and prescribed API function pointers. 
-In runtime, the SPDZ-2 processor with call the loaded API functions instead of the original implementation and provide it with the required parameters.
+In runtime, the SPDZ-2 processor will call the loaded API functions instead of the original implementation and provide it with the required parameters.
+
+### Extension API
+
+The API for an extension is defined [in the following include file](https://github.com/cryptobiu/SPDZ-2-Extension-MpcHonestMajority/blob/master/spdzext.h)
+
+```
+int init(void ** handle, const int pid, const int num_of_parties, const int thread_id,
+			const char * field, const int open_count, const int mult_count, const int bits_count)
+
+int term(void * handle)
+
+int offline(void * handle, const int offline_size)
+
+int start_open(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify)
+
+int stop_open(void * handle)
+
+int triple(void * handle, mpz_t * a, mpz_t * b, mpz_t * c)
+
+int input(void * handle, const int input_of_pid, mpz_t * input_value)
+
+int start_verify(void * handle, int * error)
+
+int stop_verify(void * handle)
+
+int start_input(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs)
+
+int stop_input(void * handle)
+
+int start_mult(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
+
+int stop_mult(void * handle);
+
+int mix_add(void * handle, mpz_t * share, const mpz_t * scalar);
+
+int mix_sub_scalar(void * handle, mpz_t * share, const mpz_t * scalar);
+
+int mix_sub_share(void * handle, const mpz_t * scalar, mpz_t * share);
+
+int start_share_immediates(void * handle, const size_t value_count, const mpz_t * values, mpz_t * shares);
+
+int stop_share_immediates(void * handle);
+ 
+int share_immediate(void * handle, const mpz_t * value, mpz_t * share);
+
+int bit(void * handle, mpz_t * share);
+
+int inverse(void * handle, mpz_t * share_value, mpz_t * share_inverse);
+
+```
+### Example of SPDZ-2 extension
 See https://github.com/cryptobiu/SPDZ-2-Extension-MpcHonestMajority for an example of such implemented extension library.
 
 ## SPDZ-2 
