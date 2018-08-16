@@ -6,8 +6,10 @@ See `Programs/Source/` for some example MPC programs, and `tutorial.md` for
 a basic tutorial.
 See also https://www.cs.bris.ac.uk/Research/CryptographySecurity/SPDZ
 
-#### SPDZ-2 With Extensions
+## SPDZ-2 With Extensions
 
+
+## SPDZ-2 
 
 #### Requirements:
  - GCC
