@@ -7,7 +7,9 @@ a basic tutorial.
 See also https://www.cs.bris.ac.uk/Research/CryptographySecurity/SPDZ
 
 ## SPDZ-2 With Extensions
-
+The SPDZ-2 extensions is a mechanism that enables substitution of the original implementation of various operations with an alternate external implementation. This is done by dynamically loading a configured library and prescribed API function pointers. 
+In runtime, the SPDZ-2 processor with call the loaded API functions instead of the original implementation and provide it with the required parameters.
+See https://github.com/cryptobiu/SPDZ-2-Extension-MpcHonestMajority for an example of such implemented extension library.
 
 ## SPDZ-2 
 
