@@ -15,7 +15,7 @@ The SPDZ-2 extensions is a mechanism that enables substitution of the original i
 In runtime, the SPDZ-2 processor will call the loaded API functions instead of the original implementation and provide it with the required parameters.
 
 ### MPC programs source code
-The [Programs/Source] folder od the fork includes MPC programs added as paro of our work to evaluate different protocols under the framework. For example, the following program evaluates a decision tree.  
+The [Programs/Source](https://github.com/cryptobiu/SPDZ-2/tree/master/Programs/Source) folder of this fork contains MPC programs added as paro of our work to evaluate different protocols under the framework. For example, the following program evaluates a decision tree.  
 ```
 import util
 #------------------------------------------------------------------------------
