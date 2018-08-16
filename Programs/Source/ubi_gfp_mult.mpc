@@ -1,9 +1,0 @@
-
-@for_range(70)
-def _(i):
-    a = sint.get_input_from(0)
-    b = sint.get_input_from(1)
-    c = sint.get_input_from(2)
-    product = a*b*c
-    clr_product = product.reveal()
-    print_ln('%s) a = %s; b = %s; c = %s; product = %s;', i, a.reveal(), b.reveal(), c.reveal(), clr_product)
