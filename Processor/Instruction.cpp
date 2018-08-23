@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #include "Processor/Instruction.h"
@@ -12,7 +12,10 @@
 #include <algorithm>
 #include <sstream>
 #include <map>
+#include <valgrind/callgrind.h>
 
+// broken
+#undef DEBUG
 
 // Convert modp to signed bigint of a given bit length
 void to_signed_bigint(bigint& bi, const gfp& x, int len)
@@ -256,6 +259,8 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       // instructions with no operand
       case TIME:
       case CRASH:
+      case STARTGRIND:
+      case STOPGRIND:
       	break;
       // instructions with 4 register operands
       case PRINTFLOATPLAIN:
@@ -267,9 +272,12 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       case GSTARTOPEN:
       case GSTOPOPEN:
       case WRITEFILESHARE:
+      case OPEN:
+      case GOPEN:
 #if defined(EXTENDED_SPDZ)
       case E_STARTMULT:
       case E_STOPMULT:
+      case E_MULT:
 #endif
         num_var_args = get_int(s);
         get_vector(num_var_args, start, s);
@@ -325,6 +333,11 @@ void BaseInstruction::parse_operands(istream& s, int pos)
         n = get_int(s);
         get_vector(num_var_args, start, s);
         break;
+      case BITDECINT:
+          num_var_args = get_int(s) - 1;
+          r[0] = get_int(s);
+          get_vector(num_var_args, start, s);
+          break;
       case PREP:
       case GPREP:
         // subtract extra argument
@@ -1451,6 +1464,15 @@ void Instruction::execute(Processor& Proc) const
             Proc.get_C2_ref(r[0] + j) = a;
           }
         return;
+      case BITDECINT:
+        {
+          long a = Proc.read_Ci(r[0]);
+          for (unsigned int i = 0; i < start.size(); i++)
+            {
+              Proc.get_Ci_ref(start[i]) = (a >> i) & 1;
+            }
+          break;
+        }
       case STARTOPEN:
 #if defined(EXTENDED_SPDZ)
     	  Proc.POpen_Start_Ext_64(start, size);
@@ -1479,6 +1501,20 @@ void Instruction::execute(Processor& Proc) const
         Proc.POpen_Stop(start,Proc.P,Proc.MC2,size);
 #endif
         return;
+      case OPEN:
+#if defined(EXTENDED_SPDZ)
+          Proc.POpen_Ext_64(start, size);
+#else
+          Proc.POpen(start, Proc.P, Proc.MCp, size);
+#endif
+        break;
+      case GOPEN:
+#if defined(EXTENDED_SPDZ)
+          Proc.GOpen_Ext_64(start, size);
+#else
+          Proc.POpen(start, Proc.P, Proc.MC2, size);
+#endif
+        break;
 #if defined(EXTENDED_SPDZ)
       case E_STARTMULT:
     	  Proc.PMult_Start_Ext_64(start, size);
@@ -1486,6 +1522,9 @@ void Instruction::execute(Processor& Proc) const
       case E_STOPMULT:
     	  Proc.PMult_Stop_Ext_64(start, size);
         return;
+      case E_MULT:
+        Proc.PMult_Ext_64(start, size);
+        break;
 #endif
       case JMP:
         Proc.PC += (signed int) n;
@@ -1675,6 +1714,12 @@ void Instruction::execute(Processor& Proc) const
         break;
       case CRASH:
         throw crash_requested();
+        break;
+      case STARTGRIND:
+        CALLGRIND_START_INSTRUMENTATION;
+        break;
+      case STOPGRIND:
+        CALLGRIND_STOP_INSTRUMENTATION;
         break;
       // ***
       // TODO: read/write shared GF(2^n) data instructions

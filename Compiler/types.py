@@ -1,4 +1,4 @@
-# (C) 2017 University of Bristol. See License.txt
+# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 from Compiler.program import Tape
 from Compiler.exceptions import *
@@ -456,6 +456,9 @@ class cint(_clear, _int):
     def __neg__(self):
         return 0 - self
 
+    def __abs__(self):
+        return (self >= 0).if_else(self, -self)
+
     @vectorize
     def __invert__(self):
         res = cint()
@@ -788,13 +791,8 @@ class regint(_register, _int):
         return cint(self).mod2m(*args, **kwargs)
 
     def bit_decompose(self, bit_length=None):
-        res = []
-        x = self
-        two = regint(2)
-        for i in range(bit_length or program.bit_length):
-            y = x / two
-            res.append(x - two * y)
-            x = y
+        res = [regint() for i in range(bit_length or program.bit_length)]
+        bitdecint(self, *res)
         return res
 
     @staticmethod
@@ -815,6 +813,9 @@ class regint(_register, _int):
 
 class _secret(_register):
     __slots__ = []
+
+    PreOR = staticmethod(lambda l: floatingpoint.PreORC(l))
+    PreOp = staticmethod(lambda op, l: floatingpoint.PreOpL(op, l))
 
     @vectorized_classmethod
     @set_instruction_type
@@ -968,6 +969,9 @@ class sint(_secret, _int):
     clear_type = cint
     reg_type = 's'
 
+    PreOp = staticmethod(floatingpoint.PreOpL)
+    PreOR = staticmethod(floatingpoint.PreOR)
+
     @vectorized_classmethod
     def get_random_int(cls, bits):
         res = sint()
@@ -1040,6 +1044,10 @@ class sint(_secret, _int):
     @vectorize
     def __neg__(self):
         return 0 - self
+
+    @vectorize
+    def __abs__(self):
+        return (self >= 0).if_else(self, -self)
 
     @read_mem_value
     @vectorize
@@ -1158,6 +1166,10 @@ class sgf2n(_secret, _gf2n):
     reg_type = 'sg'
 
     @classmethod
+    def get_type(cls, length):
+        return cls
+
+    @classmethod
     def get_raw_input_from(cls, player):
         res = cls()
         gstartinput(player, 1)
@@ -1258,8 +1270,10 @@ class sgf2n(_secret, _gf2n):
         masked = sum([b * (one << wanted_positions[i]) for i,b in enumerate(random_bits)], self).reveal()
         return [self.clear_type((masked >> wanted_positions[i]) & one) + r for i,r in enumerate(random_bits)]
 
-sint.basic_type = sint
-sgf2n.basic_type = sgf2n
+for t in (sint, sgf2n):
+    t.bit_type = t
+    t.basic_type = t
+    t.default_type = t
 
 
 class sgf2nint(sgf2n):
@@ -1956,6 +1970,7 @@ class sfloat(_number):
         s: sign bit
         """
     __slots__ = ['v', 'p', 'z', 's', 'size']
+
     # single precision
     vlen = 24
     plen = 8
@@ -2297,13 +2312,13 @@ class Array(object):
                 self[i] = value[source_index]
                 source_index.iadd(1)
             return
-        self._store(self.value_type.conv(value), self.get_address(index))
+        self._store(value, self.get_address(index))
 
     def _load(self, address):
         return self.value_type.load_mem(address)
 
     def _store(self, value, address):
-        value.store_in_mem(address)
+        self.value_type.conv(value).store_in_mem(address)
 
     def __len__(self):
         return self.length
@@ -2327,10 +2342,10 @@ class Array(object):
                 self[i] = j
         return self
 
-    def assign_all(self, value):
-        mem_value = self.value_type.MemValue(value)
-        n_loops = 8 if len(self) > 2**20 else 1
-        @library.for_range_multithread(n_loops, 1024, len(self))
+    def assign_all(self, value, use_threads=True):
+        mem_value = MemValue(value)
+        n_threads = 8 if use_threads and len(self) > 2**20 else 1
+        @library.for_range_multithread(n_threads, 1024, len(self))
         def f(i):
             self[i] = mem_value
         return self

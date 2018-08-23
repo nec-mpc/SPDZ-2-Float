@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #include "Processor/Machine.h"
 #include "Math/Setup.h"
@@ -46,13 +46,31 @@ int main(int argc, const char** argv)
           "--portnumbase" // Flag token.
     );
     opt.add(
+          "", // Default.
+          0, // Required?
+          1, // Number of args expected.
+          0, // Delimiter if expecting multiple args.
+          "Port to listen on (default: port number base + player number)", // Help description.
+          "-mp", // Flag token.
+          "--my-port" // Flag token.
+    );
+    opt.add(
           "localhost", // Default.
           0, // Required?
           1, // Number of args expected.
           0, // Delimiter if expecting multiple args.
-          "Host where Server.x is running (default: localhost)", // Help description.
+          "Host where Server.x is running to coordinate startup (default: localhost). Ignored if --ip-file-name is used.", // Help description.
           "-h", // Flag token.
           "--hostname" // Flag token.
+    );
+    opt.add(
+      "", // Default.
+      0, // Required?
+      1, // Number of args expected.
+      0, // Delimiter if expecting multiple args.
+      "Filename containing list of party ip addresses. Alternative to --hostname and running Server.x for startup coordination.", // Help description.
+      "-ip", // Flag token.
+      "--ip-file-name" // Flag token.
     );
     opt.add(
           "empty", // Default.
@@ -166,19 +184,26 @@ int main(int argc, const char** argv)
       return 1;
     }
 
-    string memtype, hostname;
+    string memtype, hostname, ipFileName;
     int lg2, lgp, pnbase, opening_sum, max_broadcast;
     int p2pcommsec;
+    int my_port;
 
     opt.get("--portnumbase")->getInt(pnbase);
     opt.get("--lgp")->getInt(lgp);
     opt.get("--lg2")->getInt(lg2);
     opt.get("--memory")->getString(memtype);
     opt.get("--hostname")->getString(hostname);
+    opt.get("--ip-file-name")->getString(ipFileName);
     opt.get("--opening-sum")->getInt(opening_sum);
     opt.get("--max-broadcast")->getInt(max_broadcast);
     opt.get("--player-to-player-commsec")->getInt(p2pcommsec);
 
+    ez::OptionGroup* mp_opt = opt.get("--my-port");
+    if (mp_opt->isSet)
+      mp_opt->getInt(my_port);
+    else
+      my_port = Names::DEFAULT_PORT;
 
     int mynum;
     sscanf((*allArgs[1]).c_str(), "%d", &mynum);
@@ -192,15 +217,38 @@ int main(int argc, const char** argv)
         Config::read_player_config(prep_data_prefix,mynum,pubkeys,mykey,mypublickey);
         keys = new CommsecKeysPackage(pubkeys,mykey,mypublickey);
     }
-    
-    Machine(playerno, pnbase, hostname, progname, memtype, lgp, lg2,
-      opt.get("--direct")->isSet, opening_sum, opt.get("--parallel")->isSet,
-      opt.get("--threads")->isSet, max_broadcast, keys).run();
 
-    cerr << "Command line:";
-    for (int i = 0; i < argc; i++)
-      cerr << " " << argv[i];
-    cerr << endl;
+    Names playerNames;
+    if (ipFileName.size() > 0) {
+      if (my_port != Names::DEFAULT_PORT)
+        throw runtime_error("cannot set port number when using IP file");
+      playerNames.init(playerno, pnbase, ipFileName);
+    } else {
+      playerNames.init(playerno, pnbase, my_port, hostname.c_str());
+    }
+    playerNames.set_keys(keys);
+        
+#ifndef INSECURE
+    try
+#endif
+    {
+        Machine(playerno, playerNames, progname, memtype, lgp, lg2,
+                opt.get("--direct")->isSet, opening_sum, opt.get("--parallel")->isSet,
+                opt.get("--threads")->isSet, max_broadcast).run();
+
+        cerr << "Command line:";
+        for (int i = 0; i < argc; i++)
+            cerr << " " << argv[i];
+        cerr << endl;
+    }
+#ifndef INSECURE
+    catch(...)
+    {
+        purge_preprocessing(playerNames,
+                get_prep_dir(playerNames.num_players(), lgp, lg2));
+        throw;
+    }
+#endif
 }
 
 

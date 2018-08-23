@@ -1,4 +1,4 @@
-# (C) 2017 University of Bristol. See License.txt
+# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 run_player() {
@@ -35,6 +35,8 @@ sleep 0.5
 #mkdir /dev/shm/Player-Data
 
 players=${PLAYERS:-2}
+
+SPDZROOT=${SPDZROOT:-.}
 
 #. Scripts/setup.sh
 

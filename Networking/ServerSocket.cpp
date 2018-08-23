@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * ServerSocket.cpp
@@ -22,7 +22,7 @@ void* accept_thread(void* server_socket)
   return 0;
 }
 
-ServerSocket::ServerSocket(int Portnum) : portnum(Portnum)
+ServerSocket::ServerSocket(int Portnum) : portnum(Portnum), thread(0)
 {
   struct sockaddr_in serv; /* socket info about our server */
 
@@ -51,7 +51,7 @@ ServerSocket::ServerSocket(int Portnum) : portnum(Portnum)
    */
   fl=1;
   while (fl!=0)
-    { fl=bind(main_socket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
+    { fl=::bind(main_socket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
       if (fl != 0)
         { cerr << "Binding to socket on " << my_name << ":" << Portnum << " failed, trying again in a second ..." << endl;
           sleep(1);
@@ -120,7 +120,10 @@ int ServerSocket::get_connection_socket(int id)
     }
 
   while (clients.find(id) == clients.end())
-      data_signal.wait();
+  {
+      if (data_signal.wait(60) == ETIMEDOUT)
+          throw runtime_error("No client after one minute");
+  }
 
   int client_socket = clients[id];
   used.insert(id);

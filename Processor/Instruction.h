@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _Instruction
 #define _Instruction
@@ -64,6 +64,8 @@ enum
     JOIN_TAPE = 0x1A,
     CRASH = 0x1B,
     USE_PREP = 0x1C,
+    STARTGRIND = 0x1D,
+    STOPGRIND = 0x1E,
     // Addition
     ADDC = 0x20,
     ADDS = 0x21,
@@ -92,9 +94,11 @@ enum
     // Open
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
+    OPEN = 0xA5,
 #if defined(EXTENDED_SPDZ)
     E_STARTMULT = 0xA2,
     E_STOPMULT = 0xA3,
+    E_MULT = 0xA4,
 #endif
     // Data access
     TRIPLE = 0x50,
@@ -142,6 +146,7 @@ enum
     EQC = 0x97,
     JMPI = 0x98,
     // Integers
+    BITDECINT = 0x99,
     LDINT = 0x9A,
     ADDINT = 0x9B,
     SUBINT = 0x9C,
@@ -215,6 +220,7 @@ enum
     // Open
     GSTARTOPEN = 0x1A0,
     GSTOPOPEN = 0x1A1,
+    GOPEN = 0x1A5,
     // Data access
     GTRIPLE = 0x150,
     GBIT = 0x151,

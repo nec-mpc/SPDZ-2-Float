@@ -1,8 +1,9 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #include "sockets.h"
 #include "Exceptions/Exceptions.h"
+#include "Tools/time-func.h"
 
 #include <iostream>
 using namespace std;
@@ -60,7 +61,7 @@ void set_up_server_socket(sockaddr_in& dest,int& consocket,int& main_socket,int 
    */
   fl=1;
   while (fl!=0)
-    { fl=bind(main_socket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
+    { fl=::bind(main_socket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
       if (fl != 0)
         { cerr << "Binding to socket on " << my_name << ":" << Portnum << " failed, trying again in a second ..." << endl;
           sleep(1);
@@ -139,12 +140,14 @@ void set_up_client_socket(int& mysocket,const char* hostname,int Portnum)
    freeaddrinfo(ai);
 
 
+   Timer timer;
+   timer.start();
    do
    {  fl=1;
       while (fl==1 || errno==EINPROGRESS)
        { fl=connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr)); }
    }
-   while (fl==-1 && errno==ECONNREFUSED);
+   while (fl==-1 && errno==ECONNREFUSED && timer.elapsed() < 60);
    if (fl<0) { error("set_up_socket:connect:",hostname);  }
 }
 
@@ -179,6 +182,22 @@ void receive(int socket,int& a)
       if (i<0) { error("Receiving error - 2"); }
     }
   a=msg[0];
+}
+
+
+void send(int socket, size_t a, size_t len)
+{
+  octet blen[len];
+  encode_length(blen, a, len);
+  send(socket, blen, len);
+}
+
+
+void receive(int socket, size_t& a, size_t len)
+{
+  octet blen[len];
+  receive(socket, blen, len);
+  a = decode_length(blen, len);
 }
 
 

@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * SHA1 routine optimized to do word accesses rather than byte accesses,
@@ -10,6 +10,7 @@
 
 
 #include "sha1.h"
+#include "octetStream.h"
 #include <arpa/inet.h>
 #include <string.h>
 
@@ -282,4 +283,16 @@ void blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx)
 	/* Output hash */
 	for (i = 0; i < 5; i++)
 		put_be32(hashout + i*4, ctx->H[i]);
+}
+
+void SHA1::update(const octetStream& os)
+{
+    update(os.get_data(), os.get_length());
+}
+
+void SHA1::final(octetStream& os)
+{
+    os.resize_precise(hash_length);
+    os.reset_write_head();
+    final(os.get_data());
 }

@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #include "Processor/Processor.h"
@@ -21,6 +21,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
         MAC_Check<gf2n>& MC2,MAC_Check<gfp>& MCp,Machine& machine,
         const Program& program)
 : thread_num(thread_num),DataF(DataF),P(P),MC2(MC2),MCp(MCp),machine(machine),
+  private_input_filename(get_filename(PREP_DIR "Private-Input-",true)),
   input2(*this,MC2),inputp(*this,MCp),privateOutput2(*this),privateOutputp(*this),sent(0),rounds(0),
   external_clients(ExternalClients(P.my_num(), DataF.prep_data_dir)),binary_file_io(Binary_File_IO())
 #if defined(EXTENDED_SPDZ)
@@ -35,14 +36,14 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   reset(program,0);
 
   public_input.open(get_filename("Programs/Public-Input/",false).c_str());
-  private_input.open(get_filename("Player-Data/Private-Input-",true).c_str());
-  public_output.open(get_filename("Player-Data/Public-Output-",true).c_str(), ios_base::out);
-  private_output.open(get_filename("Player-Data/Private-Output-",true).c_str(), ios_base::out);
+  private_input.open(private_input_filename.c_str());
+  public_output.open(get_filename(PREP_DIR "Public-Output-",true).c_str(), ios_base::out);
+  private_output.open(get_filename(PREP_DIR "Private-Output-",true).c_str(), ios_base::out);
 
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 1500000, 1500000, 619200))
+	if(0 != (*the_ext_lib.ext_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 52832, 469395, 91800))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -61,6 +62,9 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 	cout << "SPDZ GF2N extension library initialized." << endl;
 
 	alloc_po_mpz(5000);
+	alloc_pm_mpz(5000);
+	mpz_init(mpz_share_aux);
+	mpz_init(mpz_arg_aux);
 #endif
 }
 
@@ -73,6 +77,9 @@ Processor::~Processor()
 	dlclose(the_ext_lib.ext_lib_handle);
 
 	free_po_mpz();
+	free_pm_mpz();
+	mpz_clear(mpz_share_aux);
+	mpz_clear(mpz_arg_aux);
 #endif
 }
 
@@ -510,6 +517,28 @@ void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<T>& 
 	rounds++;
 }
 
+void unzip_open(vector<int>& dest, vector<int>& source, const vector<int>& reg)
+{
+	int n = reg.size() / 2;
+	source.resize(n);
+	dest.resize(n);
+	for (int i = 0; i < n; i++)
+	{
+		source[i] = reg[2 * i + 1];
+		dest[i] = reg[2 * i];
+	}
+}
+
+template<class T>
+void Processor::POpen(const vector<int>& reg, const Player& P, MAC_Check<T>& MC,
+		int size)
+{
+	vector<int> source, dest;
+	unzip_open(dest, source, reg);
+	POpen_Start(source, P, MC, size);
+	POpen_Stop(dest, P, MC, size);
+}
+
 ostream& operator<<(ostream& s,const Processor& P)
 {
   s << "Processor State" << endl;
@@ -556,6 +585,14 @@ void Processor::maybe_encrypt_sequence(int client_id)
 }
 
 #if defined(EXTENDED_SPDZ)
+
+void Processor::POpen_Ext_64(const vector<int>& reg, int size)
+{
+	vector<int> dest, source;
+	unzip_open(dest, source, reg);
+	POpen_Start_Ext_64(source, size);
+	POpen_Stop_Ext_64(dest, size);
+}
 
 void Processor::POpen_Start_Ext_64(const vector<int>& reg, int size)
 {
@@ -633,16 +670,13 @@ void Processor::PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 
 void Processor::PInput_Ext_64(Share<gfp>& input_value, const int input_party_id)
 {
-	mpz_t mpz_input_value;
-	mpz_init(mpz_input_value);
-	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &mpz_input_value))
+	if(0 != (*the_ext_lib.ext_input)(spdz_gfp_ext_handle, input_party_id, &mpz_share_aux))
 	{
 		cerr << "Processor::PInput_Ext_64 extension library input failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	Pmpz2share(&mpz_input_value, input_value);
-	mpz_clear(mpz_input_value);
+	Pmpz2share(&mpz_share_aux, input_value);
 }
 
 void Processor::PInput_Start_Ext_64(int player, int n_inputs)
@@ -682,6 +716,22 @@ void Processor::PInput_Stop_Ext_64(int /*player*/, vector<int> targets)
 	free_pi_mpz();
 }
 
+void Processor::PMult_Ext_64(const vector<int>& reg, int size)
+{
+	vector<int> sources, dest;
+	int n = reg.size() / 3;
+	sources.reserve(2 * n);
+	dest.reserve(n);
+	for (int i = 0; i < n; i++)
+	{
+		dest.push_back(reg[3 * i]);
+		sources.push_back(reg[3 * i + 1]);
+		sources.push_back(reg[3 * i + 2]);
+	}
+	PMult_Start_Ext_64(sources, size);
+	PMult_Stop_Ext_64(dest, size);
+}
+
 void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
 {
 	int sz=reg.size();
@@ -696,10 +746,14 @@ void Processor::PMult_Start_Ext_64(const vector<int>& reg, int size)
 	PO.resize(sz*size);
 
 	//the share values are saved as mpz
-	alloc_pm_mpz(Sh_PO.size());
+	if(Sh_PO.size() > pm_size)
+	{
+		free_pm_mpz();
+		alloc_pm_mpz(Sh_PO.size());
+	}
 	PShares2mpz(Sh_PO, pm_shares);
 
-	if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, pm_size, pm_shares, pm_products, 1))
+	if(0 != (*the_ext_lib.ext_start_mult)(spdz_gfp_ext_handle, Sh_PO.size(), pm_shares, pm_products, 1))
 	{
 		cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
 		dlclose(the_ext_lib.ext_lib_handle);
@@ -717,7 +771,6 @@ void Processor::PMult_Stop_Ext_64(const vector<int>& reg, int size)
 	}
 
 	PMult_Stop_prep_products(reg, size);
-	free_pm_mpz();
 
 	sent += reg.size() * size;
 	rounds++;
@@ -749,14 +802,11 @@ void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size)
 
 void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	to_bigint(*((mpz_class*)(&share_value)), a.get_share());
-	to_bigint(*((mpz_class*)(&arg)), b);
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &share_value, &arg))
+	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gfp_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Pmpz2share(&share_value, c);
+		Pmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -764,20 +814,15 @@ void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	to_bigint(*((mpz_class*)(&share_value)), a.get_share());
-	to_bigint(*((mpz_class*)(&arg)), b);
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &share_value, &arg))
+	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gfp_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Pmpz2share(&share_value, c);
+		Pmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -785,20 +830,15 @@ void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	to_bigint(*((mpz_class*)(&share_value)), b.get_share());
-	to_bigint(*((mpz_class*)(&arg)), a);
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, &arg, &share_value))
+	to_bigint(*((bigint*)(&mpz_share_aux)), b.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), a);
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gfp_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Pmpz2share(&share_value, c);
+		Pmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -806,19 +846,14 @@ void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 {
-	mpz_t mpz_value, mpz_share;
-	mpz_init(mpz_value);
-	mpz_init(mpz_share);
-	to_bigint(*((mpz_class*)(&mpz_value)), value);
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, &mpz_value, &mpz_share))
+	to_bigint(*((bigint*)(&mpz_arg_aux)), value);
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gfp_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Pmpz2share(&mpz_share, share);
+		Pmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -826,17 +861,13 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_value);
-	mpz_clear(mpz_share);
 }
 
 void Processor::PBit_Ext_64(Share<gfp>& share)
 {
-	mpz_t mpz_share;
-	mpz_init(mpz_share);
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share))
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gfp_ext_handle, &mpz_share_aux))
 	{
-		Pmpz2share(&mpz_share, share);
+		Pmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -844,18 +875,14 @@ void Processor::PBit_Ext_64(Share<gfp>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share);
 }
 
 void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse)
 {
-	mpz_t mpz_share_value, mpz_share_inverse;
-	mpz_init(mpz_share_value);
-	mpz_init(mpz_share_inverse);
-	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &mpz_share_value, &mpz_share_inverse))
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gfp_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Pmpz2share(&mpz_share_value, share_value);
-		Pmpz2share(&mpz_share_inverse, share_inverse);
+		Pmpz2share(&mpz_share_aux, share_value);
+		Pmpz2share(&mpz_arg_aux, share_inverse);
 	}
 	else
 	{
@@ -863,8 +890,6 @@ void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inver
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share_value);
-	mpz_clear(mpz_share_inverse);
 }
 
 void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values)
@@ -872,7 +897,7 @@ void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_va
 	size_t count = shares.size();
 	for(size_t i = 0; i < count; i++)
 	{
-		to_bigint(*((mpz_class*)(share_values + i)), shares[i].get_share());
+		to_bigint(*((bigint*)(share_values + i)), shares[i].get_share());
 	}
 }
 
@@ -892,6 +917,14 @@ void Processor::Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv)
 	mac.mul(MCp.get_alphai(), value);
 	shv.set_share(value);
 	shv.set_mac(mac);
+}
+
+void Processor::GOpen_Ext_64(const vector<int>& reg, int size)
+{
+	vector<int> dest, source;
+	unzip_open(dest, source, reg);
+	GOpen_Start_Ext_64(source, size);
+	GOpen_Stop_Ext_64(dest, size);
 }
 
 void Processor::GOpen_Start_Ext_64(const vector<int>& reg,int size)
@@ -1086,14 +1119,11 @@ void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size)
 
 void Processor::GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	mpz_set_ui(share_value, a.get_share().get_word());
-	mpz_set_ui(arg, b.get_word());
-	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gf2n_ext_handle, &share_value, &arg))
+	mpz_set_ui(mpz_share_aux, a.get_share().get_word());
+	mpz_set_ui(mpz_arg_aux, b.get_word());
+	if(0 == (*the_ext_lib.ext_mix_add)(spdz_gf2n_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Gmpz2share(&share_value, c);
+		Gmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -1101,20 +1131,15 @@ void Processor::GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	mpz_set_ui(share_value, a.get_share().get_word());
-	mpz_set_ui(arg, b.get_word());
-	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gf2n_ext_handle, &share_value, &arg))
+	mpz_set_ui(mpz_share_aux, a.get_share().get_word());
+	mpz_set_ui(mpz_arg_aux, b.get_word());
+	if(0 == (*the_ext_lib.ext_mix_sub_scalar)(spdz_gf2n_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Gmpz2share(&share_value, c);
+		Gmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -1122,20 +1147,15 @@ void Processor::GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 {
-	mpz_t share_value, arg;
-	mpz_init(share_value);
-	mpz_init(arg);
-	mpz_set_ui(share_value, b.get_share().get_word());
-	mpz_set_ui(arg, a.get_word());
-	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gf2n_ext_handle, &arg, &share_value))
+	mpz_set_ui(mpz_share_aux, b.get_share().get_word());
+	mpz_set_ui(mpz_arg_aux, a.get_word());
+	if(0 == (*the_ext_lib.ext_mix_sub_share)(spdz_gf2n_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Gmpz2share(&share_value, c);
+		Gmpz2share(&mpz_share_aux, c);
 	}
 	else
 	{
@@ -1143,19 +1163,14 @@ void Processor::GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(share_value);
-	mpz_clear(arg);
 }
 
 void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 {
-	mpz_t mpz_value, mpz_share;
-	mpz_init(mpz_value);
-	mpz_init(mpz_share);
-	mpz_set_ui(mpz_value, value.get_word());
-	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, &mpz_value, &mpz_share))
+	mpz_set_ui(mpz_arg_aux, value.get_word());
+	if(0 == (*the_ext_lib.ext_share_immediate)(spdz_gf2n_ext_handle, &mpz_arg_aux, &mpz_share_aux))
 	{
-		Gmpz2share(&mpz_share, share);
+		Gmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -1163,17 +1178,13 @@ void Processor::GLdsi_Ext_64(gf2n& value, Share<gf2n>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_value);
-	mpz_clear(mpz_share);
 }
 
 void Processor::GBit_Ext_64(Share<gf2n>& share)
 {
-	mpz_t mpz_share;
-	mpz_init(mpz_share);
-	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &mpz_share))
+	if(0 == (*the_ext_lib.ext_bit)(spdz_gf2n_ext_handle, &mpz_share_aux))
 	{
-		Gmpz2share(&mpz_share, share);
+		Gmpz2share(&mpz_share_aux, share);
 	}
 	else
 	{
@@ -1181,18 +1192,14 @@ void Processor::GBit_Ext_64(Share<gf2n>& share)
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share);
 }
 
 void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inverse)
 {
-	mpz_t mpz_share_value, mpz_share_inverse;
-	mpz_init(mpz_share_value);
-	mpz_init(mpz_share_inverse);
-	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &mpz_share_value, &mpz_share_inverse))
+	if(0 == (*the_ext_lib.ext_inverse)(spdz_gf2n_ext_handle, &mpz_share_aux, &mpz_arg_aux))
 	{
-		Gmpz2share(&mpz_share_value, share_value);
-		Gmpz2share(&mpz_share_inverse, share_inverse);
+		Gmpz2share(&mpz_share_aux, share_value);
+		Gmpz2share(&mpz_arg_aux, share_inverse);
 	}
 	else
 	{
@@ -1200,8 +1207,6 @@ void Processor::GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inv
 		dlclose(the_ext_lib.ext_lib_handle);
 		abort();
 	}
-	mpz_clear(mpz_share_value);
-	mpz_clear(mpz_share_inverse);
 }
 
 void Processor::GShares2mpz(const vector< Share<gf2n> >& shares, mpz_t * share_values)
@@ -1329,6 +1334,8 @@ template void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_
 template void Processor::POpen_Start(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
 template void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<gf2n>& MC,int size);
 template void Processor::POpen_Stop(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
+template void Processor::POpen(const vector<int>& reg,const Player& P,MAC_Check<gf2n>& MC,int size);
+template void Processor::POpen(const vector<int>& reg,const Player& P,MAC_Check<gfp>& MC,int size);
 template void Processor::read_socket_private<gfp>(int client_id, const vector<int>& registers, bool send_macs);
 template void Processor::read_socket_vector<gfp>(int client_id, const vector<int>& registers);
 template void Processor::read_shares_from_file<gfp>(int start_file_pos, int end_file_pos_register, const vector<int>& data_registers);

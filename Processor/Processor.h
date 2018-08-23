@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 
 #ifndef _Processor
@@ -92,6 +92,8 @@ class Processor : public ProcessorBase
   MAC_Check<gf2n>& MC2;
   MAC_Check<gfp>& MCp;
   Machine& machine;
+
+  string private_input_filename;
 
   Input<gf2n> input2;
   Input<gfp> inputp;
@@ -271,6 +273,9 @@ class Processor : public ProcessorBase
   template <class T>
   void POpen_Stop_prep_opens(const vector<int>& reg, vector<T>& PO, vector<T>& C, int size);
 
+  template <class T>
+  void POpen(const vector<int>& reg,const Player& P,MAC_Check<T>& MC,int size);
+
   // Print the processor state
   friend ostream& operator<<(ostream& s,const Processor& P);
 
@@ -281,12 +286,14 @@ class Processor : public ProcessorBase
 #if defined(EXTENDED_SPDZ)
   public:
 
+  void POpen_Ext_64(const vector<int>& reg,int size);
   void POpen_Start_Ext_64(const vector<int>& reg,int size);
   void POpen_Stop_Ext_64(const vector<int>& reg,int size);
   void PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
   void PInput_Ext_64(Share<gfp>& input_value, const int input_party_id);
   void PInput_Start_Ext_64(int player, int n_inputs);
   void PInput_Stop_Ext_64(int player, vector<int> targets);
+  void PMult_Ext_64(const vector<int>& reg, int size);
   void PMult_Start_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_prep_products(const vector<int>& reg, int size);
@@ -301,6 +308,7 @@ class Processor : public ProcessorBase
   void Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps);
   void Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv);
 
+  void GOpen_Ext_64(const vector<int>& reg,int size);
   void GOpen_Start_Ext_64(const vector<int>& reg,int size);
   void GOpen_Stop_Ext_64(const vector<int>& reg,int size);
   void GTriple_Ext_64(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c);
@@ -322,6 +330,7 @@ class Processor : public ProcessorBase
   void Gmpz2share(const mpz_t * mpzv, Share<gf2n> & shv);
 
   void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
+  mpz_t mpz_share_aux, mpz_arg_aux;
 
   mpz_t * po_shares, * po_opens;
   size_t po_size;
@@ -333,10 +342,13 @@ class Processor : public ProcessorBase
   }
   void free_po_mpz()
   {
-	  for(size_t i = 0; i < po_size; i++) { mpz_clear(po_shares[i]); mpz_clear(po_opens[i]); }
-	  delete po_shares; po_shares = NULL;
-	  delete po_opens; po_opens = NULL;
-	  po_size = 0;
+	  if(po_size > 0)
+	  {
+		  for(size_t i = 0; i < po_size; i++) { mpz_clear(po_shares[i]); mpz_clear(po_opens[i]); }
+		  delete po_shares; po_shares = NULL;
+		  delete po_opens; po_opens = NULL;
+		  po_size = 0;
+	  }
   }
 
   mpz_t * pi_inputs;
@@ -357,18 +369,31 @@ class Processor : public ProcessorBase
   size_t pm_size;
   void alloc_pm_mpz(const size_t required_size)
   {
-	  pm_shares = new mpz_t[pm_size = required_size];
-	  for(size_t i = 0; i < pm_size; i++) mpz_init(pm_shares[i]);
+	  assert(required_size%2 == 0);
+	  pm_size = required_size;
+	  pm_shares = new mpz_t[pm_size];
 	  pm_products = new mpz_t[pm_size/2];
-	  for(size_t i = 0; i < pm_size/2; i++) mpz_init(pm_products[i]);
+	  for(size_t i = 0; i < pm_size/2; i++)
+	  {
+		  mpz_init(pm_products[i]);
+		  mpz_init(pm_shares[2*i]);
+		  mpz_init(pm_shares[2*i+1]);
+	  }
   }
   void free_pm_mpz()
   {
-	  for(size_t i = 0; i < pm_size; i++) mpz_clear(pm_shares[i]);
-	  for(size_t i = 0; i < pm_size/2; i++) mpz_clear(pm_products[i]);
-	  delete pm_shares; pm_shares = NULL;
-	  delete pm_products; pm_products = NULL;
-	  pm_size = 0;
+	  if(pm_size > 0)
+	  {
+		  for(size_t i = 0; i < pm_size/2; i++)
+		  {
+			  mpz_clear(pm_products[i]);
+			  mpz_clear(pm_shares[2*i]);
+			  mpz_clear(pm_shares[2*i+1]);
+		  }
+		  delete pm_shares; pm_shares = NULL;
+		  delete pm_products; pm_products = NULL;
+		  pm_size = 0;
+	  }
   }
 
   mpz_t * go_shares, * go_opens;

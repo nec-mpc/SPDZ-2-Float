@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * MMO.h
@@ -14,6 +14,13 @@
 class MMO
 {
     octet IV[176]  __attribute__((aligned (16)));
+
+    template<int N>
+    static void encrypt_and_xor(void* output, const void* input,
+            const octet* key);
+    template<int N>
+    static void encrypt_and_xor(void* output, const void* input,
+            const octet* key, const int* indices);
 
 public:
     MMO() { zeroIV(); }

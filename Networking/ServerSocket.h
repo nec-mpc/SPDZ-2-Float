@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 /*
  * ServerSocket.h
@@ -23,7 +23,7 @@ class ServerSocket
 protected:
     int main_socket, portnum;
     map<int,int> clients;
-    set<int> used;
+    std::set<int> used;
     Signal data_signal;
     pthread_t thread;
 

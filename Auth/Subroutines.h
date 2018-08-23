@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _Subroutines
 #define _Subroutines
@@ -67,6 +67,9 @@ void Create_Random(T& ans,const Player& P);
 
 /* Produce a random seed of length len */
 void Create_Random_Seed(octet* seed,const Player& P,int len);
+
+// populates challenge with random bits
+void generate_challenge(vector<int>& challenge, const Player& P);
 
 
 

@@ -1,13 +1,15 @@
-# (C) 2017 University of Bristol. See License.txt
+# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 import itertools
 from random import randint
 import time
 import inspect
 import functools
+import copy
 from Compiler.exceptions import *
 from Compiler.config import *
 from Compiler import util
+from Compiler import tools
 
 
 ###
@@ -54,6 +56,8 @@ opcodes = dict(
     JOIN_TAPE = 0x1A,
     CRASH = 0x1B,
     USE_PREP = 0x1C,
+    STARTGRIND = 0x1D,
+    STOPGRIND = 0x1E,
     # Addition
     ADDC = 0x20,
     ADDS = 0x21,
@@ -84,8 +88,10 @@ opcodes = dict(
     # Open
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
+    OPEN = 0xA5,
     E_STARTMULT = 0xA2,
     E_STOPMULT = 0xA3,
+    E_MULT = 0xA4,
     # Data access
     TRIPLE = 0x50,
     BIT = 0x51,
@@ -134,6 +140,7 @@ opcodes = dict(
     EQC = 0x97,
     JMPI = 0x98,
     # Integers
+    BITDECINT = 0x99,
     LDINT = 0x9A,
     ADDINT = 0x9B,
     SUBINT = 0x9C,
@@ -274,6 +281,19 @@ def gf2n(instruction):
         except KeyError:
             raise CompilerError('Cannot decorate instruction %s' % instruction)
 
+    def reformat(arg_format):
+        if isinstance(arg_format, list):
+            __format = []
+            for __f in arg_format:
+                if __f in ('int', 'p', 'ci', 'str'):
+                    __format.append(__f)
+                else:
+                    __format.append(__f[0] + 'g' + __f[1:])
+            arg_format[:] = __format
+        else:
+            for __f in arg_format.args:
+                reformat(__f)
+
     class GF2N_Instruction(instruction_cls):
         __doc__ = instruction_cls.__doc__.replace('c_', 'c^g_').replace('s_', 's^g_')
         __slots__ = []
@@ -289,13 +309,8 @@ def gf2n(instruction):
             if __f != 'int' and __f != 'p':
                 arg_format = itertools.repeat(__f[0] + 'g' + __f[1:])
         else:
-            __format = []
-            for __f in instruction_cls.arg_format:
-                if __f in ('int', 'p', 'ci', 'str'):
-                    __format.append(__f)
-                else:
-                    __format.append(__f[0] + 'g' + __f[1:])
-            arg_format = __format
+            arg_format = copy.deepcopy(instruction_cls.arg_format)
+            reformat(arg_format)
 
         def is_gf2n(self):
             return True
@@ -422,7 +437,7 @@ class PlayerNoAF(IntArgFormat):
             raise ArgumentError(arg, 'Player number > 256')
 
 class String(ArgFormat):
-    length = 12
+    length = 16
 
     @classmethod
     def check(cls, arg):
@@ -521,7 +536,7 @@ class Instruction(object):
                 raise CompilerError('Invalid argument "%s" to instruction: %s'
                     % (e.arg, self) + '\n' + e.msg)
             except KeyError as e:
-                raise CompilerError('Incorrect number of arguments for instruction %s' % (self))
+                raise CompilerError('Unknown argument %s for instruction %s' % (f, self))
     
     def get_used(self):
         """ Return the set of registers that are read in this instruction. """
@@ -537,7 +552,11 @@ class Instruction(object):
         return ""
 
     def has_var_args(self):
-        return False
+        try:
+            len(self.arg_format)
+            return False
+        except:
+            return True
 
     def is_vec(self):
         return False

@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _Online_Thread
 #define _Online_Thread
@@ -36,6 +36,8 @@ class thread_info
 };
 
 void* Main_Func(void *ptr);
+
+void purge_preprocessing(Names& N, string prep_dir);
 
 #endif
 

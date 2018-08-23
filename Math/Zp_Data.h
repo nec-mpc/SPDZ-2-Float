@@ -1,4 +1,4 @@
-// (C) 2017 University of Bristol. See License.txt
+// (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
 #ifndef _Zp_Data
 #define _Zp_Data
@@ -22,7 +22,7 @@ using namespace std;
    #ifdef LargeM
      #define MAX_MOD_SZ 20
    #else
-     #define MAX_MOD_SZ 3
+     #define MAX_MOD_SZ 2
   #endif
 #endif
 
@@ -32,7 +32,8 @@ class Zp_Data
 {
   bool        montgomery;  // True if we are using Montgomery arithmetic
   mp_limb_t   R[MAX_MOD_SZ],R2[MAX_MOD_SZ],R3[MAX_MOD_SZ],pi;
-  mp_limb_t   prA[MAX_MOD_SZ];
+  // extra limb needed for Montgomery multiplication
+  mp_limb_t   prA[MAX_MOD_SZ+1];
   int         t;           // More Montgomery data
 
   void Mont_Mult(mp_limb_t* z,const mp_limb_t* x,const mp_limb_t* y) const;
@@ -46,6 +47,9 @@ class Zp_Data
   void init(const bigint& p,bool mont=true);
   int get_t() const { return t; }
   const mp_limb_t* get_prA() const { return prA; }
+
+  void pack(octetStream& o) const;
+  void unpack(octetStream& o);
 
   // This one does nothing, needed so as to make vectors of Zp_Data
   Zp_Data() : montgomery(0), pi(0), mask(0) { t=1; }
@@ -67,6 +71,8 @@ class Zp_Data
   void Sub(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) const;
 
   __m128i get_random128(PRNG& G);
+
+  bool operator!=(const Zp_Data& other) const;
 
    friend void to_bigint(bigint& ans,const modp& x,const Zp_Data& ZpD,bool reduce);
 
@@ -96,8 +102,19 @@ class Zp_Data
 };
 
 template<>
+inline void Zp_Data::Add<0>(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) const
+{
+  mp_limb_t carry = mpn_add_n(ans,x,y,t);
+  if (carry!=0 || mpn_cmp(ans,prA,t)>=0)
+    { mpn_sub_n(ans,ans,prA,t); }
+}
+
+template<>
 inline void Zp_Data::Add<2>(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) const
 {
+#ifdef __clang__
+  Add<0>(ans, x, y);
+#else
   __uint128_t a, b, p;
   memcpy(&a, x, sizeof(__uint128_t));
   memcpy(&b, y, sizeof(__uint128_t));
@@ -108,14 +125,7 @@ inline void Zp_Data::Add<2>(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y
  sub:
       c -= p;
   memcpy(ans, &c, sizeof(__uint128_t));
-}
-
-template<>
-inline void Zp_Data::Add<0>(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) const
-{
-  mp_limb_t carry = mpn_add_n(ans,x,y,t);
-  if (carry!=0 || mpn_cmp(ans,prA,t)>=0)
-    { mpn_sub_n(ans,ans,prA,t); }
+#endif
 }
 
 inline void Zp_Data::Add(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) const
@@ -124,6 +134,13 @@ inline void Zp_Data::Add(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) c
     return Add<2>(ans, x, y);
   else
     return Add<0>(ans, x, y);
+}
+
+inline void Zp_Data::Sub(mp_limb_t* ans,const mp_limb_t* x,const mp_limb_t* y) const
+{
+  mp_limb_t borrow = mpn_sub_n(ans,x,y,t);
+  if (borrow!=0)
+    mpn_add_n(ans,ans,prA,t);
 }
 
 #endif
