@@ -1242,28 +1242,32 @@ void Instruction::execute(Processor& Proc) const
         break;
       case STARTINPUT:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.PInput_Start_Ext_64(r[0],n);
+    	  std::cerr << "STARTINPUT instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
     	  Proc.inputp.start(r[0],n);
 #endif
         break;
       case GSTARTINPUT:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.GInput_Start_Ext_64(r[0],n);
+    	  std::cerr << "GSTARTINPUT instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
         Proc.input2.start(r[0],n);
 #endif
         break;
       case STOPINPUT:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.PInput_Stop_Ext_64(n, start);
+    	  std::cerr << "STOPINPUT instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
     	  Proc.inputp.stop(n,start);
 #endif
         break;
       case GSTOPINPUT:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.GInput_Stop_Ext_64(n, start);
+    	  std::cerr << "GSTOPINPUT instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
         Proc.input2.stop(n,start);
 #endif
@@ -1475,28 +1479,32 @@ void Instruction::execute(Processor& Proc) const
         }
       case STARTOPEN:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.POpen_Start_Ext_64(start, size);
+    	  std::cerr << "STARTOPEN instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
     	  Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
 #endif
         return;
       case GSTARTOPEN:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.GOpen_Start_Ext_64(start, size);
+    	  std::cerr << "GSTARTOPEN instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
         Proc.POpen_Start(start,Proc.P,Proc.MC2,size);
 #endif
         return;
       case STOPOPEN:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.POpen_Stop_Ext_64(start, size);
+    	  std::cerr << "STOPOPEN instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
     	  Proc.POpen_Stop(start,Proc.P,Proc.MCp,size);
 #endif
         return;
       case GSTOPOPEN:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.GOpen_Stop_Ext_64(start, size);
+    	  std::cerr << "GSTOPOPEN instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
 #else
         Proc.POpen_Stop(start,Proc.P,Proc.MC2,size);
 #endif
@@ -1517,10 +1525,12 @@ void Instruction::execute(Processor& Proc) const
         break;
 #if defined(EXTENDED_SPDZ)
       case E_STARTMULT:
-    	  Proc.PMult_Start_Ext_64(start, size);
+    	  std::cerr << "E_STARTMULT instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
         return;
       case E_STOPMULT:
-    	  Proc.PMult_Stop_Ext_64(start, size);
+    	  std::cerr << "E_STOPMULT instruction is not implemented in extension" << std::endl;
+    	  exit(-1);
         return;
       case E_MULT:
         Proc.PMult_Ext_64(start, size);

@@ -287,15 +287,15 @@ class Processor : public ProcessorBase
   public:
 
   void POpen_Ext_64(const vector<int>& reg,int size);
-  void POpen_Start_Ext_64(const vector<int>& reg,int size);
-  void POpen_Stop_Ext_64(const vector<int>& reg,int size);
+  //void POpen_Start_Ext_64(const vector<int>& reg,int size);
+  //void POpen_Stop_Ext_64(const vector<int>& reg,int size);
   void PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
   void PInput_Ext_64(Share<gfp>& input_value, const int input_party_id);
-  void PInput_Start_Ext_64(int player, int n_inputs);
-  void PInput_Stop_Ext_64(int player, vector<int> targets);
+  //void PInput_Start_Ext_64(int player, int n_inputs);
+  //void PInput_Stop_Ext_64(int player, vector<int> targets);
   void PMult_Ext_64(const vector<int>& reg, int size);
-  void PMult_Start_Ext_64(const vector<int>& reg, int size);
-  void PMult_Stop_Ext_64(const vector<int>& reg, int size);
+  //void PMult_Start_Ext_64(const vector<int>& reg, int size);
+  //void PMult_Stop_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_prep_products(const vector<int>& reg, int size);
   void PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
@@ -309,14 +309,14 @@ class Processor : public ProcessorBase
   void Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv);
 
   void GOpen_Ext_64(const vector<int>& reg,int size);
-  void GOpen_Start_Ext_64(const vector<int>& reg,int size);
-  void GOpen_Stop_Ext_64(const vector<int>& reg,int size);
+  //void GOpen_Start_Ext_64(const vector<int>& reg,int size);
+  //void GOpen_Stop_Ext_64(const vector<int>& reg,int size);
   void GTriple_Ext_64(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c);
   void GInput_Ext_64(Share<gf2n>& input_value, const int input_party_id);
-  void GInput_Start_Ext_64(int player, int n_inputs);
-  void GInput_Stop_Ext_64(int player, vector<int> targets);
-  void GMult_Start_Ext_64(const vector<int>& reg, int size);
-  void GMult_Stop_Ext_64(const vector<int>& reg, int size);
+  //void GInput_Start_Ext_64(int player, int n_inputs);
+  //void GInput_Stop_Ext_64(int player, vector<int> targets);
+  //void GMult_Start_Ext_64(const vector<int>& reg, int size);
+  //void GMult_Stop_Ext_64(const vector<int>& reg, int size);
   void GMult_Stop_prep_products(const vector<int>& reg, int size);
   void GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
   void GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
@@ -454,37 +454,35 @@ public:
 	spdz_ext_ifc();
 	~spdz_ext_ifc();
 
-	void * ext_lib_handle;
+	void * x_lib_handle;
 
-	int (*ext_init)(void ** handle, const int pid, const int num_of_parties, const int thread_id, const char * field,
-					const int open_count, const int mult_count, const int bits_count);
-    int (*ext_term)(void * handle);
+	int (*x_init)(void ** handle, const int pid, const int num_of_parties, const int thread_id,
+					const char * field, const int open_count, const int mult_count, const int bits_count);
+    int (*x_term)(void * handle);
 
-    int (*ext_offline)(void * handle, const int offline_size);
+    int (*x_offline)(void * handle, const int offline_size);
 
-    int (*ext_start_open)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify);
-    int (*ext_stop_open)(void * handle);
+    int (*x_opens)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify);
 
-    int (*ext_triple)(void * handle, mpz_t * a, mpz_t * b, mpz_t * c);
+    int (*x_triple)(void * handle, mpz_t a, mpz_t b, mpz_t c);
 
-    int (*ext_input)(void * handle, const int input_of_pid, mpz_t * input_value);
+	int (*x_verify)(void * handle, int * error);
 
-    int (*ext_start_verify)(void * handle, int * error);
-    int (*ext_stop_verify)(void * handle);
+	int (*x_input)(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs);
 
-    int (*ext_start_input)(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs);
-    int (*ext_stop_input)(void * handle);
+	int (*x_mult)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
 
-    int (*ext_start_mult)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
-    int (*ext_stop_mult)(void * handle);
+    int (*x_mix_add)(void * handle, mpz_t share, const mpz_t scalar);
 
-    int (*ext_mix_add)(void * handle, mpz_t * share, const mpz_t * scalar);
-    int (*ext_mix_sub_scalar)(void * handle, mpz_t * share, const mpz_t * scalar);
-    int (*ext_mix_sub_share)(void * handle, const mpz_t * scalar, mpz_t * share);
+    int (*x_mix_sub_scalar)(void * handle, mpz_t share, const mpz_t scalar);
 
-    int (*ext_share_immediate)(void * handle, const mpz_t * value, mpz_t * share);
-    int (*ext_bit)(void * handle, mpz_t * share);
-    int (*ext_inverse)(void * handle, mpz_t * share_value, mpz_t * share_inverse);
+    int (*x_mix_sub_share)(void * handle, const mpz_t scalar, mpz_t share);
+
+    int (*x_share_immediates)(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
+
+    int (*x_bit)(void * handle, mpz_t share);
+
+    int (*x_inverse)(void * handle, mpz_t share_value, mpz_t share_inverse);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };
