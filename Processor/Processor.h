@@ -287,15 +287,9 @@ class Processor : public ProcessorBase
   public:
 
   void POpen_Ext_64(const vector<int>& reg,int size);
-  //void POpen_Start_Ext_64(const vector<int>& reg,int size);
-  //void POpen_Stop_Ext_64(const vector<int>& reg,int size);
   void PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
   void PInput_Ext_64(Share<gfp>& input_value, const int input_party_id);
-  //void PInput_Start_Ext_64(int player, int n_inputs);
-  //void PInput_Stop_Ext_64(int player, vector<int> targets);
   void PMult_Ext_64(const vector<int>& reg, int size);
-  //void PMult_Start_Ext_64(const vector<int>& reg, int size);
-  //void PMult_Stop_Ext_64(const vector<int>& reg, int size);
   void PMult_Stop_prep_products(const vector<int>& reg, int size);
   void PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
@@ -308,28 +302,7 @@ class Processor : public ProcessorBase
   void Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps);
   void Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv);
 
-  void GOpen_Ext_64(const vector<int>& reg,int size);
-  //void GOpen_Start_Ext_64(const vector<int>& reg,int size);
-  //void GOpen_Stop_Ext_64(const vector<int>& reg,int size);
-  void GTriple_Ext_64(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c);
-  void GInput_Ext_64(Share<gf2n>& input_value, const int input_party_id);
-  //void GInput_Start_Ext_64(int player, int n_inputs);
-  //void GInput_Stop_Ext_64(int player, vector<int> targets);
-  //void GMult_Start_Ext_64(const vector<int>& reg, int size);
-  //void GMult_Stop_Ext_64(const vector<int>& reg, int size);
-  void GMult_Stop_prep_products(const vector<int>& reg, int size);
-  void GAddm_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
-  void GSubml_Ext_64(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
-  void GSubmr_Ext_64(gf2n& a, Share<gf2n>& b, Share<gf2n>& c);
-  void GLdsi_Ext_64(gf2n& value, Share<gf2n>& share);
-  void GBit_Ext_64(Share<gf2n>& share);
-  void GInverse_Ext_64(Share<gf2n>& share_value, Share<gf2n>& share_inverse);
-
-  void GShares2mpz(const vector< Share<gf2n> >& shares, mpz_t * share_values);
-  void Gmpz2gf2ns(const mpz_t * mpz_values, vector<gf2n>& gf2ns);
-  void Gmpz2share(const mpz_t * mpzv, Share<gf2n> & shv);
-
-  void * spdz_gfp_ext_handle, * spdz_gf2n_ext_handle;
+  void * spdz_gfp_ext_handle;
   mpz_t mpz_share_aux, mpz_arg_aux;
 
   mpz_t * po_shares, * po_opens;

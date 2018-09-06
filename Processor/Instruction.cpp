@@ -576,10 +576,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GLDSI:
-    	  Proc.temp.ans2.assign(n);
-#if defined(EXTENDED_SPDZ)
-    	  Proc.GLdsi_Ext_64(Proc.temp.ans2, Proc.get_S2_ref(r[0]));
-#else
+    	Proc.temp.ans2.assign(n);
         {
           if (Proc.P.my_num()==0)
             Proc.get_S2_ref(r[0]).set_share(Proc.temp.ans2);
@@ -589,7 +586,6 @@ void Instruction::execute(Processor& Proc) const
           tmp.mul(Proc.MC2.get_alphai(),Proc.temp.ans2);
           Proc.get_S2_ref(r[0]).set_mac(tmp);
         }
-#endif
         break;
       case LDMC:
         Proc.write_Cp(r[0],Proc.machine.Mp.read_C(n));
@@ -755,11 +751,7 @@ void Instruction::execute(Processor& Proc) const
            Sans2.add(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
-#if defined(EXTENDED_SPDZ)
-	   Proc.GAddm_Ext_64(Proc.get_S2_ref(r[1]), Proc.get_C2_ref(r[2]), Proc.get_S2_ref(r[0]));
-#else
            Proc.get_S2_ref(r[0]).add(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-#endif
         #endif
         break;
       case SUBC:
@@ -811,11 +803,7 @@ void Instruction::execute(Processor& Proc) const
            Sans2.sub(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
-#if defined(EXTENDED_SPDZ)
-	   	   Proc.GSubml_Ext_64(Proc.get_S2_ref(r[1]), Proc.get_C2_ref(r[2]), Proc.get_S2_ref(r[0]));
-#else
            Proc.get_S2_ref(r[0]).sub(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-#endif
         #endif
         break;
       case SUBMR:
@@ -835,11 +823,7 @@ void Instruction::execute(Processor& Proc) const
            Sans2.sub(Proc.read_C2(r[1]),Proc.read_S2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
-#if defined(EXTENDED_SPDZ)
-	   	   Proc.GSubmr_Ext_64(Proc.get_C2_ref(r[1]), Proc.get_S2_ref(r[2]), Proc.get_S2_ref(r[0]));
-#else
            Proc.get_S2_ref(r[0]).sub(Proc.read_C2(r[1]),Proc.read_S2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-#endif
 	#endif
         break;
       case MULC:
@@ -987,11 +971,7 @@ void Instruction::execute(Processor& Proc) const
            Sans2.add(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
-#if defined(EXTENDED_SPDZ)
-	   	   Proc.GAddm_Ext_64(Proc.get_S2_ref(r[1]), Proc.temp.ans2, Proc.get_S2_ref(r[0]));
-#else
            Proc.get_S2_ref(r[0]).add(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
-#endif
 	#endif
         break;
       case SUBCI:
@@ -1031,11 +1011,7 @@ void Instruction::execute(Processor& Proc) const
            Sans2.sub(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
-#if defined(EXTENDED_SPDZ)
-	   Proc.GSubml_Ext_64(Proc.get_S2_ref(r[1]), Proc.temp.ans2, Proc.get_S2_ref(r[0]));
-#else
            Proc.get_S2_ref(r[0]).sub(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
-#endif
         #endif
         break;
       case SUBCFI:
@@ -1122,11 +1098,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GTRIPLE:
-#if defined(EXTENDED_SPDZ)
-    	  Proc.GTriple_Ext_64(Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
-#else
         Proc.DataF.get_three(DATA_GF2N, DATA_TRIPLE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
-#endif
         break;
       case GBITTRIPLE:
         Proc.DataF.get_three(DATA_GF2N, DATA_BITTRIPLE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
@@ -1148,11 +1120,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GBIT:
-#if defined(EXTENDED_SPDZ)
-    	  Proc.GBit_Ext_64(Proc.get_S2_ref(r[0]));
-#else
         Proc.DataF.get_one(DATA_GF2N, DATA_BIT, Proc.get_S2_ref(r[0]));
-#endif
         break;
       case INV:
 #if defined(EXTENDED_SPDZ)
@@ -1162,11 +1130,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GINV:
-#if defined(EXTENDED_SPDZ)
-    	  Proc.GInverse_Ext_64(Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
-#else
         Proc.DataF.get_two(DATA_GF2N, DATA_INVERSE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
-#endif
         break;
       case INPUTMASK:
         Proc.DataF.get_input(Proc.get_Sp_ref(r[0]), Proc.temp.ansp, n);
@@ -1210,9 +1174,6 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GINPUT:
-#if defined(EXTENDED_SPDZ)
-        Proc.GInput_Ext_64(Proc.get_S2_ref(r[0]), n);
-#else
         { gf2n& rr=Proc.temp.rr2; gf2n& t=Proc.temp.t2; gf2n& tmp=Proc.temp.tmp2;
           Proc.DataF.get_input(Proc.get_S2_ref(r[0]),rr,n);
           octetStream o;
@@ -1238,7 +1199,6 @@ void Instruction::execute(Processor& Proc) const
           tmp.add(Proc.get_S2_ref(r[0]).get_mac(),tmp);
           Proc.get_S2_ref(r[0]).set_mac(tmp);
         }
-#endif
         break;
       case STARTINPUT:
 #if defined(EXTENDED_SPDZ)
@@ -1517,11 +1477,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GOPEN:
-#if defined(EXTENDED_SPDZ)
-          Proc.GOpen_Ext_64(start, size);
-#else
           Proc.POpen(start, Proc.P, Proc.MC2, size);
-#endif
         break;
 #if defined(EXTENDED_SPDZ)
       case E_STARTMULT:
