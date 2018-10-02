@@ -563,7 +563,7 @@ void Instruction::execute(Processor& Proc) const
       case LDSI:
     	  Proc.temp.ansp.assign(n);
 #if defined(EXTENDED_SPDZ)
-    	  Proc.PLdsi_Ext_64(Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+    	  Proc.PLdsi_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
         { if (Proc.P.my_num()==0)
             Proc.get_Sp_ref(r[0]).set_share(Proc.temp.ansp);
@@ -740,7 +740,7 @@ void Instruction::execute(Processor& Proc) const
 	   Proc.write_Sp(r[0],Sansp);
         #else
 #if defined(EXTENDED_SPDZ)
-	   Proc.PAddm_Ext_64(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
+	   Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
        Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 #endif
@@ -792,7 +792,7 @@ void Instruction::execute(Processor& Proc) const
 	   Proc.write_Sp(r[0],Sansp);
         #else
 #if defined(EXTENDED_SPDZ)
-	   	   Proc.PSubml_Ext_64(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
+	   	   Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 #endif
@@ -812,7 +812,7 @@ void Instruction::execute(Processor& Proc) const
 	   Proc.write_Sp(r[0],Sansp);
         #else
 #if defined(EXTENDED_SPDZ)
-	   	   Proc.PSubmr_Ext_64(Proc.get_Cp_ref(r[1]), Proc.get_Sp_ref(r[2]), Proc.get_Sp_ref(r[0]));
+	   	   Proc.PSubmr_Ext(Proc.get_Cp_ref(r[1]), Proc.get_Sp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Cp(r[1]),Proc.read_Sp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 #endif
@@ -843,12 +843,16 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case MULM:
+#if defined(EXTENDED_SPDZ)
+    	  Proc.PMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.read_Cp(r[2]));
+#else
 	#ifdef DEBUG
-           Sansp.mul(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]));
+       Sansp.mul(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]));
 	   Proc.write_Sp(r[0],Sansp);
 	#else
            Proc.get_Sp_ref(r[0]).mul(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]));
 	#endif
+#endif
         break;
       case GMULM:
 	#ifdef DEBUG
@@ -959,7 +963,7 @@ void Instruction::execute(Processor& Proc) const
 	   Proc.write_Sp(r[0],Sansp);
         #else
 #if defined(EXTENDED_SPDZ)
-	   Proc.PAddm_Ext_64(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+	   Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
        Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
 #endif
@@ -999,7 +1003,7 @@ void Instruction::execute(Processor& Proc) const
 	   Proc.write_Sp(r[0],Sansp);
         #else
 #if defined(EXTENDED_SPDZ)
-	   Proc.PSubml_Ext_64(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+	   Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
 #endif
@@ -1039,7 +1043,7 @@ void Instruction::execute(Processor& Proc) const
 	   Proc.write_Sp(r[0],Sansp);
 	#else
 #if defined(EXTENDED_SPDZ)
-	   Proc.PSubmr_Ext_64(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
+	   Proc.PSubmr_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
 #else
        Proc.get_Sp_ref(r[0]).sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 #endif
@@ -1092,7 +1096,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case TRIPLE:
 #if defined(EXTENDED_SPDZ)
-    	  Proc.PTriple_Ext_64(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+    	  Proc.PTriple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #else
     	  Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #endif
@@ -1114,7 +1118,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case BIT:
 #if defined(EXTENDED_SPDZ)
-    	Proc.PBit_Ext_64(Proc.get_Sp_ref(r[0]));
+    	Proc.PBit_Ext(Proc.get_Sp_ref(r[0]));
 #else
         Proc.DataF.get_one(DATA_MODP, DATA_BIT, Proc.get_Sp_ref(r[0]));
 #endif
@@ -1124,7 +1128,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case INV:
 #if defined(EXTENDED_SPDZ)
-    	Proc.PInverse_Ext_64(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
+    	Proc.PInverse_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
 #else
         Proc.DataF.get_two(DATA_MODP, DATA_INVERSE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
 #endif
@@ -1144,7 +1148,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case INPUT:
 #if defined(EXTENDED_SPDZ)
-        Proc.PInput_Ext_64(Proc.get_Sp_ref(r[0]), n);
+        Proc.PInput_Ext(Proc.get_Sp_ref(r[0]), n);
 #else
         { gfp& rr=Proc.temp.rrp; gfp& t=Proc.temp.tp; gfp& tmp=Proc.temp.tmpp;
           Proc.DataF.get_input(Proc.get_Sp_ref(r[0]),rr,n);
@@ -1471,7 +1475,7 @@ void Instruction::execute(Processor& Proc) const
         return;
       case OPEN:
 #if defined(EXTENDED_SPDZ)
-          Proc.POpen_Ext_64(start, size);
+          Proc.POpen_Ext(start, size);
 #else
           Proc.POpen(start, Proc.P, Proc.MCp, size);
 #endif
@@ -1489,7 +1493,7 @@ void Instruction::execute(Processor& Proc) const
     	  exit(-1);
         return;
       case E_MULT:
-        Proc.PMult_Ext_64(start, size);
+        Proc.PMult_Ext(start, size);
         break;
 #endif
       case JMP:

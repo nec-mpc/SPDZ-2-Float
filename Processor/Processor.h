@@ -286,17 +286,18 @@ class Processor : public ProcessorBase
 #if defined(EXTENDED_SPDZ)
   public:
 
-  void POpen_Ext_64(const vector<int>& reg,int size);
-  void PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
-  void PInput_Ext_64(Share<gfp>& input_value, const int input_party_id);
-  void PMult_Ext_64(const vector<int>& reg, int size);
+  void POpen_Ext(const vector<int>& reg,int size);
+  void PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
+  void PInput_Ext(Share<gfp>& input_value, const int input_party_id);
+  void PMult_Ext(const vector<int>& reg, int size);
   void PMult_Stop_prep_products(const vector<int>& reg, int size);
-  void PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
-  void PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c);
-  void PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c);
-  void PLdsi_Ext_64(gfp& value, Share<gfp>& share);
-  void PBit_Ext_64(Share<gfp>& share);
-  void PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse);
+  void PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c);
+  void PLdsi_Ext(gfp& value, Share<gfp>& share);
+  void PBit_Ext(Share<gfp>& share);
+  void PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse);
+  void PMulm_Ext(Share<gfp>& sec_product, const Share<gfp> & sec_factor, const gfp & clr_factor);
 
   void PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values);
   void Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps);
@@ -450,6 +451,8 @@ public:
     int (*x_mix_sub_scalar)(void * handle, mpz_t share, const mpz_t scalar);
 
     int (*x_mix_sub_share)(void * handle, const mpz_t scalar, mpz_t share);
+
+    int (*x_mix_mul)(void * handle, mpz_t share, const mpz_t scalar);
 
     int (*x_share_immediates)(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
 

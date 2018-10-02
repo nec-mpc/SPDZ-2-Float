@@ -575,7 +575,7 @@ void Processor::maybe_encrypt_sequence(int client_id)
 
 #if defined(EXTENDED_SPDZ)
 
-void Processor::POpen_Ext_64(const vector<int>& reg, int size)
+void Processor::POpen_Ext(const vector<int>& reg, int size)
 {
 	vector<int> dest, source;
 	unzip_open(dest, source, reg);
@@ -601,7 +601,7 @@ void Processor::POpen_Ext_64(const vector<int>& reg, int size)
 	//the extension library is given the shares' values and returns opens' values
 	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), po_shares, po_opens, 1))
 	{
-		cerr << "Processor::POpen_Ext_64 extension library start_open failed." << endl;
+		cerr << "Processor::POpen_Ext extension library start_open failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -666,7 +666,7 @@ void Processor::POpen_Stop_Ext_64(const vector<int>& reg,int size)
 }
 */
 
-void Processor::PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
+void Processor::PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
 	mpz_t ma, mb, mc;
 
@@ -676,7 +676,7 @@ void Processor::PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 
 	if(0 != (*the_ext_lib.x_triple)(spdz_gfp_ext_handle, ma, mb, mc))
 	{
-		cerr << "Processor::PTriple_Ext_64 extension library triple failed." << endl;
+		cerr << "Processor::PTriple_Ext extension library triple failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -689,11 +689,11 @@ void Processor::PTriple_Ext_64(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 	mpz_clear(mc);
 }
 
-void Processor::PInput_Ext_64(Share<gfp>& input_value, const int input_party_id)
+void Processor::PInput_Ext(Share<gfp>& input_value, const int input_party_id)
 {
 	if(0 != (*the_ext_lib.x_input)(spdz_gfp_ext_handle, input_party_id, 1, &mpz_share_aux))
 	{
-		cerr << "Processor::PInput_Ext_64 extension library input failed." << endl;
+		cerr << "Processor::PInput_Ext extension library input failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -741,7 +741,7 @@ void Processor::PInput_Stop_Ext_64(int player, vector<int> targets)
 }
 */
 
-void Processor::PMult_Ext_64(const vector<int>& reg, int size)
+void Processor::PMult_Ext(const vector<int>& reg, int size)
 {
 	vector<int> sources, dest;
 	int n = reg.size() / 3;
@@ -856,7 +856,7 @@ void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size)
 	}
 }
 
-void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
+void Processor::PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
 	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
 	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
@@ -866,13 +866,13 @@ void Processor::PAddm_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	}
 	else
 	{
-		cerr << "Processor::PAddm_Ext_64 extension library mix_add failed." << endl;
+		cerr << "Processor::PAddm_Ext extension library mix_add failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
 }
 
-void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
+void Processor::PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
 	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
 	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
@@ -882,13 +882,13 @@ void Processor::PSubml_Ext_64(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	}
 	else
 	{
-		cerr << "Processor::PSubml_Ext_64 extension library mix_sub_scalar failed." << endl;
+		cerr << "Processor::PSubml_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
 }
 
-void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
+void Processor::PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c)
 {
 	to_bigint(*((bigint*)(&mpz_share_aux)), b.get_share());
 	to_bigint(*((bigint*)(&mpz_arg_aux)), a);
@@ -898,13 +898,13 @@ void Processor::PSubmr_Ext_64(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	}
 	else
 	{
-		cerr << "Processor::PSubmr_Ext_64 extension library mix_sub_scalar failed." << endl;
+		cerr << "Processor::PSubmr_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
 }
 
-void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
+void Processor::PLdsi_Ext(gfp& value, Share<gfp>& share)
 {
 	to_bigint(*((bigint*)(&mpz_arg_aux)), value);
 	if(0 == (*the_ext_lib.x_share_immediates)(spdz_gfp_ext_handle, 0, 1, &mpz_arg_aux, &mpz_share_aux))
@@ -913,13 +913,13 @@ void Processor::PLdsi_Ext_64(gfp& value, Share<gfp>& share)
 	}
 	else
 	{
-		cerr << "Processor::PLdsi_Ext_64 extension library share_immediates failed." << endl;
+		cerr << "Processor::PLdsi_Ext extension library share_immediates failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
 }
 
-void Processor::PBit_Ext_64(Share<gfp>& share)
+void Processor::PBit_Ext(Share<gfp>& share)
 {
 	if(0 == (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, mpz_share_aux))
 	{
@@ -927,13 +927,13 @@ void Processor::PBit_Ext_64(Share<gfp>& share)
 	}
 	else
 	{
-		cerr << "Processor::PBit_Ext_64 extension library bit failed." << endl;
+		cerr << "Processor::PBit_Ext extension library bit failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
 }
 
-void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inverse)
+void Processor::PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse)
 {
 	if(0 == (*the_ext_lib.x_inverse)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
 	{
@@ -942,7 +942,23 @@ void Processor::PInverse_Ext_64(Share<gfp>& share_value, Share<gfp>& share_inver
 	}
 	else
 	{
-		cerr << "Processor::PBit_Ext_64 extension library inverse failed." << endl;
+		cerr << "Processor::PInverse_Ext extension library inverse failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::PMulm_Ext(Share<gfp>& sec_product, const Share<gfp>& sec_factor, const gfp & clr_factor)
+{
+	to_bigint(*((bigint*)(&mpz_share_aux)), sec_factor.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), clr_factor);
+	if(0 == (*the_ext_lib.x_mix_mul)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
+	{
+		Pmpz2share(&mpz_share_aux, sec_product);
+	}
+	else
+	{
+		cerr << "Processor::PMulm_Ext extension library mix_mul failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -1036,6 +1052,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("mix_add", x_mix_add)
 	LOAD_LIB_METHOD("mix_sub_scalar", x_mix_sub_scalar)
 	LOAD_LIB_METHOD("mix_sub_share", x_mix_sub_share)
+	LOAD_LIB_METHOD("mix_mul", x_mix_mul)
 	LOAD_LIB_METHOD("share_immediates", x_share_immediates)
 	LOAD_LIB_METHOD("bit", x_bit)
 	LOAD_LIB_METHOD("inverse", x_inverse)
