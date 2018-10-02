@@ -1078,12 +1078,16 @@ void Instruction::execute(Processor& Proc) const
         break;
       case MULSI:
         Proc.temp.ansp.assign(n);
+#if defined(EXTENDED_SPDZ)
+        Proc.PMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.temp.ansp);
+#else
 	#ifdef DEBUG
            Sansp.mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
 	   Proc.write_Sp(r[0],Sansp);
 	#else
            Proc.get_Sp_ref(r[0]).mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
 	#endif
+#endif
         break;
       case GMULSI:
         Proc.temp.ans2.assign(n);
