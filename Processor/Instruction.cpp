@@ -966,16 +966,16 @@ void Instruction::execute(Processor& Proc) const
         break;
       case ADDSI:
         Proc.temp.ansp.assign(n);
-	#ifdef DEBUG
-           Sansp.add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
-	   Proc.write_Sp(r[0],Sansp);
-        #else
 #if defined(EXTENDED_SPDZ)
-	   Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+        Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
-       Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
-#endif
+	#ifdef DEBUG
+        Sansp.add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+        Proc.write_Sp(r[0],Sansp);
+	#else
+        Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
 	#endif
+#endif
         break;
       case GADDSI:
         Proc.temp.ans2.assign(n);
@@ -1005,17 +1005,17 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case SUBSI:
-        Proc.temp.ansp.assign(n);
-  	#ifdef DEBUG
-           Sansp.sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
-	   Proc.write_Sp(r[0],Sansp);
-        #else
+    	  Proc.temp.ansp.assign(n);
 #if defined(EXTENDED_SPDZ)
-	   Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+    	  Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
-           Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+	#ifdef DEBUG
+    	  Sansp.sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+    	  Proc.write_Sp(r[0],Sansp);
+	#else
+    	  Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.temp.ansp,Proc.P.my_num()==0,Proc.MCp.get_alphai());
+	#endif
 #endif
-        #endif
         break;
       case GSUBSI:
         Proc.temp.ans2.assign(n);
@@ -1046,16 +1046,16 @@ void Instruction::execute(Processor& Proc) const
         break;
       case SUBSFI:
         Proc.temp.ansp.assign(n);
- 	#ifdef DEBUG
-           Sansp.sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-	   Proc.write_Sp(r[0],Sansp);
-	#else
 #if defined(EXTENDED_SPDZ)
-	   Proc.PSubmr_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
+        Proc.PSubmr_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
 #else
-       Proc.get_Sp_ref(r[0]).sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-#endif
+	#ifdef DEBUG
+        Sansp.sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+        Proc.write_Sp(r[0],Sansp);
+	#else
+        Proc.get_Sp_ref(r[0]).sub(Proc.temp.ansp,Proc.read_Sp(r[1]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 	#endif
+#endif
         break;
       case GSUBSFI:
         Proc.temp.ans2.assign(n);
@@ -1090,10 +1090,10 @@ void Instruction::execute(Processor& Proc) const
         Proc.PMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.temp.ansp);
 #else
 	#ifdef DEBUG
-           Sansp.mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
-	   Proc.write_Sp(r[0],Sansp);
+        Sansp.mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
+        Proc.write_Sp(r[0],Sansp);
 	#else
-           Proc.get_Sp_ref(r[0]).mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
+        Proc.get_Sp_ref(r[0]).mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
 	#endif
 #endif
         break;
