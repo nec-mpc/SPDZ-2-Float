@@ -719,12 +719,16 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case ADDS:
-	#ifdef DEBUG
+#if defined(EXTENDED_SPDZ)
+    	  Proc.PAdds_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[2]));
+#else
+		#ifdef DEBUG
            Sansp.add(Proc.read_Sp(r[1]),Proc.read_Sp(r[2]));
            Proc.write_Sp(r[0],Sansp);
         #else
            Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.read_Sp(r[2]));
         #endif
+#endif
         break;
       case GADDS:
 	#ifdef DEBUG
