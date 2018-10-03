@@ -739,16 +739,16 @@ void Instruction::execute(Processor& Proc) const
         #endif
         break;
       case ADDM:
-        #ifdef DEBUG
-           Sansp.add(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-	   Proc.write_Sp(r[0],Sansp);
-        #else
 #if defined(EXTENDED_SPDZ)
 	   Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
-       Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+       #ifdef DEBUG
+           Sansp.add(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+           Proc.write_Sp(r[0],Sansp);
+       #else
+           Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+       #endif
 #endif
-        #endif
         break;
       case GADDM:
         #ifdef DEBUG
@@ -775,12 +775,16 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case SUBS:
+#if defined(EXTENDED_SPDZ)
+    	  Proc.PSubs_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[2]));
+#else
 	#ifdef DEBUG
-           Sansp.sub(Proc.read_Sp(r[1]),Proc.read_Sp(r[2]));
-	   Proc.write_Sp(r[0],Sansp);
-        #else
+    	  Sansp.sub(Proc.read_Sp(r[1]),Proc.read_Sp(r[2]));
+          Proc.write_Sp(r[0],Sansp);
+    #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.read_Sp(r[2]));
 	#endif
+#endif
         break;
       case GSUBS:
 	#ifdef DEBUG

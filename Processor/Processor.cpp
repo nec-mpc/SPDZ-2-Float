@@ -43,7 +43,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 5, 5, 5))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 5, 5, 5))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -860,6 +860,22 @@ void Processor::PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>
 	}
 }
 
+void Processor::PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b)
+{
+	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
+	to_bigint(*((bigint*)(&mpz_arg_aux)), b.get_share());
+	if(0 == (*the_ext_lib.x_subs)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
+	{
+		Pmpz2share(&mpz_share_aux, diff);
+	}
+	else
+	{
+		cerr << "Processor::PSubs_Ext extension library x_subs failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values)
 {
 	size_t count = shares.size();
@@ -950,6 +966,7 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("mix_sub_share", x_mix_sub_share)
 	LOAD_LIB_METHOD("mix_mul", x_mix_mul)
 	LOAD_LIB_METHOD("adds", x_adds)
+	LOAD_LIB_METHOD("subs", x_subs)
 	LOAD_LIB_METHOD("share_immediates", x_share_immediates)
 	LOAD_LIB_METHOD("bit", x_bit)
 	LOAD_LIB_METHOD("inverse", x_inverse)

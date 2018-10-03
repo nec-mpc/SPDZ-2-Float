@@ -299,6 +299,7 @@ class Processor : public ProcessorBase
   void PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse);
   void PMulm_Ext(Share<gfp>& sec_product, const Share<gfp> & sec_factor, const gfp & clr_factor);
   void PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b);
+  void PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b);
 
   void PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values);
   void Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps);
@@ -456,6 +457,8 @@ public:
     int (*x_mix_mul)(void * handle, mpz_t share, const mpz_t scalar);
 
     int (*x_adds)(void * handle, mpz_t share1, const mpz_t share2);
+
+    int (*x_subs)(void * handle, mpz_t share1, const mpz_t share2);
 
     int (*x_share_immediates)(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
 
