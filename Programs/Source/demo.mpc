@@ -4,4 +4,5 @@ b = sint.get_input_from(1)
 c = sint.get_input_from(2)
 
 res = a * b * c
-print_ln("a = %s; b = %s; c = %s; product = %s;", a.reveal(), b.reveal(), c.reveal(), res.reveal())
+print_ln("a = %s; b = %s; c = %s; product = %s;",
+         a.reveal(), b.reveal(), c.reveal(), res.reveal())
