@@ -603,25 +603,12 @@ void Processor::POpen_Ext(const vector<int>& reg, int size)
 
 void Processor::PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
-	mpz_t ma, mb, mc;
-
-	mpz_init(ma);
-	mpz_init(mb);
-	mpz_init(mc);
-
-	if(0 != (*the_ext_lib.x_triple)(spdz_gfp_ext_handle, ma, mb, mc))
+	if(0 != (*the_ext_lib.x_triple)(spdz_gfp_ext_handle, (mp_limb_t*)&a, (mp_limb_t*)&b, (mp_limb_t*)&c))
 	{
 		cerr << "Processor::PTriple_Ext extension library triple failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
-	Pmpz2share(&ma, a);
-	Pmpz2share(&mb, b);
-	Pmpz2share(&mc, c);
-
-	mpz_clear(ma);
-	mpz_clear(mb);
-	mpz_clear(mc);
 }
 
 void Processor::PInput_Ext(Share<gfp>& input_value, const int input_party_id)

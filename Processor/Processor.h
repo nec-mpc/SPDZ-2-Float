@@ -421,7 +421,7 @@ public:
 
     int (*x_opens)(void * handle, const size_t share_count, const mp_limb_t * shares, mp_limb_t * opens, int verify);
 
-    int (*x_triple)(void * handle, mpz_t a, mpz_t b, mpz_t c);
+    int (*x_triple)(void * handle, mp_limb_t * a, mp_limb_t * b, mp_limb_t * c);
 
 	int (*x_verify)(void * handle, int * error);
 
