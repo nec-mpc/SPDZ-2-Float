@@ -25,7 +25,6 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   input2(*this,MC2),inputp(*this,MCp),privateOutput2(*this),privateOutputp(*this),sent(0),rounds(0),
   external_clients(ExternalClients(P.my_num(), DataF.prep_data_dir)),binary_file_io(Binary_File_IO())
 #if defined(EXTENDED_SPDZ)
-  , po_shares(NULL), po_opens(NULL), po_size(0)
   , pi_inputs(NULL), pi_size(0)
   , pm_shares(NULL), pm_products(NULL), pm_size(0)
   , go_shares(NULL), go_opens(NULL), go_size(0)
@@ -51,7 +50,6 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 	}
 	cout << "SPDZ GFP extension library initialized." << endl;
 
-	alloc_po_mpz(5000);
 	alloc_pm_mpz(5000);
 	mpz_init(mpz_share_aux);
 	mpz_init(mpz_arg_aux);
@@ -65,7 +63,6 @@ Processor::~Processor()
 	(*the_ext_lib.x_term)(spdz_gfp_ext_handle);
 	dlclose(the_ext_lib.x_lib_handle);
 
-	free_po_mpz();
 	free_pm_mpz();
 	mpz_clear(mpz_share_aux);
 	mpz_clear(mpz_arg_aux);
@@ -590,45 +587,14 @@ void Processor::POpen_Ext(const vector<int>& reg, int size)
 
 	prep_shares(source, Sh_PO, size);
 
-	//the share values are saved as mpz
-	if(Sh_PO.size() > po_size)
-	{
-		free_po_mpz();
-		alloc_po_mpz(Sh_PO.size());
-	}
-	/* trace of share vector for memory layout survey
-	if(this->P.my_num() == 0)
-	{
-		std::cout << "size of gfp = " << sizeof(gfp) << std::endl;
-		std::cout << "size of share<gfp> = " << sizeof(Share<gfp>) << std::endl;
-
-		size_t shsize = Sh_PO.size();
-		for(size_t i = 0; i < shsize; ++i)
-		{
-			std::cout << "Sh_PO[" << i << "].v[0] = " << Sh_PO[i].get_share().get().get_limb(0) << std::endl;
-			std::cout << "Sh_PO[" << i << "].v[1] = " << Sh_PO[i].get_share().get().get_limb(1) << std::endl;
-			std::cout << "Sh_PO[" << i << "].m[0] = " << Sh_PO[i].get_mac().get().get_limb(0) << std::endl;
-			std::cout << "Sh_PO[" << i << "].m[1] = " << Sh_PO[i].get_mac().get().get_limb(1) << std::endl;
-		}
-
-		std::cout << "Sh_PO (" << Sh_PO.size() << ")dump" << std::endl;
-		const u_int8_t * p = (const u_int8_t *)Sh_PO.data();
-		size_t memsize = Sh_PO.size()*sizeof(Share<gfp>);
-		for(size_t i = 0; i < memsize; ++i)
-			std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)p[i] << " ";
-		std::cout << std::endl;
-	}*/
-	PShares2mpz(Sh_PO, po_shares);
-
 	//the extension library is given the shares' values and returns opens' values
-	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), po_shares, po_opens, 1))
+	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)PO.data(), 1))
 	{
 		cerr << "Processor::POpen_Ext extension library start_open failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
 
-	Pmpz2gfps(po_opens, PO);
 	POpen_Stop_prep_opens(dest, PO, C, size);
 
 	sent += dest.size() * size;

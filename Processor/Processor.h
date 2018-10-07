@@ -308,25 +308,6 @@ class Processor : public ProcessorBase
   void * spdz_gfp_ext_handle;
   mpz_t mpz_share_aux, mpz_arg_aux;
 
-  mpz_t * po_shares, * po_opens;
-  size_t po_size;
-  void alloc_po_mpz(const size_t required_size)
-  {
-	  po_shares = new mpz_t[po_size = required_size];
-	  po_opens = new mpz_t[po_size];
-	  for(size_t i = 0; i < po_size; i++) { mpz_init(po_shares[i]); mpz_init(po_opens[i]); }
-  }
-  void free_po_mpz()
-  {
-	  if(po_size > 0)
-	  {
-		  for(size_t i = 0; i < po_size; i++) { mpz_clear(po_shares[i]); mpz_clear(po_opens[i]); }
-		  delete po_shares; po_shares = NULL;
-		  delete po_opens; po_opens = NULL;
-		  po_size = 0;
-	  }
-  }
-
   mpz_t * pi_inputs;
   size_t pi_size;
   void alloc_pi_mpz(const size_t required_size)
@@ -382,7 +363,7 @@ class Processor : public ProcessorBase
   }
   void free_go_mpz()
   {
-	  for(size_t i = 0; i < po_size; i++) { mpz_clear(go_shares[i]); mpz_clear(go_opens[i]); }
+	  for(size_t i = 0; i < go_size; i++) { mpz_clear(go_shares[i]); mpz_clear(go_opens[i]); }
 	  delete go_shares; go_shares = NULL;
 	  delete go_opens; go_opens = NULL;
 	  go_size = 0;
@@ -438,7 +419,7 @@ public:
 
     int (*x_offline)(void * handle, const int offline_size);
 
-    int (*x_opens)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify);
+    int (*x_opens)(void * handle, const size_t share_count, const mp_limb_t * shares, mp_limb_t * opens, int verify);
 
     int (*x_triple)(void * handle, mpz_t a, mpz_t b, mpz_t c);
 
