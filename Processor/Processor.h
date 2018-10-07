@@ -462,7 +462,7 @@ public:
 
     int (*x_share_immediates)(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
 
-    int (*x_bit)(void * handle, mpz_t share);
+    int (*x_bit)(void * handle, mp_limb_t * share);
 
     int (*x_inverse)(void * handle, mpz_t share_value, mpz_t share_inverse);
 

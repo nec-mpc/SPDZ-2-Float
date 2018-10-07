@@ -43,7 +43,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 5, 5, 5))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 50, 50, 50))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -801,9 +801,37 @@ void Processor::PLdsi_Ext(gfp& value, Share<gfp>& share)
 
 void Processor::PBit_Ext(Share<gfp>& share)
 {
-	if(0 == (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, mpz_share_aux))
+	if(0 == (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, (mp_limb_t *)&share))
 	{
-		Pmpz2share(&mpz_share_aux, share);
+		char buffer[256];
+
+		snprintf(buffer, 256, "[%016lX:%016lX]", share.get_share().get().get_limb(0), share.get_share().get().get_limb(1));
+		cout << "bit share = " << buffer << endl;
+
+		gfp mac;
+		mac.mul(MCp.get_alphai(), share.get_share());
+		share.set_mac(mac);
+
+		/*
+		{
+			mpz_t mp_share, mp_open;
+			mpz_init(mp_share);
+			mpz_init(mp_open);
+			mpz_import(mp_share, 2, -1, 8, 0, 0, &share);
+			if(0 == (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, 1, &mp_share, &mp_open, 1))
+			{
+				cout << "open bit share = [" << mpz_get_str(buffer, 10, mp_open) << "]" << endl;
+			}
+			else
+			{
+				cerr << "Processor::PBit_Ext extension library opens failed." << endl;
+				dlclose(the_ext_lib.x_lib_handle);
+				abort();
+			}
+			mpz_clear(mp_share);
+			mpz_clear(mp_open);
+		}
+		*/
 	}
 	else
 	{
