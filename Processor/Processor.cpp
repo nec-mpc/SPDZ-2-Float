@@ -691,13 +691,7 @@ void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size)
 
 void Processor::PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
-	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
-	if(0 == (*the_ext_lib.x_mix_add)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
-	{
-		Pmpz2share(&mpz_share_aux, c);
-	}
-	else
+	if(0 != (*the_ext_lib.x_mix_add)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
 	{
 		cerr << "Processor::PAddm_Ext extension library mix_add failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);

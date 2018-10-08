@@ -429,7 +429,7 @@ public:
 
 	int (*x_mult)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
 
-    int (*x_mix_add)(void * handle, mpz_t share, const mpz_t scalar);
+    int (*x_mix_add)(void * handle, const mp_limb_t * share, const mp_limb_t * scalar, mp_limb_t * sum);
 
     int (*x_mix_sub_scalar)(void * handle, mpz_t share, const mpz_t scalar);
 
