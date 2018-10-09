@@ -42,7 +42,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 50, 50, 50))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 50, 50, 50))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -701,13 +701,7 @@ void Processor::PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 
 void Processor::PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
-	to_bigint(*((bigint*)(&mpz_arg_aux)), b);
-	if(0 == (*the_ext_lib.x_mix_sub_scalar)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
-	{
-		Pmpz2share(&mpz_share_aux, c);
-	}
-	else
+	if(0 != (*the_ext_lib.x_mix_sub_scalar)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
 	{
 		cerr << "Processor::PSubml_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
