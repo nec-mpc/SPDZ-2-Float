@@ -711,13 +711,7 @@ void Processor::PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 
 void Processor::PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c)
 {
-	to_bigint(*((bigint*)(&mpz_share_aux)), b.get_share());
-	to_bigint(*((bigint*)(&mpz_arg_aux)), a);
-	if(0 == (*the_ext_lib.x_mix_sub_share)(spdz_gfp_ext_handle, mpz_arg_aux, mpz_share_aux))
-	{
-		Pmpz2share(&mpz_share_aux, c);
-	}
-	else
+	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
 	{
 		cerr << "Processor::PSubmr_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
