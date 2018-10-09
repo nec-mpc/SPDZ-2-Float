@@ -42,7 +42,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 50, 50, 50))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 50, 50, 50))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -746,27 +746,6 @@ void Processor::PBit_Ext(Share<gfp>& share)
 		gfp mac;
 		mac.mul(MCp.get_alphai(), share.get_share());
 		share.set_mac(mac);
-
-		/*
-		{
-			mpz_t mp_share, mp_open;
-			mpz_init(mp_share);
-			mpz_init(mp_open);
-			mpz_import(mp_share, 2, -1, 8, 0, 0, &share);
-			if(0 == (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, 1, &mp_share, &mp_open, 1))
-			{
-				cout << "open bit share = [" << mpz_get_str(buffer, 10, mp_open) << "]" << endl;
-			}
-			else
-			{
-				cerr << "Processor::PBit_Ext extension library opens failed." << endl;
-				dlclose(the_ext_lib.x_lib_handle);
-				abort();
-			}
-			mpz_clear(mp_share);
-			mpz_clear(mp_open);
-		}
-		*/
 	}
 	else
 	{
@@ -793,13 +772,14 @@ void Processor::PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse)
 
 void Processor::PMulm_Ext(Share<gfp>& sec_product, const Share<gfp>& sec_factor, const gfp & clr_factor)
 {
-	to_bigint(*((bigint*)(&mpz_share_aux)), sec_factor.get_share());
-	to_bigint(*((bigint*)(&mpz_arg_aux)), clr_factor);
-	if(0 == (*the_ext_lib.x_mix_mul)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
-	{
-		Pmpz2share(&mpz_share_aux, sec_product);
-	}
-	else
+	mp_limb_t clr[2];
+	mpz_t __clr;
+	mpz_init(__clr);
+	to_bigint(*((bigint*)&__clr), clr_factor);
+	mpz_export(clr, NULL, -1, 8, 0, 0, __clr);
+	mpz_clear(__clr);
+
+	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gfp_ext_handle, (const mp_limb_t *)&sec_factor, (const mp_limb_t *)clr, (mp_limb_t *)&sec_product))
 	{
 		cerr << "Processor::PMulm_Ext extension library mix_mul failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -809,13 +789,7 @@ void Processor::PMulm_Ext(Share<gfp>& sec_product, const Share<gfp>& sec_factor,
 
 void Processor::PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b)
 {
-	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
-	to_bigint(*((bigint*)(&mpz_arg_aux)), b.get_share());
-	if(0 == (*the_ext_lib.x_adds)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
-	{
-		Pmpz2share(&mpz_share_aux, sum);
-	}
-	else
+	if(0 != (*the_ext_lib.x_adds)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&sum))
 	{
 		cerr << "Processor::PAdds_Ext extension library x_adds failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -825,13 +799,7 @@ void Processor::PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>
 
 void Processor::PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b)
 {
-	to_bigint(*((bigint*)(&mpz_share_aux)), a.get_share());
-	to_bigint(*((bigint*)(&mpz_arg_aux)), b.get_share());
-	if(0 == (*the_ext_lib.x_subs)(spdz_gfp_ext_handle, mpz_share_aux, mpz_arg_aux))
-	{
-		Pmpz2share(&mpz_share_aux, diff);
-	}
-	else
+	if(0 != (*the_ext_lib.x_subs)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&diff))
 	{
 		cerr << "Processor::PSubs_Ext extension library x_subs failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);

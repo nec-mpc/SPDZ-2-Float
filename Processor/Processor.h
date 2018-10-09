@@ -435,11 +435,11 @@ public:
 
     int (*x_mix_sub_share)(void * handle, const mp_limb_t * scalar, const mp_limb_t * share, mp_limb_t * diff);
 
-    int (*x_mix_mul)(void * handle, mpz_t share, const mpz_t scalar);
+    int (*x_mix_mul)(void * handle, const mp_limb_t * share, const mp_limb_t * scalar, mp_limb_t * product);
 
-    int (*x_adds)(void * handle, mpz_t share1, const mpz_t share2);
+    int (*x_adds)(void * handle, const mp_limb_t * share1, const mp_limb_t * share2, mp_limb_t * sum);
 
-    int (*x_subs)(void * handle, mpz_t share1, const mpz_t share2);
+    int (*x_subs)(void * handle, const mp_limb_t * share1, const mp_limb_t * share2, mp_limb_t * diff);
 
     int (*x_share_immediates)(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
 
