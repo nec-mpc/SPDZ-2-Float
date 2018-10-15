@@ -46,6 +46,7 @@ class Zp_Data
   void assign(const Zp_Data& Zp);
   void init(const bigint& p,bool mont=true);
   int get_t() const { return t; }
+  bool get_m() const { return montgomery; }
   const mp_limb_t* get_prA() const { return prA; }
 
   void pack(octetStream& o) const;

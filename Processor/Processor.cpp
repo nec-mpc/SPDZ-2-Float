@@ -556,7 +556,6 @@ void Processor::maybe_encrypt_sequence(int client_id)
 }
 
 #if defined(EXTENDED_SPDZ)
-#include <iomanip>
 void Processor::POpen_Ext(const vector<int>& reg, int size)
 {
 	vector<int> dest, source;
@@ -572,35 +571,12 @@ void Processor::POpen_Ext(const vector<int>& reg, int size)
 
 	prep_shares(source, Sh_PO, size);
 
-	{
-		std::stringstream sts;
-		const u_int8_t * pbuff = (const u_int8_t *)PO.data();
-		for(size_t i = 0; i < PO.size()*2*sizeof(mp_limb_t); ++i)
-		{
-			sts << std::hex << std::setw(2) << std::setfill('0') << (int)pbuff[i] << " ";
-			if((2*sizeof(mp_limb_t) - 1) == i%(2*sizeof(mp_limb_t))) sts << std::endl;
-		}
-		cout << __FUNCTION__ << ": pre-open PO memory dump: " << endl << sts.str() << endl;
-	}
-
 	//the extension library is given the shares' values and returns opens' values
 	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)PO.data(), 1))
 	{
 		cerr << "Processor::POpen_Ext extension library start_open failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
-	}
-
-	{
-		std::stringstream sts;
-		const u_int8_t * pbuff = (const u_int8_t *)PO.data();
-		for(size_t i = 0; i < PO.size()*2*sizeof(mp_limb_t); ++i)
-		{
-			sts << std::hex << std::setw(2) << std::setfill('0') << (int)pbuff[i] << " ";
-			if((2*sizeof(mp_limb_t) - 1) == i%(2*sizeof(mp_limb_t))) sts << std::endl;
-		}
-		cout << __FUNCTION__ << ": post-open PO memory dump: " << endl << sts.str() << endl;
-		cout << __FUNCTION__ << ": PO[0] = " << PO[0] << endl;
 	}
 
 	POpen_Stop_prep_opens(dest, PO, C, size);

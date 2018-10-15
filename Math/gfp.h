@@ -32,7 +32,7 @@ class gfp
 
   typedef gfp value_type;
 
-  static void init_field(const bigint& p,bool mont=true)
+  static void init_field(const bigint& p,bool mont=false)
     { ZpD.init(p,mont); }
   static bigint pr()   
     { return ZpD.pr; }
