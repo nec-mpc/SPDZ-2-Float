@@ -290,7 +290,7 @@ class Processor : public ProcessorBase
   void PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
   void PInput_Ext(Share<gfp>& input_value, const int input_party_id);
   void PMult_Ext(const vector<int>& reg, int size);
-  void PMult_Stop_prep_products(const vector<int>& reg, int size);
+  void PMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gfp> > & products);
   void PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c);
@@ -306,100 +306,6 @@ class Processor : public ProcessorBase
   void Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv);
 
   void * spdz_gfp_ext_handle;
-  mpz_t mpz_share_aux, mpz_arg_aux;
-
-  mpz_t * pi_inputs;
-  size_t pi_size;
-  void alloc_pi_mpz(const size_t required_size)
-  {
-	  pi_inputs = new mpz_t[pi_size = required_size];
-	  for(size_t i = 0; i < pi_size; i++) mpz_init(pi_inputs[i]);
-  }
-  void free_pi_mpz()
-  {
-	  for(size_t i = 0; i < pi_size; i++) mpz_clear(pi_inputs[i]);
-	  delete pi_inputs; pi_inputs = NULL;
-	  pi_size = 0;
-  }
-
-  mpz_t * pm_shares, * pm_products;
-  size_t pm_size;
-  void alloc_pm_mpz(const size_t required_size)
-  {
-	  assert(required_size%2 == 0);
-	  pm_size = required_size;
-	  pm_shares = new mpz_t[pm_size];
-	  pm_products = new mpz_t[pm_size/2];
-	  for(size_t i = 0; i < pm_size/2; i++)
-	  {
-		  mpz_init(pm_products[i]);
-		  mpz_init(pm_shares[2*i]);
-		  mpz_init(pm_shares[2*i+1]);
-	  }
-  }
-  void free_pm_mpz()
-  {
-	  if(pm_size > 0)
-	  {
-		  for(size_t i = 0; i < pm_size/2; i++)
-		  {
-			  mpz_clear(pm_products[i]);
-			  mpz_clear(pm_shares[2*i]);
-			  mpz_clear(pm_shares[2*i+1]);
-		  }
-		  delete pm_shares; pm_shares = NULL;
-		  delete pm_products; pm_products = NULL;
-		  pm_size = 0;
-	  }
-  }
-
-  mpz_t * go_shares, * go_opens;
-  size_t go_size;
-  void alloc_go_mpz(const size_t required_size)
-  {
-	  go_shares = new mpz_t[go_size = required_size];
-	  go_opens = new mpz_t[go_size];
-	  for(size_t i = 0; i < pi_size; i++) { mpz_init(go_shares[i]); mpz_init(go_opens[i]); }
-  }
-  void free_go_mpz()
-  {
-	  for(size_t i = 0; i < go_size; i++) { mpz_clear(go_shares[i]); mpz_clear(go_opens[i]); }
-	  delete go_shares; go_shares = NULL;
-	  delete go_opens; go_opens = NULL;
-	  go_size = 0;
-  }
-
-  mpz_t * gi_inputs;
-  size_t gi_size;
-  void alloc_gi_mpz(const size_t required_size)
-  {
-	  gi_inputs = new mpz_t[gi_size = required_size];
-	  for(size_t i = 0; i < gi_size; i++) mpz_init(gi_inputs[i]);
-  }
-  void free_gi_mpz()
-  {
-	  for(size_t i = 0; i < gi_size; i++) mpz_clear(gi_inputs[i]);
-	  delete gi_inputs; gi_inputs = NULL;
-	  gi_size = 0;
-  }
-
-  mpz_t * gm_shares, * gm_products;
-  size_t gm_size;
-  void alloc_gm_mpz(const size_t required_size)
-  {
-	  gm_shares = new mpz_t[gm_size = required_size];
-	  for(size_t i = 0; i < gm_size; i++) mpz_init(gm_shares[i]);
-	  gm_products = new mpz_t[gm_size/2];
-	  for(size_t i = 0; i < gm_size/2; i++) mpz_init(gm_products[i]);
-  }
-  void free_gm_mpz()
-  {
-	  for(size_t i = 0; i < gm_size; i++) mpz_clear(gm_shares[i]);
-	  for(size_t i = 0; i < gm_size/2; i++) mpz_clear(gm_products[i]);
-	  delete gm_shares; gm_shares = NULL;
-	  delete gm_products; gm_products = NULL;
-	  gm_size = 0;
-  }
 
 #endif
 
@@ -421,13 +327,15 @@ public:
 
     int (*x_opens)(void * handle, const size_t share_count, const mp_limb_t * shares, mp_limb_t * opens, int verify);
 
+    int (*x_closes)(void * handle, const int party_id, const size_t value_count, const mp_limb_t * values, mp_limb_t * shares);
+
     int (*x_triple)(void * handle, mp_limb_t * a, mp_limb_t * b, mp_limb_t * c);
 
 	int (*x_verify)(void * handle, int * error);
 
-	int (*x_input)(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs);
+	int (*x_input)(void * handle, const int input_of_pid, const size_t num_of_inputs, mp_limb_t * inputs);
 
-	int (*x_mult)(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
+	int (*x_mult)(void * handle, const size_t share_count, const mp_limb_t * shares, mp_limb_t * products, int verify);
 
     int (*x_mix_add)(void * handle, const mp_limb_t * share, const mp_limb_t * scalar, mp_limb_t * sum);
 
@@ -441,11 +349,9 @@ public:
 
     int (*x_subs)(void * handle, const mp_limb_t * share1, const mp_limb_t * share2, mp_limb_t * diff);
 
-    int (*x_share_immediates)(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
-
     int (*x_bit)(void * handle, mp_limb_t * share);
 
-    int (*x_inverse)(void * handle, mpz_t share_value, mpz_t share_inverse);
+    int (*x_inverse)(void * handle, mp_limb_t * share_value, mp_limb_t * share_inverse);
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };
