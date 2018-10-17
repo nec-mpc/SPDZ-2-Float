@@ -300,10 +300,7 @@ class Processor : public ProcessorBase
   void PMulm_Ext(Share<gfp>& sec_product, const Share<gfp> & sec_factor, const gfp & clr_factor);
   void PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b);
   void PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b);
-
-  void PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values);
-  void Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps);
-  void Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv);
+  void PMovs_Ext(Share<gfp>& dest, const Share<gfp>& source);
 
   void * spdz_gfp_ext_handle;
 

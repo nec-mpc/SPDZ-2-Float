@@ -664,7 +664,11 @@ void Instruction::execute(Processor& Proc) const
         Proc.write_C2(r[0],Proc.read_C2(r[1]));
         break;
       case MOVS:
+#if defined(EXTENDED_SPDZ)
+    	Proc.PMovs_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]));
+#else
         Proc.write_Sp(r[0],Proc.read_Sp(r[1]));
+#endif
         break;
       case GMOVS:
         Proc.write_S2(r[0],Proc.read_S2(r[1]));
@@ -815,16 +819,16 @@ void Instruction::execute(Processor& Proc) const
         #endif
         break;
       case SUBMR:
-        #ifdef DEBUG
-           Sansp.sub(Proc.read_Cp(r[1]),Proc.read_Sp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-	   Proc.write_Sp(r[0],Sansp);
-        #else
 #if defined(EXTENDED_SPDZ)
 	   	   Proc.PSubmr_Ext(Proc.get_Cp_ref(r[1]), Proc.get_Sp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
+        #ifdef DEBUG
+           Sansp.sub(Proc.read_Cp(r[1]),Proc.read_Sp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+           Proc.write_Sp(r[0],Sansp);
+        #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Cp(r[1]),Proc.read_Sp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-#endif
 	#endif
+#endif
         break;
       case GSUBMR:
         #ifdef DEBUG

@@ -1,6 +1,6 @@
 #party_id,required_input_count
-0,2700
-1,0
+0,1
+1,1
 2,0
 3,0
 4,0

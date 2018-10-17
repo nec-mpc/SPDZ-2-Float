@@ -603,9 +603,6 @@ void Processor::PInput_Ext(Share<gfp>& input_value, const int input_party_id)
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
-
-	mp_limb_t * p = (mp_limb_t*)&input_value;
-	cout << __FUNCTION__ << ": input share = " << p[3] << ":" << p[2] << ":" << p[1] << ":" << p[0] << endl;
 }
 
 void Processor::PMult_Ext(const vector<int>& reg, int size)
@@ -614,6 +611,7 @@ void Processor::PMult_Ext(const vector<int>& reg, int size)
 	int n = reg.size() / 3;
 	sources.reserve(2 * n);
 	dest.reserve(n);
+
 	for (int i = 0; i < n; i++)
 	{
 		dest.push_back(reg[3 * i]);
@@ -708,11 +706,7 @@ void Processor::PLdsi_Ext(gfp& value, Share<gfp>& share)
 
 void Processor::PBit_Ext(Share<gfp>& share)
 {
-	if(0 == (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, (mp_limb_t *)&share))
-	{
-		cout << "bit share = " << share.get_share() << endl;
-	}
-	else
+	if(0 != (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, (mp_limb_t *)&share))
 	{
 		cerr << "Processor::PBit_Ext extension library bit failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -767,31 +761,9 @@ void Processor::PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp
 	}
 }
 
-void Processor::PShares2mpz(const vector< Share<gfp> >& shares, mpz_t * share_values)
+void Processor::PMovs_Ext(Share<gfp>& dest, const Share<gfp>& source)
 {
-	size_t count = shares.size();
-	for(size_t i = 0; i < count; i++)
-	{
-		to_bigint(*((bigint*)(share_values + i)), shares[i].get_share());
-	}
-}
-
-void Processor::Pmpz2gfps(const mpz_t * mpz_values, vector<gfp>& gfps)
-{
-	size_t count = gfps.size();
-	for(size_t i = 0; i < count; i++)
-	{
-		to_gfp(gfps[i], *((mpz_class*)(mpz_values + i)));
-	}
-}
-
-void Processor::Pmpz2share(const mpz_t * mpzv, Share<gfp> & shv)
-{
-	gfp mac, value;
-	to_gfp(value, *((mpz_class*)mpzv));
-	mac.mul(MCp.get_alphai(), value);
-	shv.set_share(value);
-	shv.set_mac(mac);
+	memcpy(&dest, &source, 4 * sizeof(mp_limb_t));
 }
 
 #define LOAD_LIB_METHOD(Name,Proc)	\
