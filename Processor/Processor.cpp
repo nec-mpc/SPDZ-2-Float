@@ -35,7 +35,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 50, 50, 50))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp61", 500, 500, 500))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -627,23 +627,11 @@ void Processor::PMult_Ext(const vector<int>& reg, int size)
 
 	prep_shares(sources, Sh_PO, size);
 
-	//vector<gfp>& PO = get_PO<gfp>();
-	//PO.resize(sources.size()*size);
-
-	//the share values are saved as mpz
-	/*
-	if(Sh_PO.size() > pm_size)
-	{
-		free_pm_mpz();
-		alloc_pm_mpz(Sh_PO.size());
-	}
-	PShares2mpz(Sh_PO, pm_shares);
-	*/
 	std::vector< Share<gfp> > products(Sh_PO.size()/2);
 
 	if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)products.data(), 1))
 	{
-		cerr << "Processor::PMult_Start_Ext_64 extension library start_mult failed." << endl;
+		cerr << "Processor::PMult_Ext extension library start_mult failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -722,14 +710,7 @@ void Processor::PBit_Ext(Share<gfp>& share)
 {
 	if(0 == (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, (mp_limb_t *)&share))
 	{
-		char buffer[256];
-
-		snprintf(buffer, 256, "[%016lX:%016lX]", share.get_share().get().get_limb(0), share.get_share().get().get_limb(1));
-		cout << "bit share = " << buffer << endl;
-
-		gfp mac;
-		mac.mul(MCp.get_alphai(), share.get_share());
-		share.set_mac(mac);
+		cout << "bit share = " << share.get_share() << endl;
 	}
 	else
 	{
