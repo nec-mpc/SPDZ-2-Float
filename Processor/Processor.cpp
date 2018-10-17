@@ -605,8 +605,29 @@ void Processor::PInput_Ext(Share<gfp>& input_value, const int input_party_id)
 	}
 }
 
-void Processor::PMult_Ext(const vector<int>& reg, int size)
+void Processor::PMult_Ext(const vector<int>& reg, int /*size*/)
 {
+	int n = reg.size() / 3;
+	cout << "PMult_Ext called for " << n << " required multiplications." << endl;
+	for (int i = 0; i < n; i++)
+	{
+		Share<gfp> xy[2], pr;
+		pr = get_Sp_ref(reg[3 * i]);
+		xy[0] = get_Sp_ref(reg[3 * i + 1]);
+		xy[1] = get_Sp_ref(reg[3 * i + 2]);
+
+		if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, 2, (const mp_limb_t*)xy, (mp_limb_t*)&pr, 1))
+		{
+			cerr << "Processor::PMult_Ext extension library start_mult failed." << endl;
+			dlclose(the_ext_lib.x_lib_handle);
+			abort();
+		}
+		else
+			cout << "Successful x_mult() for pair " << i << endl;
+	}
+	sent += n;
+	rounds++;
+	/*
 	vector<int> sources, dest;
 	int n = reg.size() / 3;
 	sources.reserve(2 * n);
@@ -638,6 +659,7 @@ void Processor::PMult_Ext(const vector<int>& reg, int size)
 
 	sent += dest.size() * size;
 	rounds++;
+	*/
 }
 
 void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gfp> > & products)

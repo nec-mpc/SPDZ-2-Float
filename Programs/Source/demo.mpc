@@ -2,7 +2,7 @@
 a = sint.get_input_from(0)
 b = sint.get_input_from(1)
 
-'''
+#''
 d = (a > b)
 print_ln('d = %s', d.reveal())
 
@@ -14,4 +14,4 @@ print_ln('a=%s; a-5=%s;', a.reveal(), (a-5).reveal())
 print_ln('a=%s; b=%s; a+b=%s;', a.reveal(), b.reveal(), (a+b).reveal())
 print_ln('a=%s; b=%s; a-b=%s;', a.reveal(), b.reveal(), (a-b).reveal())
 print_ln('a=%s; b=%s; a*b=%s;', a.reveal(), b.reveal(), (a*b).reveal())
-#''
+'''
