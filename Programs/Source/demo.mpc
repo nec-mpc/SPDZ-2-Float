@@ -1,10 +1,10 @@
 
-a = sint.get_input_from(0)
-b = sint.get_input_from(1)
+a = sint(1)
+b = sint(1)
 
 #''
-d = (a > b)
-print_ln('d = %s', d.reveal())
+c = (a == b)
+print_ln('c = %s', c.reveal())
 
 '''
 print_ln('a=%s; 5*a=%s;', a.reveal(), (5*a).reveal())
