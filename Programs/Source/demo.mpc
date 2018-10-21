@@ -2,6 +2,11 @@
 a = sint(1)
 b = sint(1)
 
+#''
+c = (a == b)
+print_ln('c = %s', c.reveal())
+
+'''
 print_ln('a=%s; 5*a=%s;', a.reveal(), (5*a).reveal())
 print_ln('a=%s; 5+a=%s;', a.reveal(), (5+a).reveal())
 print_ln('a=%s; 5-a=%s;', a.reveal(), (5-a).reveal())
@@ -10,8 +15,3 @@ print_ln('a=%s; b=%s; a+b=%s;', a.reveal(), b.reveal(), (a+b).reveal())
 print_ln('a=%s; b=%s; a-b=%s;', a.reveal(), b.reveal(), (a-b).reveal())
 print_ln('a=%s; b=%s; a*b=%s;', a.reveal(), b.reveal(), (a*b).reveal())
 '''
-c = (a == b)
-print_ln('c = %s', c.reveal())
-
-'''
-#''
