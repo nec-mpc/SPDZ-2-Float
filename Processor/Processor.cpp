@@ -607,27 +607,27 @@ void Processor::PInput_Ext(Share<gfp>& input_value, const int input_party_id)
 
 void Processor::PMult_Ext(const vector<int>& reg, int size)
 {
-	vector<int> sources, dest;
+	vector<int> xsources, ysources, dest;
 	int n = reg.size() / 3;
-	sources.reserve(2 * n);
+	xsources.reserve(n);
+	ysources.reserve(n);
 	dest.reserve(n);
 
 	for (int i = 0; i < n; i++)
 	{
 		dest.push_back(reg[3 * i]);
-		sources.push_back(reg[3 * i + 1]);
-		sources.push_back(reg[3 * i + 2]);
+		xsources.push_back(reg[3 * i + 1]);
+		ysources.push_back(reg[3 * i + 2]);
 	}
 
-	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
-	Sh_PO.clear();
-	Sh_PO.reserve(sources.size()*size);
+	std::vector< Share<gfp> > xsh, ysh, products(n*size);
+	xsh.reserve(n*size);
+	ysh.reserve(n*size);
 
-	prep_shares(sources, Sh_PO, size);
+	prep_shares(xsources, xsh, size);
+	prep_shares(ysources, ysh, size);
 
-	std::vector< Share<gfp> > products(Sh_PO.size()/2);
-
-	if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)products.data(), 1))
+	if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, n*size, (const mp_limb_t*)xsh.data(), (const mp_limb_t*)ysh.data(), (mp_limb_t*)products.data(), 1))
 	{
 		cerr << "Processor::PMult_Ext extension library start_mult failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
