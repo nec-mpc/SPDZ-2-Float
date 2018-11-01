@@ -193,14 +193,16 @@ void aes_256_schedule( octet* key, const octet* userkey )
 
 
 void aes_128_encrypt(octet* out, const octet* in, const octet* key)
-{ __m128i tmp;
+{ 
+__m128i tmp;
   tmp = _mm_loadu_si128 (&((__m128i*)in)[0]);
   tmp = aes_128_encrypt(tmp,key);
   _mm_storeu_si128 (&((__m128i*)out)[0],tmp);
 }
 
 void aes_192_encrypt(octet* out, const octet* in, const octet* key)
-{ __m128i tmp; 
+{
+	__m128i tmp; 
   tmp = _mm_loadu_si128 (&((__m128i*)in)[0]); 
   tmp = _mm_xor_si128 (tmp,((__m128i*)key)[0]); 
   int j;
