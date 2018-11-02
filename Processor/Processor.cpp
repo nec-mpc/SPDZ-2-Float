@@ -933,6 +933,46 @@ void Processor::GLdsi_Ext(gf2n& value, Share<gf2n>& share)
 	}
 }
 
+void Processor::GBit_Ext(Share<gf2n>& share)
+{
+	if(0 != (*the_ext_lib.x_bit)(spdz_gf2n_ext_handle, (mp_limb_t *)&share))
+	{
+		cerr << "Processor::GBit_Ext extension library bit failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::GMulm_Ext(Share<gf2n>& sec_product, const Share<gf2n> & sec_factor, const gf2n & clr_factor)
+{
+	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gf2n_ext_handle, (const mp_limb_t *)&sec_factor, (const mp_limb_t *)&clr_factor, (mp_limb_t *)&sec_product))
+	{
+		cerr << "Processor::PMulm_Ext extension library mix_mul failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::GAdds_Ext(Share<gf2n>& sum, const Share<gf2n>& a, const Share<gf2n>& b)
+{
+	if(0 != (*the_ext_lib.x_adds)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&sum))
+	{
+		cerr << "Processor::GAdds_Ext extension library x_adds failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::GSubs_Ext(Share<gf2n>& diff, const Share<gf2n>& a, const Share<gf2n>& b)
+{
+	if(0 != (*the_ext_lib.x_subs)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&diff))
+	{
+		cerr << "Processor::GSubs_Ext extension library x_subs failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 #endif
 
 #if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)

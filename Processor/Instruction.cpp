@@ -739,12 +739,16 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GADDS:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GAdds_Ext(Proc.get_S2_ref(r[0]), Proc.get_S2_ref(r[1]), Proc.get_S2_ref(r[2]));
+#else
 	#ifdef DEBUG
            Sans2.add(Proc.read_S2(r[1]),Proc.read_S2(r[2]));
            Proc.write_S2(r[0],Sans2);
         #else
            Proc.get_S2_ref(r[0]).add(Proc.read_S2(r[1]),Proc.read_S2(r[2]));
         #endif
+#endif
         break;
       case ADDM:
 #if defined(EXTENDED_SPDZ_GFP)
@@ -799,12 +803,16 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GSUBS:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GSubs_Ext(Proc.get_S2_ref(r[0]), Proc.get_S2_ref(r[1]), Proc.get_S2_ref(r[2]));
+#else
 	#ifdef DEBUG
            Sans2.sub(Proc.read_S2(r[1]),Proc.read_S2(r[2]));
 	   Proc.write_S2(r[0],Sans2);
         #else
            Proc.get_S2_ref(r[0]).sub(Proc.read_S2(r[1]),Proc.read_S2(r[2]));
 	#endif
+#endif
         break;
       case SUBML:
 #if defined(EXTENDED_SPDZ_GFP)
@@ -879,12 +887,16 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GMULM:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GMulm_Ext(Proc.get_S2_ref(r[0]), Proc.read_S2(r[1]), Proc.read_C2(r[2]));
+#else
 	#ifdef DEBUG
-           Sans2.mul(Proc.read_S2(r[1]),Proc.read_C2(r[2]));
-	   Proc.write_S2(r[0],Sans2);
+    	  Sans2.mul(Proc.read_S2(r[1]),Proc.read_C2(r[2]));
+    	  Proc.write_S2(r[0],Sans2);
 	#else
-           Proc.get_S2_ref(r[0]).mul(Proc.read_S2(r[1]),Proc.read_C2(r[2]));
+    	  Proc.get_S2_ref(r[0]).mul(Proc.read_S2(r[1]),Proc.read_C2(r[2]));
 	#endif
+#endif
         break;
       case DIVC:
         if (Proc.read_Cp(r[2]).is_zero())
@@ -1122,13 +1134,17 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GMULSI:
-        Proc.temp.ans2.assign(n);
+    	  Proc.temp.ans2.assign(n);
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GMulm_Ext(Proc.get_S2_ref(r[0]), Proc.read_S2(r[1]), Proc.temp.ans2);
+#else
 	#ifdef DEBUG
-           Sans2.mul(Proc.read_S2(r[1]),Proc.temp.ans2);
-	   Proc.write_S2(r[0],Sans2);
+    	  Sans2.mul(Proc.read_S2(r[1]),Proc.temp.ans2);
+    	  Proc.write_S2(r[0],Sans2);
 	#else
-           Proc.get_S2_ref(r[0]).mul(Proc.read_S2(r[1]),Proc.temp.ans2);
+    	  Proc.get_S2_ref(r[0]).mul(Proc.read_S2(r[1]),Proc.temp.ans2);
 	#endif
+#endif
         break;
       case TRIPLE:
 #if defined(EXTENDED_SPDZ_GFP)
@@ -1164,7 +1180,11 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GBIT:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	Proc.GBit_Ext(Proc.get_S2_ref(r[0]));
+#else
         Proc.DataF.get_one(DATA_GF2N, DATA_BIT, Proc.get_S2_ref(r[0]));
+#endif
         break;
       case INV:
 #if defined(EXTENDED_SPDZ_GFP)
