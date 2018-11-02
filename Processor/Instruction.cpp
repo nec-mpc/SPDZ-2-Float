@@ -755,12 +755,16 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GADDM:
+#if defined(EXTENDED_SPDZ_GF2N)
+	   Proc.GAddm_Ext(Proc.get_S2_ref(r[1]), Proc.get_C2_ref(r[2]), Proc.get_S2_ref(r[0]));
+#else
         #ifdef DEBUG
            Sans2.add(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
            Proc.get_S2_ref(r[0]).add(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
         #endif
+#endif
         break;
       case SUBC:
 	#ifdef DEBUG
@@ -983,12 +987,16 @@ void Instruction::execute(Processor& Proc) const
         break;
       case GADDSI:
         Proc.temp.ans2.assign(n);
+#if defined(EXTENDED_SPDZ_GF2N)
+        Proc.GAddm_Ext(Proc.get_S2_ref(r[1]), Proc.temp.ans2, Proc.get_S2_ref(r[0]));
+#else
 	#ifdef DEBUG
            Sans2.add(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
            Proc.get_S2_ref(r[0]).add(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	#endif
+#endif
         break;
       case SUBCI:
         Proc.temp.ansp.assign(n);

@@ -650,7 +650,7 @@ void Processor::PMult_Ext(const vector<int>& reg, int size)
 
 	if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, n*size, (const mp_limb_t*)xsh.data(), (const mp_limb_t*)ysh.data(), (mp_limb_t*)products.data(), 1))
 	{
-		cerr << "Processor::PMult_Ext extension library start_mult failed." << endl;
+		cerr << "Processor::PMult_Ext extension library mult failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -829,6 +829,75 @@ void Processor::GInput_Ext(Share<gf2n>& input_value, const int input_party_id)
 	if(0 != (*the_ext_lib.x_input)(spdz_gf2n_ext_handle, input_party_id, 1, (mp_limb_t*)&input_value))
 	{
 		cerr << "Processor::GInput_Ext extension library input failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::GMult_Ext(const vector<int>& reg, int size)
+{
+	vector<int> xsources, ysources, dest;
+	int n = reg.size() / 3;
+	xsources.reserve(n);
+	ysources.reserve(n);
+	dest.reserve(n);
+
+	for (int i = 0; i < n; i++)
+	{
+		dest.push_back(reg[3 * i]);
+		xsources.push_back(reg[3 * i + 1]);
+		ysources.push_back(reg[3 * i + 2]);
+	}
+
+	std::vector< Share<gf2n> > xsh, ysh, products(n*size);
+	xsh.reserve(n*size);
+	ysh.reserve(n*size);
+
+	prep_shares(xsources, xsh, size);
+	prep_shares(ysources, ysh, size);
+
+	if(0 != (*the_ext_lib.x_mult)(spdz_gf2n_ext_handle, n*size, (const mp_limb_t*)xsh.data(), (const mp_limb_t*)ysh.data(), (mp_limb_t*)products.data(), 1))
+	{
+		cerr << "Processor::GMult_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	GMult_Stop_prep_products(dest, size, products);
+
+	sent += dest.size() * size;
+	rounds++;
+}
+
+void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gf2n> > & products)
+{
+	std::vector< Share<gf2n> >::const_iterator sitr = products.begin();
+	if (size>1)
+	{
+		for (typename vector<int>::const_iterator reg_it=reg.begin(); reg_it!=reg.end(); reg_it++)
+		{
+			vector< Share<gf2n> >::iterator insert_point=get_S<gf2n>().begin()+*reg_it;
+			for(int i = 0; i < size; ++i)
+			{
+				*(insert_point + i) = *sitr++;
+			}
+		}
+	}
+	else
+	{
+		int sz=reg.size();
+		for(int i = 0; i < sz; ++i)
+		{
+			get_S_ref<gf2n>(reg[i]) = *sitr++;
+		}
+	}
+}
+
+void Processor::GAddm_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
+{
+	if(0 != (*the_ext_lib.x_mix_add)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	{
+		cerr << "Processor::GAddm_Ext extension library mix_add failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
