@@ -1198,6 +1198,9 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GINPUT:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GInput_Ext(Proc.get_S2_ref(r[0]), n);
+#else
         { gf2n& rr=Proc.temp.rr2; gf2n& t=Proc.temp.t2; gf2n& tmp=Proc.temp.tmp2;
           Proc.DataF.get_input(Proc.get_S2_ref(r[0]),rr,n);
           octetStream o;
@@ -1223,6 +1226,7 @@ void Instruction::execute(Processor& Proc) const
           tmp.add(Proc.get_S2_ref(r[0]).get_mac(),tmp);
           Proc.get_S2_ref(r[0]).set_mac(tmp);
         }
+#endif
         break;
       case STARTINPUT:
 #if defined(EXTENDED_SPDZ_GFP)

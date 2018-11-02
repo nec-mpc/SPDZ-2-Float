@@ -824,6 +824,16 @@ void Processor::GTriple_Ext(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c)
 	}
 }
 
+void Processor::GInput_Ext(Share<gf2n>& input_value, const int input_party_id)
+{
+	if(0 != (*the_ext_lib.x_input)(spdz_gf2n_ext_handle, input_party_id, 1, (mp_limb_t*)&input_value))
+	{
+		cerr << "Processor::GInput_Ext extension library input failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 #endif
 
 #if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
