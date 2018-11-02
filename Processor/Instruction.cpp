@@ -675,7 +675,11 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GMOVS:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	Proc.GMovs_Ext(Proc.get_S2_ref(r[0]), Proc.get_S2_ref(r[1]));
+#else
         Proc.write_S2(r[0],Proc.read_S2(r[1]));
+#endif
         break;
       case MOVINT:
         Proc.write_Ci(r[0],Proc.read_Ci(r[1]));
@@ -1194,7 +1198,11 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GINV:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	Proc.GInverse_Ext(Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
+#else
         Proc.DataF.get_two(DATA_GF2N, DATA_INVERSE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
+#endif
         break;
       case INPUTMASK:
         Proc.DataF.get_input(Proc.get_Sp_ref(r[0]), Proc.temp.ansp, n);

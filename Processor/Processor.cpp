@@ -943,6 +943,16 @@ void Processor::GBit_Ext(Share<gf2n>& share)
 	}
 }
 
+void Processor::GInverse_Ext(Share<gf2n>& share_value, Share<gf2n>& share_inverse)
+{
+	if(0 != (*the_ext_lib.x_inverse)(spdz_gf2n_ext_handle, (mp_limb_t *)&share_value, (mp_limb_t *)&share_inverse))
+	{
+		cerr << "Processor::GInverse_Ext extension library inverse failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::GMulm_Ext(Share<gf2n>& sec_product, const Share<gf2n> & sec_factor, const gf2n & clr_factor)
 {
 	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gf2n_ext_handle, (const mp_limb_t *)&sec_factor, (const mp_limb_t *)&clr_factor, (mp_limb_t *)&sec_product))
@@ -971,6 +981,15 @@ void Processor::GSubs_Ext(Share<gf2n>& diff, const Share<gf2n>& a, const Share<g
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
+}
+
+void Processor::GMovs_Ext(Share<gf2n>& dest, const Share<gf2n>& source)
+{
+#ifdef USE_GF2N_LONG
+	memcpy(&dest, &source, 2 * sizeof(mp_limb_t));
+#else
+	memcpy(&dest, &source, sizeof(mp_limb_t));
+#endif
 }
 
 #endif

@@ -320,6 +320,7 @@ class Processor : public ProcessorBase
   void GSubmr_Ext(gf2n& a, Share<gf2n>& b, Share<gf2n>& c);
   void GLdsi_Ext(gf2n& value, Share<gf2n>& share);
   void GBit_Ext(Share<gf2n>& share);
+  void GInverse_Ext(Share<gf2n>& share_value, Share<gf2n>& share_inverse);
   void GMulm_Ext(Share<gf2n>& sec_product, const Share<gf2n> & sec_factor, const gf2n & clr_factor);
   void GAdds_Ext(Share<gf2n>& sum, const Share<gf2n>& a, const Share<gf2n>& b);
   void GSubs_Ext(Share<gf2n>& diff, const Share<gf2n>& a, const Share<gf2n>& b);
