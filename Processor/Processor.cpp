@@ -719,7 +719,7 @@ void Processor::PLdsi_Ext(gfp& value, Share<gfp>& share)
 {
 	if(0 != (*the_ext_lib.x_closes)(spdz_gfp_ext_handle, 0, 1, (const mp_limb_t *)&value, (mp_limb_t *)&share))
 	{
-		cerr << "Processor::PLdsi_Ext extension library share_immediates failed." << endl;
+		cerr << "Processor::PLdsi_Ext extension library closes failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -918,6 +918,16 @@ void Processor::GSubmr_Ext(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
 	{
 		cerr << "Processor::GSubmr_Ext extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::GLdsi_Ext(gf2n& value, Share<gf2n>& share)
+{
+	if(0 != (*the_ext_lib.x_closes)(spdz_gf2n_ext_handle, 0, 1, (const mp_limb_t *)&value, (mp_limb_t *)&share))
+	{
+		cerr << "Processor::GLdsi_Ext extension library closes failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}

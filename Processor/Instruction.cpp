@@ -577,6 +577,9 @@ void Instruction::execute(Processor& Proc) const
         break;
       case GLDSI:
     	Proc.temp.ans2.assign(n);
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GLdsi_Ext(Proc.temp.ans2, Proc.get_S2_ref(r[0]));
+#else
         {
           if (Proc.P.my_num()==0)
             Proc.get_S2_ref(r[0]).set_share(Proc.temp.ans2);
@@ -586,6 +589,7 @@ void Instruction::execute(Processor& Proc) const
           tmp.mul(Proc.MC2.get_alphai(),Proc.temp.ans2);
           Proc.get_S2_ref(r[0]).set_mac(tmp);
         }
+#endif
         break;
       case LDMC:
         Proc.write_Cp(r[0],Proc.machine.Mp.read_C(n));
