@@ -803,24 +803,28 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case SUBML:
-	#ifdef DEBUG
-           Sansp.sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-	   Proc.write_Sp(r[0],Sansp);
-        #else
 #if defined(EXTENDED_SPDZ_GFP)
-	   	   Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
+    	  Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
+   	   #ifdef DEBUG
+           Sansp.sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
+           Proc.write_Sp(r[0],Sansp);
+        #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
-#endif
         #endif
+#endif
         break;
       case GSUBML:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GSubml_Ext(Proc.get_S2_ref(r[1]), Proc.get_C2_ref(r[2]), Proc.get_S2_ref(r[0]));
+#else
 	#ifdef DEBUG
-           Sans2.sub(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-	   Proc.write_S2(r[0],Sans2);
-        #else
-           Proc.get_S2_ref(r[0]).sub(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-        #endif
+    	  Sans2.sub(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
+    	  Proc.write_S2(r[0],Sans2);
+	#else
+    	  Proc.get_S2_ref(r[0]).sub(Proc.read_S2(r[1]),Proc.read_C2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
+	#endif
+#endif
         break;
       case SUBMR:
 #if defined(EXTENDED_SPDZ_GFP)
