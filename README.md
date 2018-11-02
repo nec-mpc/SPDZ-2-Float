@@ -119,12 +119,12 @@ NodePtr = (NodePtr + 1) * (-1)
 print_ln('evaluation result = %s', NodePtr.reveal())
 ```
 ### marking of code changes
-Code changes in the fork can be detected by searching for ```EXTENDED_SPDZ``` compiler directive. 
+Code changes in the fork can be detected by searching for ```EXTENDED_SPDZ_GFP``` compiler directive. 
 If this directive is swiched off, the original SPDZ-2 code will be compiled.
 Here is an example of a code change, in [Instruction.cpp](https://github.com/cryptobiu/SPDZ-2/edit/master/Processor/Instruction.cpp)
 ```
 case STARTOPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  Proc.POpen_Start_Ext_64(start, size);
 #else
     	  Proc.POpen_Start(start,Proc.P,Proc.MCp,size);

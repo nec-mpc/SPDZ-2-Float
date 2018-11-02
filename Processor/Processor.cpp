@@ -9,7 +9,7 @@
 #include <sodium.h>
 #include <string>
 
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <list>
@@ -32,7 +32,7 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
   public_output.open(get_filename(PREP_DIR "Public-Output-",true).c_str(), ios_base::out);
   private_output.open(get_filename(PREP_DIR "Private-Output-",true).c_str(), ios_base::out);
 
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
 	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 700000, 700000, 619200))
@@ -43,13 +43,33 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 	}
 	cout << "SPDZ GFP extension library initialized." << endl;
 #endif
+
+#if defined(EXTENDED_SPDZ_GF2N)
+	spdz_gf2n_ext_handle = NULL;
+	cout << "Processor " << thread_num << " SPDZ GF2N extension library initializing." << endl;
+	if(0 != (*the_ext_lib.x_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), thread_num, "gf2n64", 0, 0, 619200))
+	{
+		cerr << "SPDZ GF2N extension library initialization failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+	cout << "SPDZ GF2N extension library initialized." << endl;
+#endif
 }
 
 Processor::~Processor()
 {
   cerr << "Sent " << sent << " elements in " << rounds << " rounds" << endl;
-#if defined(EXTENDED_SPDZ)
+
+#if defined(EXTENDED_SPDZ_GFP)
 	(*the_ext_lib.x_term)(spdz_gfp_ext_handle);
+#endif
+
+#if defined(EXTENDED_SPDZ_GF2N)
+	(*the_ext_lib.x_term)(spdz_gf2n_ext_handle);
+#endif
+
+#if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
 	dlclose(the_ext_lib.x_lib_handle);
 #endif
 }
@@ -555,7 +575,8 @@ void Processor::maybe_encrypt_sequence(int client_id)
   }
 }
 
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
+
 void Processor::POpen_Ext(const vector<int>& reg, int size)
 {
 	vector<int> dest, source;
@@ -574,7 +595,7 @@ void Processor::POpen_Ext(const vector<int>& reg, int size)
 	//the extension library is given the shares' values and returns opens' values
 	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)PO.data(), 1))
 	{
-		cerr << "Processor::POpen_Ext extension library start_open failed." << endl;
+		cerr << "Processor::POpen_Ext extension library open failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
 		abort();
 	}
@@ -759,6 +780,53 @@ void Processor::PMovs_Ext(Share<gfp>& dest, const Share<gfp>& source)
 {
 	memcpy(&dest, &source, 4 * sizeof(mp_limb_t));
 }
+
+#endif
+
+#if defined(EXTENDED_SPDZ_GF2N)
+
+void Processor::GOpen_Ext(const vector<int>& reg,int size)
+{
+	vector<int> dest, source;
+	unzip_open(dest, source, reg);
+
+	int sz=source.size();
+	vector<gf2n>& PO = get_PO<gf2n>();
+	PO.resize(sz*size);
+	vector<gf2n>& C = get_C<gf2n>();
+	vector< Share<gf2n> >& Sh_PO = get_Sh_PO<gf2n>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+
+	prep_shares(source, Sh_PO, size);
+
+	//the extension library is given the shares' values and returns opens' values
+	if(0 != (*the_ext_lib.x_opens)(spdz_gf2n_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)PO.data(), 1))
+	{
+		cerr << "Processor::GOpen_Ext extension library open failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	POpen_Stop_prep_opens(dest, PO, C, size);
+
+	sent += dest.size() * size;
+	rounds++;
+}
+
+void Processor::GTriple_Ext(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c)
+{
+	if(0 != (*the_ext_lib.x_triple)(spdz_gf2n_ext_handle, (mp_limb_t*)&a, (mp_limb_t*)&b, (mp_limb_t*)&c))
+	{
+		cerr << "Processor::GTriple_Ext extension library triple failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+#endif
+
+#if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
 
 #define LOAD_LIB_METHOD(Name,Proc)	\
 if(0 != load_extension_method(Name, (void**)(&Proc), x_lib_handle)) { dlclose(x_lib_handle); abort(); }

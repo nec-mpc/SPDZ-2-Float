@@ -95,7 +95,7 @@ enum
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
     OPEN = 0xA5,
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     E_STARTMULT = 0xA2,
     E_STOPMULT = 0xA3,
     E_MULT = 0xA4,

@@ -274,7 +274,7 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       case WRITEFILESHARE:
       case OPEN:
       case GOPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
       case E_STARTMULT:
       case E_STOPMULT:
       case E_MULT:
@@ -562,7 +562,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case LDSI:
     	  Proc.temp.ansp.assign(n);
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  Proc.PLdsi_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
         { if (Proc.P.my_num()==0)
@@ -664,7 +664,7 @@ void Instruction::execute(Processor& Proc) const
         Proc.write_C2(r[0],Proc.read_C2(r[1]));
         break;
       case MOVS:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	Proc.PMovs_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]));
 #else
         Proc.write_Sp(r[0],Proc.read_Sp(r[1]));
@@ -723,7 +723,7 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case ADDS:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  Proc.PAdds_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[2]));
 #else
 		#ifdef DEBUG
@@ -743,7 +743,7 @@ void Instruction::execute(Processor& Proc) const
         #endif
         break;
       case ADDM:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
 	   Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
        #ifdef DEBUG
@@ -779,7 +779,7 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case SUBS:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  Proc.PSubs_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[2]));
 #else
 	#ifdef DEBUG
@@ -803,7 +803,7 @@ void Instruction::execute(Processor& Proc) const
            Sansp.sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
 	   Proc.write_Sp(r[0],Sansp);
         #else
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
 	   	   Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
@@ -819,7 +819,7 @@ void Instruction::execute(Processor& Proc) const
         #endif
         break;
       case SUBMR:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
 	   	   Proc.PSubmr_Ext(Proc.get_Cp_ref(r[1]), Proc.get_Sp_ref(r[2]), Proc.get_Sp_ref(r[0]));
 #else
         #ifdef DEBUG
@@ -855,7 +855,7 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case MULM:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  Proc.PMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.read_Cp(r[2]));
 #else
 	#ifdef DEBUG
@@ -970,7 +970,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case ADDSI:
         Proc.temp.ansp.assign(n);
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
         Proc.PAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
 	#ifdef DEBUG
@@ -1010,7 +1010,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case SUBSI:
     	  Proc.temp.ansp.assign(n);
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  Proc.PSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
 #else
 	#ifdef DEBUG
@@ -1050,7 +1050,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case SUBSFI:
         Proc.temp.ansp.assign(n);
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
         Proc.PSubmr_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
 #else
 	#ifdef DEBUG
@@ -1090,7 +1090,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       case MULSI:
         Proc.temp.ansp.assign(n);
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
         Proc.PMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.temp.ansp);
 #else
 	#ifdef DEBUG
@@ -1111,14 +1111,18 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case TRIPLE:
-#if defined(EXTENDED_SPDZ)
-    	  Proc.PTriple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+#if defined(EXTENDED_SPDZ_GFP)
+    	Proc.PTriple_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #else
-    	  Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
+    	Proc.DataF.get_three(DATA_MODP, DATA_TRIPLE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]),Proc.get_Sp_ref(r[2]));
 #endif
         break;
       case GTRIPLE:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	Proc.GTriple_Ext(Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
+#else
         Proc.DataF.get_three(DATA_GF2N, DATA_TRIPLE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
+#endif
         break;
       case GBITTRIPLE:
         Proc.DataF.get_three(DATA_GF2N, DATA_BITTRIPLE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]),Proc.get_S2_ref(r[2]));
@@ -1133,7 +1137,7 @@ void Instruction::execute(Processor& Proc) const
         Proc.DataF.get_two(DATA_GF2N, DATA_SQUARE, Proc.get_S2_ref(r[0]),Proc.get_S2_ref(r[1]));
         break;
       case BIT:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	Proc.PBit_Ext(Proc.get_Sp_ref(r[0]));
 #else
         Proc.DataF.get_one(DATA_MODP, DATA_BIT, Proc.get_Sp_ref(r[0]));
@@ -1143,7 +1147,7 @@ void Instruction::execute(Processor& Proc) const
         Proc.DataF.get_one(DATA_GF2N, DATA_BIT, Proc.get_S2_ref(r[0]));
         break;
       case INV:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	Proc.PInverse_Ext(Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
 #else
         Proc.DataF.get_two(DATA_MODP, DATA_INVERSE, Proc.get_Sp_ref(r[0]),Proc.get_Sp_ref(r[1]));
@@ -1163,7 +1167,7 @@ void Instruction::execute(Processor& Proc) const
           Proc.temp.ans2.output(Proc.private_output, false);
         break;
       case INPUT:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
         Proc.PInput_Ext(Proc.get_Sp_ref(r[0]), n);
 #else
         { gfp& rr=Proc.temp.rrp; gfp& t=Proc.temp.tp; gfp& tmp=Proc.temp.tmpp;
@@ -1221,7 +1225,7 @@ void Instruction::execute(Processor& Proc) const
         }
         break;
       case STARTINPUT:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "STARTINPUT instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1229,7 +1233,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GSTARTINPUT:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "GSTARTINPUT instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1237,7 +1241,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case STOPINPUT:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "STOPINPUT instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1245,7 +1249,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GSTOPINPUT:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "GSTOPINPUT instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1458,7 +1462,7 @@ void Instruction::execute(Processor& Proc) const
           break;
         }
       case STARTOPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "STARTOPEN instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1466,7 +1470,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         return;
       case GSTARTOPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "GSTARTOPEN instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1474,7 +1478,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         return;
       case STOPOPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "STOPOPEN instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1482,7 +1486,7 @@ void Instruction::execute(Processor& Proc) const
 #endif
         return;
       case GSTOPOPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
     	  std::cerr << "GSTOPOPEN instruction is not implemented in extension" << std::endl;
     	  exit(-1);
 #else
@@ -1490,16 +1494,20 @@ void Instruction::execute(Processor& Proc) const
 #endif
         return;
       case OPEN:
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
           Proc.POpen_Ext(start, size);
 #else
           Proc.POpen(start, Proc.P, Proc.MCp, size);
 #endif
         break;
       case GOPEN:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GOpen_Ext(start, size);
+#else
           Proc.POpen(start, Proc.P, Proc.MC2, size);
+#endif
         break;
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
       case E_STARTMULT:
     	  std::cerr << "E_STARTMULT instruction is not implemented in extension" << std::endl;
     	  exit(-1);

@@ -283,7 +283,7 @@ class Processor : public ProcessorBase
     void maybe_decrypt_sequence(int client_id);
     void maybe_encrypt_sequence(int client_id);
 
-#if defined(EXTENDED_SPDZ)
+#if defined(EXTENDED_SPDZ_GFP)
   public:
 
   void POpen_Ext(const vector<int>& reg,int size);
@@ -306,8 +306,31 @@ class Processor : public ProcessorBase
 
 #endif
 
+
+#if defined(EXTENDED_SPDZ_GF2N)
+  public:
+
+  void GOpen_Ext(const vector<int>& reg,int size);
+  void GTriple_Ext(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c);
+  void GInput_Ext(Share<gf2n>& input_value, const int input_party_id);
+  void GMult_Ext(const vector<int>& reg, int size);
+  void GMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gf2n> > & products);
+  void GAddm_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
+  void GSubml_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c);
+  void GSubmr_Ext(gf2n& a, Share<gf2n>& b, Share<gf2n>& c);
+  void GLdsi_Ext(gf2n& value, Share<gf2n>& share);
+  void GBit_Ext(Share<gf2n>& share);
+  void GMulm_Ext(Share<gf2n>& sec_product, const Share<gf2n> & sec_factor, const gf2n & clr_factor);
+  void GAdds_Ext(Share<gf2n>& sum, const Share<gf2n>& a, const Share<gf2n>& b);
+  void GSubs_Ext(Share<gf2n>& diff, const Share<gf2n>& a, const Share<gf2n>& b);
+  void GMovs_Ext(Share<gf2n>& dest, const Share<gf2n>& source);
+
+  void * spdz_gf2n_ext_handle;
+
+#endif
 };
 
+#if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
 class spdz_ext_ifc
 {
 public:
@@ -352,6 +375,7 @@ public:
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };
+#endif
 
 template<> inline Share<gf2n>& Processor::get_S_ref(int i) { return get_S2_ref(i); }
 template<> inline gf2n& Processor::get_C_ref(int i)        { return get_C2_ref(i); }
