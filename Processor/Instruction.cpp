@@ -1074,13 +1074,17 @@ void Instruction::execute(Processor& Proc) const
 #endif
         break;
       case GSUBSFI:
-        Proc.temp.ans2.assign(n);
- 	#ifdef DEBUG
-           Sans2.sub(Proc.temp.ans2,Proc.read_S2(r[1]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-	   Proc.write_S2(r[0],Sans2);
+    	  Proc.temp.ans2.assign(n);
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GSubmr_Ext(Proc.temp.ans2, Proc.get_S2_ref(r[1]), Proc.get_S2_ref(r[0]));
+#else
+	#ifdef DEBUG
+    	  Sans2.sub(Proc.temp.ans2,Proc.read_S2(r[1]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
+    	  Proc.write_S2(r[0],Sans2);
 	#else
-           Proc.get_S2_ref(r[0]).sub(Proc.temp.ans2,Proc.read_S2(r[1]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
+    	  Proc.get_S2_ref(r[0]).sub(Proc.temp.ans2,Proc.read_S2(r[1]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	#endif
+#endif
         break;
       case MULCI:
         Proc.temp.ansp.assign(n);

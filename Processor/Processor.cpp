@@ -913,6 +913,16 @@ void Processor::GSubml_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 	}
 }
 
+void Processor::GSubmr_Ext(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
+{
+	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	{
+		cerr << "Processor::GSubmr_Ext extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 #endif
 
 #if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
