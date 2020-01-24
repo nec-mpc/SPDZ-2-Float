@@ -22,6 +22,18 @@ inline int get_val(istream& s)
   return a;
 }
 
+// Read a 32-byte integer
+inline mp::uint256_t get_uint256(istream& s)
+{
+  mp::uint256_t mp_n = 0;
+  for (int i=0; i<32; i++)
+    { mp_n<<=8;
+      mp::uint256_t t = (mp::uint256_t)get_val(s);
+      mp_n+=t;
+    }
+  return mp_n;
+}
+
 // Read a 4-byte integer
 inline int get_int(istream& s)
 {

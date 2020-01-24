@@ -1,4 +1,4 @@
-# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
+# (C) 2016 University of Bristol. See License.txt
 
 import heapq
 from Compiler.exceptions import *
@@ -19,7 +19,7 @@ class SparseDiGraph(object):
         """ max_nodes: maximum no of nodes
         default_attributes: dict of node attributes and default values """
         if default_attributes is None:
-            default_attributes = { 'merges': None, 'stop': -1, 'start': -1 }
+            default_attributes = { 'merges': None, 'stop': -1, 'start': -1, 'is_source': True }
         self.default_attributes = default_attributes
         self.attribute_pos = dict(zip(default_attributes.keys(), range(len(default_attributes))))
         self.n = max_nodes
@@ -84,11 +84,14 @@ class SparseDiGraph(object):
         self.weights[(i,j)] = weight
 
     def add_edges_from(self, tuples):
+        #print(tuples)
         for edge in tuples:
             if len(edge) == 3:
                 # use weight
+                #print("add_3") hikaru_comment
                 self.add_edge(edge[0], edge[1], edge[2])
             else:
+                #print("add_2") hikaru_comment
                 self.add_edge(edge[0], edge[1])
 
     def remove_edge(self, i, j):

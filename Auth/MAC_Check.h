@@ -14,6 +14,8 @@ using namespace std;
 #include "Networking/ServerSocket.h"
 #include "Auth/Summer.h"
 #include "Tools/time-func.h"
+#include "Math/report_type.h"
+#include "Tools/int.h"
 
 
 /* The MAX number of things we will partially open before running

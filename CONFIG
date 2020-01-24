@@ -4,16 +4,18 @@ ROOT = .
 
 MY_CFLAGS = -DINSECURE
 
+
 OPTIM= -O3
 #PROF = -pg
 #DEBUG = -DDEBUG
+MP_PRINT = -DMP_PRINT
 #MEMPROTECT = -DMEMPROTECT
 
 # set this to your preferred local storage directory
 PREP_DIR = '-DPREP_DIR="Player-Data/"'
 
 # set this to configure extension flags
-EXT_FLAGS = '-DEXTENDED_SPDZ_GFP -DEXTENDED_SPDZ_GF2N'
+EXT_FLAGS = -DEXTENDED_SPDZ_GFP -DEXTENDED_SPDZ_GF2N -DEXTENDED_SPDZ_Z2N
 
 # set for 128-bit GF(2^n) and/or OT preprocessing
 USE_GF2N_LONG = 0
@@ -37,7 +39,7 @@ endif
 # Default is 2, which suffices for 128-bit p
 # MOD = -DMAX_MOD_SZ=2
 
-LDLIBS = -lmpirxx -lmpir -lsodium $(MY_LDLIBS) -lm -lpthread -ldl 
+LDLIBS = $(MY_LDLIBS) -lm -lpthread -ldl -lcrypto -lssl
 
 ifeq ($(USE_NTL),1)
 LDLIBS := -lntl $(LDLIBS)
@@ -51,7 +53,7 @@ endif
 BOOST = -lboost_system -lboost_thread $(MY_BOOST)
 
 CXX = g++
-CFLAGS += $(ARCH) $(MY_CFLAGS) -g -Wextra -Wall $(OPTIM) -I$(ROOT) -pthread $(PROF) $(DEBUG) $(MOD) $(MEMPROTECT) $(GF2N_LONG) $(PREP_DIR) $(EXT_FLAGS) -maes -mpclmul -msse4.1 --std=c++11 -Werror
+CFLAGS += $(ARCH) $(MY_CFLAGS) -g -Wextra $(OPTIM) -I$(ROOT) -pthread $(PROF) $(DEBUG) $(MP_PRINT) $(MOD) $(MEMPROTECT) $(GF2N_LONG) $(PREP_DIR) $(EXT_FLAGS) -maes -mpclmul -msse4.1 --std=c++11 -Werror
 CPPFLAGS = $(CFLAGS)
 LD = g++
 

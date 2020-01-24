@@ -50,8 +50,10 @@ void Program::print_offline_cost() const
       return;
     }
 
-  cerr << "Cost of first tape:" << endl;
-  offline_data_used.print_cost();
+  // statistics comment out (start)
+//  cerr << "Cost of first tape:" << endl;
+//  offline_data_used.print_cost();
+  // statistics comment out (end)
 }
 
 

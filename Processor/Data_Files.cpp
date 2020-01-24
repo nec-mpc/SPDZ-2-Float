@@ -80,7 +80,7 @@ int Data_Files::share_length(int field_type)
   switch (field_type)
   {
     case DATA_MODP:
-      return 2 * gfp::t() * sizeof(mp_limb_t);
+    	return 2*GFP_SIZE*sizeof(uint64_t);
     case DATA_GF2N:
       return Share<gf2n>::size();
     default:

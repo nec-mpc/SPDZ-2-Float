@@ -12,32 +12,13 @@
 #include <algorithm>
 #include <sstream>
 #include <map>
+#include <math.h>
 #include <valgrind/callgrind.h>
+#include <bitset>
+
 
 // broken
 #undef DEBUG
-
-// Convert modp to signed bigint of a given bit length
-void to_signed_bigint(bigint& bi, const gfp& x, int len)
-{
-  to_bigint(bi, x);
-  int neg;
-  // get sign and abs(x)
-  bigint p_half=(gfp::pr()-1)/2;
-  if (mpz_cmp(bi.get_mpz_t(), p_half.get_mpz_t()) < 0)
-    neg = 0;
-  else
-  {
-    bi = gfp::pr() - bi;
-    neg = 1;
-  }
-  // reduce to range -2^(len-1), ..., 2^(len-1)
-  bigint one = 1;
-  bi &= (one << len) - 1;
-  if (neg)
-    bi = -bi;
-}
-
 
 void Instruction::parse(istream& s)
 {
@@ -47,18 +28,23 @@ void Instruction::parse(istream& s)
   int pos=s.tellg();
   opcode=get_int(s);
   size=opcode>>9;
-  opcode&=0x1FF;
+//  opcode&=0x1FF;
+  opcode&=0x3FF;
   
   if (size==0)
     size=1;
 
+//  cout << "opcode = " << hex << opcode << dec << endl;
+
   parse_operands(s, pos);
+
 }
 
 
 void BaseInstruction::parse_operands(istream& s, int pos)
 {
   int num_var_args = 0;
+  mp::uint256_t tmp = 0;
   switch (opcode)
   {
       // instructions with 3 register operands
@@ -104,6 +90,12 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       case SUBINT:
       case MULINT:
       case DIVINT:
+      case E_MP_ADDS:
+      case E_MP_ADDM:
+      case E_MP_SUBS:
+      case E_MP_SUBMR:
+      case E_MP_SUBML:
+      case E_MP_MULM:
         r[0]=get_int(s);
         r[1]=get_int(s);
         r[2]=get_int(s);
@@ -278,6 +270,11 @@ void BaseInstruction::parse_operands(istream& s, int pos)
       case E_STARTMULT:
       case E_STOPMULT:
       case E_MULT:
+      case E_MP_MULT:
+      case E_MP_OPEN:
+#endif
+#if defined(EXTENDED_SPDZ_GF2N)
+      case GE_MULT:
 #endif
         num_var_args = get_int(s);
         get_vector(num_var_args, start, s);
@@ -354,21 +351,90 @@ void BaseInstruction::parse_operands(istream& s, int pos)
         break;
       case REQBL:
         n = get_int(s);
-        if (n > 0 && gfp::pr() < bigint(1) << (n-1))
-          {
-            cout << "Tape requires prime of bit length " << n << endl;
-            throw invalid_params();
-          }
         break;
       case GREQBL:
         n = get_int(s);
+        /*
         if (n > 0 && gf2n::degree() < int(n))
           {
             stringstream ss;
             ss << "Tape requires prime of bit length " << n << endl;
             throw Processor_Error(ss.str());
           }
+          */
         break;
+#if defined(EXTENDED_SPDZ_Z2N)
+      case E_PRINTFIXEDPLAIN:
+    	  r[0] = get_int(s);
+    	  n = get_int(s);
+    	  break;
+      case E_SKEW_BIT_DEC:
+      case E_MP_SKEW_BIT_DEC:
+    	  r[0] = get_int(s);
+    	  n = get_int(s);
+    	  num_var_args = n * 3;
+    	  get_vector(num_var_args, start, s);
+    	  break;
+      case E_SKEW_BIT_INJ:
+      case E_SKEW_BIT_REC:
+      case E_MP_SKEW_BIT_INJ:
+         r[0] = get_int(s);
+         get_vector(3, start, s);
+         break;
+      case E_SKEW_RING_REC:
+      case E_MP_SKEW_RING_REC:
+    	  r[0] = get_int(s);
+    	  num_var_args = get_int(s);
+    	  get_vector(num_var_args, start, s);
+    	  break;
+      case E_MP_LDSI:
+      case E_MP_LDI:
+         r[0]=get_int(s);
+         mp_n=0;
+         for(size_t i=0; i<8; ++i)
+          {
+        	tmp = (mp::uint256_t) get_int(s);
+        	mp_n +=  tmp << (31 * i);
+          }
+         tmp = (mp::uint256_t) get_int(s);
+         mp_n +=  tmp << 248;
+         break;
+      case E_MP_ADDSI:
+      case E_MP_MULSI:
+    	  r[0]=get_int(s);
+    	  r[1]=get_int(s);
+    	  mp_n=0;
+    	  for(size_t i=0; i<8; ++i) {
+    		  tmp = (mp::uint256_t) get_int(s);
+    		  mp_n +=  tmp << (31 * i);
+    	  }
+    	  tmp = (mp::uint256_t) get_int(s);
+    	  mp_n +=  tmp << 248;
+    	  break;
+      case E_MP_SUBSIL:
+               r[0]=get_int(s);
+               r[1]=get_int(s);
+               mp_n=0;
+               for(size_t i=0; i<8; ++i) {
+                	tmp = (mp::uint256_t) get_int(s);
+                	mp_n +=  tmp << (31 * i);
+                }
+               tmp = (mp::uint256_t) get_int(s);
+               mp_n +=  tmp << 248;
+               break;
+      case E_MP_SUBSIR:
+         r[0]=get_int(s);
+         mp_n=0;
+         for(size_t i=0; i<8; ++i) {
+          	tmp = (mp::uint256_t) get_int(s);
+          	mp_n +=  tmp << (31 * i);
+          }
+         tmp = (mp::uint256_t) get_int(s);
+         mp_n +=  tmp << 248;
+         r[1]=get_int(s);
+         break;
+
+#endif
       default:
         ostringstream os;
         os << "Invalid instruction " << hex << showbase << opcode << " at " << dec << pos;
@@ -513,6 +579,7 @@ void Instruction::execute(Processor& Proc) const
 {
   Proc.PC+=1;
 
+#ifndef EXTENDED_SPDZ_GF2N
 #ifndef DEBUG
   // optimize some instructions
   switch (opcode)
@@ -547,6 +614,7 @@ void Instruction::execute(Processor& Proc) const
       return;
   }
 #endif
+#endif
 
   int r[3] = {this->r[0], this->r[1], this->r[2]};
   int n = this->n;
@@ -556,6 +624,10 @@ void Instruction::execute(Processor& Proc) const
         Proc.temp.ansp.assign(n);
         Proc.write_Cp(r[0],Proc.temp.ansp);
         break;
+      case E_MP_LDI:
+            Proc.temp.ansp.assign(mp_n);
+            Proc.write_Cp(r[0],Proc.temp.ansp);
+            break;
       case GLDI: 
         Proc.temp.ans2.assign(n);
         Proc.write_C2(r[0],Proc.temp.ans2);
@@ -591,6 +663,10 @@ void Instruction::execute(Processor& Proc) const
         }
 #endif
         break;
+      case E_MP_LDSI:
+          	  Proc.temp.ansp.assign(mp_n);
+          	  Proc.MPLdsi_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+      break;
       case LDMC:
         Proc.write_Cp(r[0],Proc.machine.Mp.read_C(n));
         n++;
@@ -742,6 +818,9 @@ void Instruction::execute(Processor& Proc) const
         #endif
 #endif
         break;
+      case E_MP_ADDS:
+         Proc.MPAdds_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[2]));
+        break;
       case GADDS:
 #if defined(EXTENDED_SPDZ_GF2N)
     	  Proc.GAdds_Ext(Proc.get_S2_ref(r[0]), Proc.get_S2_ref(r[1]), Proc.get_S2_ref(r[2]));
@@ -765,6 +844,9 @@ void Instruction::execute(Processor& Proc) const
            Proc.get_Sp_ref(r[0]).add(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
        #endif
 #endif
+        break;
+      case E_MP_ADDM:
+      	 Proc.MPAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
         break;
       case GADDM:
 #if defined(EXTENDED_SPDZ_GF2N)
@@ -806,6 +888,9 @@ void Instruction::execute(Processor& Proc) const
 	#endif
 #endif
         break;
+      case E_MP_SUBS:
+          	Proc.MPSubs_Ext(Proc.get_Sp_ref(r[0]), Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[2]));
+        break;
       case GSUBS:
 #if defined(EXTENDED_SPDZ_GF2N)
     	  Proc.GSubs_Ext(Proc.get_S2_ref(r[0]), Proc.get_S2_ref(r[1]), Proc.get_S2_ref(r[2]));
@@ -829,6 +914,9 @@ void Instruction::execute(Processor& Proc) const
            Proc.get_Sp_ref(r[0]).sub(Proc.read_Sp(r[1]),Proc.read_Cp(r[2]),Proc.P.my_num()==0,Proc.MCp.get_alphai());
         #endif
 #endif
+        break;
+      case E_MP_SUBML:
+          	Proc.MPSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.get_Cp_ref(r[2]), Proc.get_Sp_ref(r[0]));
         break;
       case GSUBML:
 #if defined(EXTENDED_SPDZ_GF2N)
@@ -854,13 +942,20 @@ void Instruction::execute(Processor& Proc) const
 	#endif
 #endif
         break;
+      case E_MP_SUBMR:
+      	   	Proc.MPSubmr_Ext(Proc.get_Cp_ref(r[1]), Proc.get_Sp_ref(r[2]), Proc.get_Sp_ref(r[0]));
+        break;
       case GSUBMR:
+#if defined(EXTENDED_SPDZ_GF2N)
+    	  Proc.GSubmr_Ext(Proc.get_C2_ref(r[1]), Proc.get_S2_ref(r[2]), Proc.get_S2_ref(r[0]));
+#else
         #ifdef DEBUG
            Sans2.sub(Proc.read_C2(r[1]),Proc.read_S2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
            Proc.get_S2_ref(r[0]).sub(Proc.read_C2(r[1]),Proc.read_S2(r[2]),Proc.P.my_num()==0,Proc.MC2.get_alphai());
-	#endif
+		#endif
+#endif
         break;
       case MULC:
 	#ifdef DEBUG
@@ -890,6 +985,9 @@ void Instruction::execute(Processor& Proc) const
 	#endif
 #endif
         break;
+      case E_MP_MULM:
+          	Proc.MPMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.read_Cp(r[2]));
+        break;
       case GMULM:
 #if defined(EXTENDED_SPDZ_GF2N)
     	  Proc.GMulm_Ext(Proc.get_S2_ref(r[0]), Proc.read_S2(r[1]), Proc.read_C2(r[2]));
@@ -917,34 +1015,18 @@ void Instruction::execute(Processor& Proc) const
         Proc.write_C2(r[0],Proc.temp.ans2);
         break;
       case MODC:
-        to_bigint(Proc.temp.aa, Proc.read_Cp(r[1]));
-        to_bigint(Proc.temp.aa2, Proc.read_Cp(r[2]));
-        mpz_fdiv_r(Proc.temp.aa.get_mpz_t(), Proc.temp.aa.get_mpz_t(), Proc.temp.aa2.get_mpz_t());
-        to_gfp(Proc.temp.ansp, Proc.temp.aa);
-        Proc.write_Cp(r[0],Proc.temp.ansp);
+        exit(EBADR);
         break;
       case LEGENDREC:
-        to_bigint(Proc.temp.aa, Proc.read_Cp(r[1]));
-        Proc.temp.aa = mpz_legendre(Proc.temp.aa.get_mpz_t(), gfp::pr().get_mpz_t());
-        to_gfp(Proc.temp.ansp, Proc.temp.aa);
-        Proc.write_Cp(r[0], Proc.temp.ansp);
+    	 exit(EBADR);
         break;
       case DIGESTC:
-      {
-        octetStream o;
-        to_bigint(Proc.temp.aa, Proc.read_Cp(r[1]));
-
-        to_gfp(Proc.temp.ansp, Proc.temp.aa);
-        Proc.temp.ansp.pack(o);
-        // keep first n bytes
-        to_gfp(Proc.temp.ansp, o.check_sum(n));
-        Proc.write_Cp(r[0], Proc.temp.ansp);
-      }
+    	 exit(EBADR);
         break;
       case DIVCI:
         if (n == 0)
           throw Processor_Error("Division by immediate zero");
-        to_gfp(Proc.temp.ansp,n%gfp::pr());
+        Proc.temp.ansp.assign(n);
         Proc.temp.ansp.invert();
         Proc.temp.ansp.mul(Proc.read_Cp(r[1]));
         Proc.write_Cp(r[0],Proc.temp.ansp);
@@ -958,9 +1040,7 @@ void Instruction::execute(Processor& Proc) const
         Proc.write_C2(r[0],Proc.temp.ans2);
         break;
       case MODCI:
-        to_bigint(Proc.temp.aa, Proc.read_Cp(r[1]));
-        to_gfp(Proc.temp.ansp, mpz_fdiv_ui(Proc.temp.aa.get_mpz_t(), n));
-        Proc.write_Cp(r[0],Proc.temp.ansp);
+    	 exit(EBADR);
         break;
       case GMULBITC:
   #ifdef DEBUG
@@ -1009,6 +1089,10 @@ void Instruction::execute(Processor& Proc) const
 	#endif
 #endif
         break;
+      case E_MP_ADDSI:
+        Proc.temp.ansp.assign(mp_n);
+        Proc.MPAddm_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+        break;
       case GADDSI:
         Proc.temp.ans2.assign(n);
 #if defined(EXTENDED_SPDZ_GF2N)
@@ -1053,14 +1137,26 @@ void Instruction::execute(Processor& Proc) const
 	#endif
 #endif
         break;
+      case E_MP_SUBSIL:
+         Proc.temp.ansp.assign(mp_n);
+         Proc.MPSubml_Ext(Proc.get_Sp_ref(r[1]), Proc.temp.ansp, Proc.get_Sp_ref(r[0]));
+         break;
+      case E_MP_SUBSIR:
+    	  Proc.temp.ansp.assign(mp_n);
+         Proc.MPSubmr_Ext(Proc.temp.ansp, Proc.get_Sp_ref(r[1]), Proc.get_Sp_ref(r[0]));
+        break;
       case GSUBSI:
         Proc.temp.ans2.assign(n);
+#if defined(EXTENDED_SPDZ_GFP)
+    	  Proc.GSubml_Ext(Proc.get_S2_ref(r[1]), Proc.temp.ans2, Proc.get_S2_ref(r[0]));
+#else
   	#ifdef DEBUG
            Sans2.sub(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
 	   Proc.write_S2(r[0],Sans2);
         #else
            Proc.get_S2_ref(r[0]).sub(Proc.read_S2(r[1]),Proc.temp.ans2,Proc.P.my_num()==0,Proc.MC2.get_alphai());
         #endif
+#endif
         break;
       case SUBCFI:
         Proc.temp.ansp.assign(n);
@@ -1136,6 +1232,10 @@ void Instruction::execute(Processor& Proc) const
         Proc.get_Sp_ref(r[0]).mul(Proc.read_Sp(r[1]),Proc.temp.ansp);
 	#endif
 #endif
+        break;
+      case E_MP_MULSI:
+         Proc.temp.ansp.assign(mp_n);
+         Proc.MPMulm_Ext(Proc.get_Sp_ref(r[0]), Proc.read_Sp(r[1]), Proc.temp.ansp);
         break;
       case GMULSI:
     	  Proc.temp.ans2.assign(n);
@@ -1357,31 +1457,16 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case ANDCI:
-        Proc.temp.aa=n;
-	#ifdef DEBUG
-           Proc.temp.ansp.AND(Proc.read_Cp(r[1]),Proc.temp.aa);
-           Proc.write_Cp(r[0],ansp);
-	#else
-           Proc.get_Cp_ref(r[0]).AND(Proc.read_Cp(r[1]),Proc.temp.aa);
-	#endif
+    	 Proc.temp.ansp.assign(n);
+    	 Proc.get_Cp_ref(r[0]).AND(Proc.read_Cp(r[1]),Proc.temp.ansp);
         break;
       case GANDCI:
         Proc.temp.ans2.assign(n);
-	#ifdef DEBUG
-           Proc.temp.ans2.AND(Proc.temp.ans2,Proc.read_C2(r[1]));
-           Proc.write_C2(r[0],Proc.temp.ans2);
-	#else
-           Proc.get_C2_ref(r[0]).AND(Proc.temp.ans2,Proc.read_C2(r[1]));
-	#endif
+        Proc.get_C2_ref(r[0]).AND(Proc.temp.ans2,Proc.read_C2(r[1]));
         break;
       case XORCI:
-        Proc.temp.aa=n;
-	#ifdef DEBUG
-           ansp.XOR(Proc.read_Cp(r[1]),Proc.temp.aa);
-           Proc.write_Cp(r[0],Proc.temp.ansp);
-	#else
-           Proc.get_Cp_ref(r[0]).XOR(Proc.read_Cp(r[1]),Proc.temp.aa);
-	#endif
+    	 Proc.temp.ansp.assign(n);
+    	 Proc.get_Cp_ref(r[0]).XOR(Proc.read_Cp(r[1]),Proc.temp.ansp);
         break;
       case GXORCI:
         Proc.temp.ans2.assign(n);
@@ -1393,13 +1478,8 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case ORCI:
-        Proc.temp.aa=n;
-	#ifdef DEBUG
-           Proc.temp.ansp.OR(Proc.read_Cp(r[1]),Proc.temp.aa);
-           Proc.write_Cp(r[0],Proc.temp.ansp);
-	#else
-	   Proc.get_Cp_ref(r[0]).OR(Proc.read_Cp(r[1]),Proc.temp.aa);
-	#endif
+    	  Proc.temp.ansp.assign(n);
+    	  Proc.get_Cp_ref(r[0]).OR(Proc.read_Cp(r[1]),Proc.temp.ansp);
         break;
       case GORCI:
         Proc.temp.ans2.assign(n);
@@ -1412,13 +1492,7 @@ void Instruction::execute(Processor& Proc) const
         break;
       // Note: Fp version has different semantics for NOTC than GNOTC
       case NOTC:
-        to_bigint(Proc.temp.aa, Proc.read_Cp(r[1]));
-        mpz_com(Proc.temp.aa.get_mpz_t(), Proc.temp.aa.get_mpz_t());
-        Proc.temp.aa2 = 1;
-        Proc.temp.aa2 <<= n;
-        Proc.temp.aa += Proc.temp.aa2;
-        to_gfp(Proc.temp.ansp, Proc.temp.aa);
-        Proc.write_Cp(r[0],Proc.temp.ansp);
+    	 exit(EBADR);
         break;
       case GNOTC:
 	#ifdef DEBUG
@@ -1429,26 +1503,10 @@ void Instruction::execute(Processor& Proc) const
 	#endif
         break;
       case SHLC:
-        to_bigint(Proc.temp.aa,Proc.read_Cp(r[2]));
-        if (Proc.temp.aa > 63)
-          throw not_implemented();
-	#ifdef DEBUG
-           Proc.temp.ansp.SHL(Proc.read_Cp(r[1]),Proc.temp.aa);
-	   Proc.write_Cp(r[0],Proc.temp.ansp);
-	#else
-           Proc.get_Cp_ref(r[0]).SHL(Proc.read_Cp(r[1]),Proc.temp.aa);
-	#endif
+    	 exit(EBADR);
         break;
       case SHRC:
-        to_bigint(Proc.temp.aa,Proc.read_Cp(r[2]));
-        if (Proc.temp.aa > 63)
-          throw not_implemented();
-	#ifdef DEBUG
-           Proc.temp.ansp.SHR(Proc.read_Cp(r[1]),Proc.temp.aa);
-	   Proc.write_Cp(r[0],Proc.temp.ansp);
-	#else
-           Proc.get_Cp_ref(r[0]).SHR(Proc.read_Cp(r[1]),Proc.temp.aa);
-	#endif
+     	 exit(EBADR);
         break;
       case SHLCI:
 	#ifdef DEBUG
@@ -1559,6 +1617,9 @@ void Instruction::execute(Processor& Proc) const
           Proc.POpen(start, Proc.P, Proc.MC2, size);
 #endif
         break;
+      case E_MP_OPEN:
+    	  Proc.MPOpen_Ext(start, size);
+    	  break;
 #if defined(EXTENDED_SPDZ_GFP)
       case E_STARTMULT:
     	  std::cerr << "E_STARTMULT instruction is not implemented in extension" << std::endl;
@@ -1571,6 +1632,37 @@ void Instruction::execute(Processor& Proc) const
       case E_MULT:
         Proc.PMult_Ext(start, size);
         break;
+      case E_MP_MULT:
+        Proc.MPMult_Ext(start, size);
+        break;
+#endif
+#if defined(EXTENDED_SPDZ_GF2N)
+      case GE_MULT:
+        Proc.GMult_Ext(start, size);
+        break;
+#endif
+#if defined(EXTENDED_SPDZ_Z2N)
+      case E_SKEW_BIT_DEC:
+    	  Proc.Skew_Bit_Decomp_Ext(start, Proc.get_Sp_ref(r[0]), size);
+    	  break;
+      case E_MP_SKEW_BIT_DEC:
+    	  Proc.MP_Skew_Bit_Decomp_Ext(start, Proc.get_Sp_ref(r[0]), size);
+    	  break;
+      case E_SKEW_BIT_REC:
+		  Proc.Skew_Bit_Recomp_Ext(start, Proc.get_S2_ref(r[0]), size);
+    	  break;
+      case E_SKEW_RING_REC:
+		  Proc.Skew_Ring_Recomp_Ext(Proc.get_Sp_ref(r[0]), start, size);
+    	  break;
+      case E_MP_SKEW_RING_REC:
+		  Proc.MP_Skew_Ring_Recomp_Ext(Proc.get_Sp_ref(r[0]), start, size);
+    	  break;
+      case E_SKEW_BIT_INJ:
+		  Proc.Skew_Bit_Inject_Ext(start, Proc.get_S2_ref(r[0]), size);
+    	  break;
+      case E_MP_SKEW_BIT_INJ:
+      	  Proc.MP_Skew_Bit_Inject_Ext(start, Proc.get_S2_ref(r[0]), size);
+         break;
 #endif
       case JMP:
         Proc.PC += (signed int) n;
@@ -1638,8 +1730,7 @@ void Instruction::execute(Processor& Proc) const
         Proc.get_C2_ref(r[0]).assign((word)Proc.read_Ci(r[1]));
         break;
       case CONVMODP:
-        to_signed_bigint(Proc.temp.aa,Proc.read_Cp(r[1]),n);
-        Proc.write_Ci(r[0], Proc.temp.aa.get_si());
+        Proc.write_Ci(r[0], (long)(Proc.read_Cp(r[1]).get()));
         break;
       case GCONVGF2N:
         Proc.write_Ci(r[0], Proc.read_C2(r[1]).get_word());
@@ -1678,30 +1769,140 @@ void Instruction::execute(Processor& Proc) const
              cout << Proc.read_C2(r[0]) << flush;
            }
         break;
+      case E_PRINTFIXEDPLAIN:
+    	  if (Proc.P.my_num() == 0)
+    	  {
+    		  uint64_t tmp_val = Proc.read_Cp(r[0]).get();
+    		  uint64_t val;
+    		  double res =0;
+    		  double int_part =0;
+    		  double dec_part =0;
+    		  int sign = (tmp_val >> 63) & 1;
+    		  if (sign == 1)
+    		  {
+    			  val = 0 - tmp_val;
+    		  }
+    		  else
+    		  {
+    			  val = tmp_val;
+    		  }
+    		  for(int i = 0; i < 64; i++)
+    		  {
+    			  if(i < n)
+    			  {
+    				  dec_part += ((val >> i) & 1) * pow(2.0, (double) (-(n-i)));
+    			  }
+    			  else
+    			  {
+    				  int_part += ((val >> i) & 1) * pow(2.0, (double) (i-n));
+    			  }
+    		  }
+    		  res = int_part + dec_part;
+    		  if (sign == 1)
+    		  {
+    			  cout << "-" << fixed << res << flush;;
+    		  }
+    		  else
+    		  {
+    			  cout << fixed << res << flush;;
+    		  }
+    	  }
+    	  break;
       case PRINTFLOATPLAIN:
         if (Proc.P.my_num() == 0)
-          {
-            gfp v = Proc.read_Cp(start[0]);
-            gfp p = Proc.read_Cp(start[1]);
-            gfp z = Proc.read_Cp(start[2]);
-            gfp s = Proc.read_Cp(start[3]);
-            to_bigint(Proc.temp.aa, v);
-            // MPIR can't handle more precision in exponent
-            to_signed_bigint(Proc.temp.aa2, p, 31);
-            long exp = Proc.temp.aa2.get_si();
-            mpf_class res = Proc.temp.aa;
-            if (exp > 0)
-              mpf_mul_2exp(res.get_mpf_t(), res.get_mpf_t(), exp);
-            else
-              mpf_div_2exp(res.get_mpf_t(), res.get_mpf_t(), -exp);
-            if (z.is_one())
-              res = 0;
-            if (!s.is_zero())
-              res *= -1;
-            if (not z.is_bit() or not s.is_bit())
-              throw Processor_Error("invalid floating point number");
-            cout << res << flush;
-          }
+
+        {
+#ifdef DEBUG
+        	int flag = 0;
+        	//flag = 1: binary, flag = 0 : decimal, flag = 2: hexadecimal
+        	uint64_t v = Proc.read_Cp(start[0]).get();
+        	uint64_t p = Proc.read_Cp(start[1]).get();
+        	uint64_t z = Proc.read_Cp(start[2]).get();
+        	uint64_t s = Proc.read_Cp(start[3]).get();
+        	int p2 = p;
+        	std::string res;
+        	//std::string str_v2;
+        	//cout << p << flush;
+        	//std::string str_v = std::to_string(v2);
+        	//std::string res2;
+        	std::string bin_v = std::bitset<24>(v).to_string();
+        	std::stringstream hex_v;
+        	hex_v << std::hex << v;
+        	if(flag == 0){
+        		if (z == 0){
+        			//if zero flag is 1
+        	       if(s == 1){
+        	    	   res = "-" + std::to_string(v);
+        	    	   res = res + " * 2^(" + std::to_string(p2) + ")";
+        	       }
+        	       else{
+        	    	   //for Debug
+        	       	//p = 1 - p;
+        	       	res = std::to_string(v) + " * 2^(" + std::to_string(p2) + ")";
+        	       	}
+        	       cout << res << flush;
+        		}
+        		else{
+        			cout << 1-z <<flush;
+        		}
+        	}
+        	if(flag == 1){
+        		if (z == 0){
+        			//if zero flag is 1
+        			if(s == 1){
+        				res = "-" + bin_v;
+        				res = res + " * 2^(" + std::to_string(p2) + ")";
+        			}
+        			else{
+        				res = bin_v + " * 2^(" + std::to_string(p2) + ")";
+        			}
+        			cout << res << flush;
+        		}
+        		else{
+        			cout << 1-z <<flush;
+        		}
+        	}
+        	if(flag == 2){
+        		if (z == 0){
+        			//if zero flag is 1
+        			if(s == 1){
+        				res = "- 0x" + hex_v.str();
+        				res = res + " * 2^(" + std::to_string(p2) + ")";
+        			}
+        			else{
+        				res = "0x" + hex_v.str() + " * 2^(" + std::to_string(p2) + ")";
+        			}
+        			cout << res << flush;
+        		}
+        		else{
+        			cout << 1-z <<flush;
+        		}
+        	}
+#else
+        	uint64_t v = Proc.read_Cp(start[0]).get();
+        	int64_t p = (int64_t) Proc.read_Cp(start[1]).get();
+        	uint64_t z = Proc.read_Cp(start[2]).get();
+        	uint64_t s = Proc.read_Cp(start[3]).get();
+        	double p2 = 1.0 * p;
+        	double v_val = 1.0 * v;
+        	double p_val = pow(2.0, p2);
+        	if (z == 0){
+        		//if zero flag is 1
+        		if(s == 1){
+        			v_val = (-1.0) * v_val * p_val;
+        		}
+        		else{
+        			//for Debug
+        			//p = 1 - p;
+        			v_val = v_val * p_val;
+        		}
+        		cout << std::scientific << v_val << flush;
+        	}
+        	else{
+        		cout << 1-z <<flush;
+        	}
+#endif
+        }
       break;
       case PRINTINT:
         if (Proc.P.my_num() == 0)
@@ -1799,11 +2000,11 @@ void Instruction::execute(Processor& Proc) const
         Proc.read_client_public_key(Proc.read_Ci(r[0]), start);
         break;
       case INITSECURESOCKET:
-        Proc.init_secure_socket(Proc.read_Ci(r[i]), start);
-        break;
+    	  abort();
+    	  break;
       case RESPSECURESOCKET:
-        Proc.resp_secure_socket(Proc.read_Ci(r[i]), start);
-        break;
+    	  abort();
+    	  break;
       case READSOCKETINT:
         Proc.read_socket_ints(Proc.read_Ci(r[0]), start);
         break;

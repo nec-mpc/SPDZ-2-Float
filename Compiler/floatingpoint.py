@@ -1,4 +1,4 @@
-# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
+# (C) 2016 University of Bristol. See License.txt
 
 from math import log, floor, ceil
 from Compiler.instructions import *
@@ -37,7 +37,8 @@ def EQZ(a, k, kappa):
     d = [None]*k
     r = [types.sint() for i in range(k)]
     comparison.PRandM(r_dprime, r_prime, r, k, k, kappa)
-    asm_open(c, a + two_power(k) * r_dprime + r_prime)# + 2**(k-1))
+    startopen(a + two_power(k) * r_dprime + r_prime)# + 2**(k-1))
+    stopopen(c)
     for i,b in enumerate(bits(c, k)):
         d[i] = b + r[i] - 2*b*r[i]
     return 1 - KOR(d, kappa)
@@ -403,8 +404,8 @@ def TruncPr(a, k, m, kappa=None):
         return shift_two(a, m)
 
     if kappa is None:
-       kappa = 40 
-
+       kappa = 40
+ 
     b = two_power(k-1) + a
     r_prime, r_dprime = types.sint(), types.sint()
     comparison.PRandM(r_dprime, r_prime, [types.sint() for i in range(m)],

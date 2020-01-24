@@ -1,13 +1,11 @@
 // (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
 
-
 #include "Auth/MAC_Check.h"
 #include "Auth/Subroutines.h"
 #include "Exceptions/Exceptions.h"
 
 #include "Tools/random.h"
 #include "Tools/time-func.h"
-#include "Tools/int.h"
 
 #include "Math/gfp.h"
 #include "Math/gf2n.h"

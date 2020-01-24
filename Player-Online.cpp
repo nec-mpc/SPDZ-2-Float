@@ -186,7 +186,6 @@ int main(int argc, const char** argv)
 
     string memtype, hostname, ipFileName;
     int lg2, lgp, pnbase, opening_sum, max_broadcast;
-    int p2pcommsec;
     int my_port;
 
     opt.get("--portnumbase")->getInt(pnbase);
@@ -197,7 +196,6 @@ int main(int argc, const char** argv)
     opt.get("--ip-file-name")->getString(ipFileName);
     opt.get("--opening-sum")->getInt(opening_sum);
     opt.get("--max-broadcast")->getInt(max_broadcast);
-    opt.get("--player-to-player-commsec")->getInt(p2pcommsec);
 
     ez::OptionGroup* mp_opt = opt.get("--my-port");
     if (mp_opt->isSet)
@@ -208,16 +206,6 @@ int main(int argc, const char** argv)
     int mynum;
     sscanf((*allArgs[1]).c_str(), "%d", &mynum);
 
-    CommsecKeysPackage *keys = NULL;
-    if(p2pcommsec) {
-        vector<public_signing_key> pubkeys;
-        secret_signing_key mykey;
-        public_signing_key mypublickey;
-        string prep_data_prefix = get_prep_dir(2, lgp, lg2);
-        Config::read_player_config(prep_data_prefix,mynum,pubkeys,mykey,mypublickey);
-        keys = new CommsecKeysPackage(pubkeys,mykey,mypublickey);
-    }
-
     Names playerNames;
     if (ipFileName.size() > 0) {
       if (my_port != Names::DEFAULT_PORT)
@@ -226,7 +214,6 @@ int main(int argc, const char** argv)
     } else {
       playerNames.init(playerno, pnbase, my_port, hostname.c_str());
     }
-    playerNames.set_keys(keys);
         
 #ifndef INSECURE
     try

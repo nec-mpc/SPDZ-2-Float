@@ -91,7 +91,6 @@ class Names
 
   friend class PlayerBase;
   friend class Player;
-  friend class TwoPartyPlayer;
 };
 
 
@@ -205,44 +204,6 @@ public:
   void receive_player(int i,octetStream& o,bool donthash=false) const;
 
   void send_all(const octetStream& o,bool donthash=false) const;
-};
-
-
-class TwoPartyPlayer : public PlayerBase
-{
-private:
-  // setup sockets for comm. with only one other player
-  void setup_sockets(int other_player, const Names &nms, int portNum, int id);
-
-  int socket;
-  bool is_server;
-  int other_player;
-  bool p2pcommsec;
-
-  secret_signing_key my_secret_key;
-  map<int,public_signing_key> player_public_keys;
-  keyinfo player_send_key;
-  keyinfo player_recv_key;
-
-public:
-  TwoPartyPlayer(const Names& Nms, int other_player, int pn_offset=0);
-  ~TwoPartyPlayer();
-
-  void send(octetStream& o);
-  void receive(octetStream& o);
-
-  int other_player_num() const;
-  int my_num() const { return is_server; }
-  int num_players() const { return 2; }
-
-  /* Send and receive to/from the other player
-   *  - o[0] contains my data, received data put in o[1]
-   */
-  void send_receive_player(vector<octetStream>& o);
-
-  void exchange(octetStream& o) const;
-  void exchange(int other, octetStream& o) const { (void)other; exchange(o); }
-  void pass_around(octetStream& o, int offset = 1) const { (void)offset; exchange(o); }
 };
 
 

@@ -13,10 +13,6 @@ AUTH = $(patsubst %.cpp,%.o,$(wildcard Auth/*.cpp))
 
 PROCESSOR = $(patsubst %.cpp,%.o,$(wildcard Processor/*.cpp))
 
-ifeq ($(USE_NTL),1)
-FHEOFFLINE = $(patsubst %.cpp,%.o,$(wildcard FHEOffline/*.cpp FHE/*.cpp))
-endif
-
 GC = $(patsubst %.cpp,%.o,$(wildcard GC/*.cpp))
 
 # OT stuff needs GF2N_LONG, so only compile if this is enabled
@@ -26,7 +22,7 @@ GC = $(patsubst %.cpp,%.o,$(wildcard GC/*.cpp))
 #endif
 
 COMMON = $(MATH) $(TOOLS) $(NETWORK) $(AUTH)
-COMPLETE = $(COMMON) $(PROCESSOR) $(FHEOFFLINE) $(TINYOTOFFLINE) $(OT)
+COMPLETE = $(COMMON) $(PROCESSOR) $(TINYOTOFFLINE) $(OT)
 BMR = $(patsubst %.cpp,%.o,$(wildcard BMR/*.cpp BMR/network/*.cpp)) $(COMMON) $(PROCESSOR) $(GC)
 
 
@@ -34,14 +30,14 @@ LIB = libSPDZ.a
 LIBSIMPLEOT = SimpleOT/libsimpleot.a
 
 # used for dependency generation
-OBJS = $(BMR) $(FHEOFFLINE) $(TINYOTOFFLINE)
+OBJS = $(BMR) $(TINYOTOFFLINE)
 DEPS := $(OBJS:.o=.d)
 
 
-all: gen_input online externalIO
+all: gen_input online 
 
 ifeq ($(USE_NTL),1)
-all: overdrive she-offline
+all: overdrive 
 endif
 
 -include $(DEPS)
@@ -49,25 +45,15 @@ endif
 %.o: %.cpp
 	$(CXX) $(CFLAGS) -MMD -c -o $@ $<
 
-online: Fake-Offline.x Server.x Player-Online.x Check-Offline.x
+online: Server.x Player-Online.x
 
-#offline: $(OT_EXE) Check-Offline.x
+#offline: $(OT_EXE)
 
 gen_input: gen_input_f2n.x gen_input_fp.x
 
-externalIO: client-setup.x bankers-bonus-client.x bankers-bonus-commsec-client.x
-
 bmr: bmr-program-party.x bmr-program-tparty.x
 
-she-offline: Check-Offline.x spdz2-offline.x
-
 overdrive: simple-offline.x pairwise-offline.x cnc-offline.x
-
-Fake-Offline.x: Fake-Offline.cpp $(COMMON) $(PROCESSOR)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
-Check-Offline.x: Check-Offline.cpp $(COMMON) $(PROCESSOR)
-	$(CXX) $(CFLAGS) Check-Offline.cpp -o Check-Offline.x $(COMMON) $(PROCESSOR) $(LDLIBS)
 
 Server.x: Server.cpp $(COMMON)
 	$(CXX) $(CFLAGS) Server.cpp -o Server.x $(COMMON) $(LDLIBS)
@@ -112,27 +98,16 @@ bmr-program-tparty.x: $(BMR) bmr-program-tparty.cpp
 bmr-clean:
 	-rm BMR/*.o BMR/*/*.o GC/*.o
 
-client-setup.x: client-setup.cpp $(COMMON) $(PROCESSOR)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
-bankers-bonus-client.x: ExternalIO/bankers-bonus-client.cpp $(COMMON) $(PROCESSOR)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
-bankers-bonus-commsec-client.x: ExternalIO/bankers-bonus-commsec-client.cpp $(COMMON) $(PROCESSOR)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
 ifeq ($(USE_NTL),1)
-simple-offline.x: $(COMMON) $(FHEOFFLINE) simple-offline.cpp
+simple-offline.x: $(COMMON) simple-offline.cpp
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-pairwise-offline.x: $(COMMON) $(FHEOFFLINE) pairwise-offline.cpp
+pairwise-offline.x: $(COMMON) pairwise-offline.cpp
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-cnc-offline.x: $(COMMON) $(FHEOFFLINE) cnc-offline.cpp
+cnc-offline.x: $(COMMON) cnc-offline.cpp
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-spdz2-offline.x: $(COMMON) $(FHEOFFLINE) spdz2-offline.cpp
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 endif
 
 clean:

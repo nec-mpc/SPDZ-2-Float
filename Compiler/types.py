@@ -1,4 +1,5 @@
-# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
+# Confidential:
+# (C) 2017 University of Bristol. See License.txt
 
 from Compiler.program import Tape
 from Compiler.exceptions import *
@@ -9,6 +10,7 @@ import comparison, floatingpoint
 import math
 import util
 import operator
+import numpy as np
 
 
 class ClientMessageType:
@@ -152,7 +154,90 @@ class _number(object):
 
 class _int(object):
     def if_else(self, a, b):
-        return self * (a - b) + b
+        if isinstance(a, sint):
+            if isinstance(b, sint):
+                return self * (a - b) + b
+            elif isinstance(b, cint):
+                return self * (a - b) + b
+            elif isinstance(b, int):
+                return self * (a - b) + b
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, cint):
+            if isinstance(b, sint):
+                return self * (a - b) + b
+            elif isinstance(b, cint):
+                return self * (a - b) + b
+            elif isinstance(b, int):
+                return self * (a - b) + b
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, int):
+            if isinstance(b, sint):
+                return self * (a - b) + b
+            elif isinstance(b, cint):
+                return self * (a - b) + b
+            elif isinstance(b, int):
+                return self * (a - b) + b
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, sfix):
+            if isinstance(b, sfix):
+                diff = sint()
+                tmp_res = sint()
+                ans = sint()
+                subs(diff, a.v, b.v)
+                muls(tmp_res, self, diff)
+                adds(ans, tmp_res, b.v)
+                return sfix(ans)
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, cfix):
+            if isinstance(b, cfix):
+                diff = cint()
+                tmp_res = sint()
+                ans = sint()
+                subc(diff, a.v, b.v)
+                mulm(tmp_res, self, diff)
+                addm(ans, tmp_res, b.v)
+                return sfix(ans)
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, sfloat):
+            if isinstance(b, sfloat):
+                ans_v = sint()
+                ans_p = sint()
+                ans_z = sint()
+                ans_s = sint()
+                tmp_v = sint()
+                tmp_p = sint()
+                tmp_z = sint()
+                tmp_s = sint()
+                diff_v = sint()
+                diff_p = sint()
+                diff_z = sint()
+                diff_s = sint()
+
+                subs(diff_v, a.v, b.v)
+                muls(tmp_v, self, diff_v)
+                adds(ans_v, tmp_v, b.v)
+
+                subs(diff_p, a.p, b.p)
+                muls(tmp_p, self, diff_p)
+                adds(ans_p, tmp_p, b.p)
+
+                subs(diff_z, a.z, b.z)
+                muls(tmp_z, self, diff_z)
+                adds(ans_z, tmp_z, b.z)
+
+                subs(diff_s, a.s, b.s)
+                muls(tmp_s, self, diff_s)
+                adds(ans_s, tmp_s, b.s)
+                return sfloat(ans_v, ans_p, ans_z, ans_s)
+            else:
+                raise NotImplementedError()
+        else:
+            raise NotImplementedError()
 
     def cond_swap(self, a, b):
         prod = self * (a - b)
@@ -235,8 +320,17 @@ class _register(Tape.Register, _number):
         super(_register, self).__init__(reg_type, program.curr_tape, size=size)
         if isinstance(val, (int, long)):
             self.load_int(val)
+
+            ### DEBUG (START) ###
+            # print("test_branch0")
+            ### DEBUG (END) ###
+
         elif val is not None:
             self.load_other(val)
+
+            ### DEBUG (START) ###
+            # print("test_branch1")
+            ### DEBUG (END) ###
 
     def sizeof(self):
         return self.size
@@ -275,6 +369,12 @@ class _clear(_register):
     @vectorize
     def print_reg_plain(self):
         print_reg_plain(self)
+
+    @set_instruction_type
+    @vectorize
+    def e_print_fixed_plain(self):
+        e_print_fixed_plain(self, 16)
+        #fixed_lower = fixed_point = 16
 
     @set_instruction_type
     @vectorize
@@ -456,9 +556,6 @@ class cint(_clear, _int):
     def __neg__(self):
         return 0 - self
 
-    def __abs__(self):
-        return (self >= 0).if_else(self, -self)
-
     @vectorize
     def __invert__(self):
         res = cint()
@@ -510,6 +607,30 @@ class cint(_clear, _int):
         digestc(res, self, num_bytes)
         return res
 
+    @vectorize
+    def e_mp_mixed_sub_right(self, s_reg):
+        res = sint()
+        e_mp_submr(res, self, s_reg)
+        return res
+
+    @classmethod
+    def e_load_mp256_num(cls, num):
+        num_on_ring = num % (2 ** 256)
+        # cut by max of int, i.e., 31bit (not 32bit)
+        max_of_int_1 = num_on_ring & 0x7fffffff
+        max_of_int_2 = (num_on_ring >> 31) & 0x7fffffff
+        max_of_int_3 = (num_on_ring >> 62) & 0x7fffffff
+        max_of_int_4 = (num_on_ring >> 93) & 0x7fffffff
+        max_of_int_5 = (num_on_ring >> 124) & 0x7fffffff
+        max_of_int_6 = (num_on_ring >> 155) & 0x7fffffff
+        max_of_int_7 = (num_on_ring >> 186) & 0x7fffffff
+        max_of_int_8 = (num_on_ring >> 217) & 0x7fffffff
+        last_byte = (num_on_ring >> 248) & 0xff
+
+        tmp = cint()
+        e_mp_ldi(tmp, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6, max_of_int_7,
+                  max_of_int_8, last_byte)
+        return tmp
 
 
 
@@ -791,8 +912,13 @@ class regint(_register, _int):
         return cint(self).mod2m(*args, **kwargs)
 
     def bit_decompose(self, bit_length=None):
-        res = [regint() for i in range(bit_length or program.bit_length)]
-        bitdecint(self, *res)
+        res = []
+        x = self
+        two = regint(2)
+        for i in range(bit_length or program.bit_length):
+            y = x / two
+            res.append(x - two * y)
+            x = y
         return res
 
     @staticmethod
@@ -813,9 +939,6 @@ class regint(_register, _int):
 
 class _secret(_register):
     __slots__ = []
-
-    PreOR = staticmethod(lambda l: floatingpoint.PreORC(l))
-    PreOp = staticmethod(lambda op, l: floatingpoint.PreOpL(op, l))
 
     @vectorized_classmethod
     @set_instruction_type
@@ -956,6 +1079,20 @@ class _secret(_register):
         return res
 
     @set_instruction_type
+    @vectorize
+    def e_mp_reveal(self):
+        res = self.clear_type()
+        e_asm_mp_open(res, self)
+        return res
+
+    # @set_instruction_type
+    # @vectorize
+    # def e_reveal(self):
+    #     res = self.clear_type()
+    #     e_asm_open(res, self)
+    #     return res
+
+    @set_instruction_type
     def reveal_to(self, player):
         masked = self.__class__()
         startprivateoutput(masked, self, player)
@@ -968,9 +1105,6 @@ class sint(_secret, _int):
     instruction_type = 'modp'
     clear_type = cint
     reg_type = 's'
-
-    PreOp = staticmethod(floatingpoint.PreOpL)
-    PreOR = staticmethod(floatingpoint.PreOR)
 
     @vectorized_classmethod
     def get_random_int(cls, bits):
@@ -1045,40 +1179,773 @@ class sint(_secret, _int):
     def __neg__(self):
         return 0 - self
 
-    @vectorize
-    def __abs__(self):
-        return (self >= 0).if_else(self, -self)
-
     @read_mem_value
     @vectorize
     def __lt__(self, other, bit_length=None, security=None):
+        """
+        # original_lt
         res = sint()
         comparison.LTZ(res, self - other, bit_length or program.bit_length + 1,
                        security or program.security)
         return res
+        """
+
+        # BIU-NEC_lt
+        if isinstance(other, sint):
+            step = 64
+            ans = sgf2n()
+            e_lessthan(self, other, step, *ans)
+            #tmp = sint()
+            #bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            #prod_left = sgf2n()
+            #prod_right = sgf2n()
+            #prod = sgf2n()
+            #ans = sgf2n()
+            #bit_array_self = [sgf2n() for _ in range(step)]
+            #bit_array_other = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            #subs(tmp, self, other)
+            #e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            #e_bitdec(self, step, *bit_array_self)
+            #e_bitdec(other, step, *bit_array_other)
+            #gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            #gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            #ge_startmult(prod_left,prod_right)
+            #ge_stopmult(prod)
+            #gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # DEBUG (start)
+            """
+            c_bit_array = [cgf2n() for _ in range(step)]
+            for i in range(step):
+                print_char4("i=")
+                print_char4(str(i))
+                print_char('\n')
+                gstartopen(bit_array[i])
+                gstopopen(c_bit_array[i])
+                gprint_reg_plain(c_bit_array[i])
+                print_char('\n')
+            """
+            # DEBUG (end)
+
+            # result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+            return result
+
+        elif isinstance(other, cint):
+            # step = 64
+            # tmp = sint()
+            # bit_array_sub = [sgf2n() for _ in range(step)]
+            #
+            # # signed ver. (start)
+            # prod_left = sgf2n()
+            # prod_right = sgf2n()
+            # prod = sgf2n()
+            # ans = sgf2n()
+            # bit_array_self = [sgf2n() for _ in range(step)]
+            # bit_array_other = [sgf2n() for _ in range(step)]
+            # # signed ver. (end)
+            #
+            # subml(tmp, self, other)
+            # e_bitdec(tmp, step, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self, step, *bit_array_self)
+            # sign = cgf2n(other >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # # result = bit_array_sub[step - 1].e_bit_inject()
+            #
+            # # signed ver. (start)
+            # result = ans.e_bit_inject()
+            # # signed ver. (end)
+            # return result
+            raise NotImplementedError
+        elif isinstance(other, int):
+            other_val = cint(other)
+            step = 64
+            tmp = sint()
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            subml(tmp, self, other_val)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # unsigned ver. (start)
+            # result = bit_array_sub[step - 1].e_bit_inject()
+            # unsigned ver. (end)
+
+            # unsigned ver. without bit-injection (start)
+            # result = bit_array_sub[step - 1]
+            # unsigned ver. without bit-injection (end)
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+            return result
+
+        else:
+            raise NotImplementedError
 
     @read_mem_value
     @vectorize
     def __gt__(self, other, bit_length=None, security=None):
+        """
+        # original_gt
         res = sint()
         comparison.LTZ(res, other - self, bit_length or program.bit_length + 1,
                        security or program.security)
         return res
+        """
+
+        # BIU-NEC_gt
+        if isinstance(other, sint):
+            step = 64
+            tmp = sint()
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            bit_array_other = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            subs(tmp, other, self)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            e_bitdec(other, step, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_other[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+
+            return result
+        elif isinstance(other, cint):
+            # step = 64
+            # tmp = sint()
+            # bit_array_sub = [sgf2n() for _ in range(step)]
+            #
+            # # signed ver. (start)
+            # prod_left = sgf2n()
+            # prod_right = sgf2n()
+            # prod = sgf2n()
+            # ans = sgf2n()
+            # bit_array_self = [sgf2n() for _ in range(step)]
+            # # signed ver. (end)
+            #
+            # submr(tmp, other, self)
+            # e_bitdec(tmp, step, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self, step, *bit_array_self)
+            # sign = cgf2n(other >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gaddm(prod_right, bit_array_sub[step - 1], sign)
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # # result = bit_array_sub[step - 1].e_bit_inject()
+            #
+            # # signed ver. (start)
+            # result = ans.e_bit_inject()
+            # # signed ver. (end)
+            # return result
+            raise NotImplementedError
+        elif isinstance(other, int):
+            step = 64
+            tmp = sint()
+            other_val = cint(other)
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            submr(tmp, other_val, self)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gaddm(prod_right, bit_array_sub[step - 1], sign)
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+            return result
+        else:
+            raise NotImplementedError
 
     def __le__(self, other, bit_length=None, security=None):
+        """
+        # original_le
         return 1 - self.greater_than(other, bit_length, security)
+        """
+
+       # BIU-NEC_le
+        if isinstance(other, sint):
+
+            step = 64
+            tmp = sint()
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            bit_array_other = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            subs(tmp, other, self)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            e_bitdec(other, step, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_other[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+
+            # gaddsi(bit_res, bit_array_sub[step - 1], 1)
+            # res = bit_res.e_bit_inject()
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            res = bit_res.e_bit_inject()
+            # signed ver. (end)
+
+            return res
+        elif isinstance(other, cint):
+            # step = 64
+            # tmp = sint()
+            # bit_array_sub = [sgf2n() for _ in range(step)]
+            #
+            # # signed ver. (start)
+            # prod_left = sgf2n()
+            # prod_right = sgf2n()
+            # prod = sgf2n()
+            # ans = sgf2n()
+            # bit_array_self = [sgf2n() for _ in range(step)]
+            # # signed ver. (end)
+            #
+            # submr(tmp, other, self)
+            # e_bitdec(tmp, step, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self, step, *bit_array_self)
+            # sign = cgf2n(other >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gaddm(prod_right, bit_array_sub[step - 1], sign)
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # bit_res = sgf2n()
+            #
+            # # gaddsi(bit_res, bit_array_sub[step - 1], 1)
+            # # res = bit_res.e_bit_inject()
+            #
+            # # signed ver. (start)
+            # gaddsi(bit_res, ans, 1)
+            # res = bit_res.e_bit_inject()
+            # # signed ver. (end)
+            # return res
+            raise NotImplementedError
+        elif isinstance(other, int):
+            step = 64
+            tmp = sint()
+            other_val = cint(other)
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            bit_array_other = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            submr(tmp, other_val, self)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gaddm(prod_right, bit_array_sub[step - 1], sign)
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+
+            # gaddsi(bit_res, bit_array_sub[step - 1], 1)
+            # res = bit_res.e_bit_inject()
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            res = bit_res.e_bit_inject()
+            # signed ver. (end)
+            return res
+        else:
+            raise NotImplementedError
 
     def __ge__(self, other, bit_length=None, security=None):
+        """
+        # original_ge
         return 1 - self.less_than(other, bit_length, security)
+        """
+
+        # BIU-NEC_ge
+        if isinstance(other, sint):
+
+            step = 64
+            tmp = sint()
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            bit_array_other = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            subs(tmp, self, other)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            e_bitdec(other, step, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+
+            # gaddsi(bit_res, bit_array[step - 1], 1)
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            # signed ver. (end)
+
+            res = bit_res.e_bit_inject()
+            return res
+        elif isinstance(other, cint):
+            # step = 64
+            # tmp = sint()
+            # bit_array_sub = [sgf2n() for _ in range(step)]
+            #
+            # # signed ver. (start)
+            # prod_left = sgf2n()
+            # prod_right = sgf2n()
+            # prod = sgf2n()
+            # ans = sgf2n()
+            # bit_array_self = [sgf2n() for _ in range(step)]
+            # bit_array_other = [sgf2n() for _ in range(step)]
+            # # signed ver. (end)
+            #
+            # subml(tmp, self, other)
+            # e_bitdec(tmp, step, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self, step, *bit_array_self)
+            # sign = cgf2n(other >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # bit_res = sgf2n()
+            #
+            # # gaddsi(bit_res, bit_array[step - 1], 1)
+            #
+            # # signed ver. (start)
+            # gaddsi(bit_res, ans, 1)
+            # # signed ver. (end)
+            #
+            # res = bit_res.e_bit_inject()
+            # return res
+            raise NotImplementedError
+        elif isinstance(other, int):
+            step = 64
+            tmp = sint()
+            other_val = cint(other)
+            bit_array_sub = [sgf2n() for _ in range(step)]
+
+            # signed ver. (start)
+            prod_left = sgf2n()
+            prod_right = sgf2n()
+            prod = sgf2n()
+            ans = sgf2n()
+            bit_array_self = [sgf2n() for _ in range(step)]
+            # signed ver. (end)
+
+            subml(tmp, self, other_val)
+            e_bitdec(tmp, step, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self, step, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+
+            # gaddsi(bit_res, bit_array[step - 1], 1)
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            # signed ver. (end)
+
+            res = bit_res.e_bit_inject()
+            return res
+        else:
+            raise NotImplementedError
 
     @read_mem_value
     @vectorize
     def __eq__(self, other, bit_length=None, security=None):
+        """
+        # original_eq
         return floatingpoint.EQZ(self - other, bit_length or program.bit_length,
                                  security or program.security)
+        """
+
+        # BIU-NEC_eq
+        if isinstance(other, sint):
+            step = 64
+            tmp = sint()
+            subs(tmp, self, other)
+            #DEBUG (start)
+            """
+            c_tmp = cint()
+            print_char4("dif:")
+            startopen(tmp)
+            stopopen(c_tmp)
+            """
+            #DEBUG (end)
+
+            bit_array = [sgf2n() for _ in range(step)]
+            op_bit_array = [sgf2n() for _ in range(step)]
+            e_bitdec(tmp, step, *bit_array)
+
+            #DEBUG (start)
+            c_bit_array = [cgf2n() for _ in range(step)]
+            c_op_bit_array = [cgf2n() for _ in range(step)]
+            #DEBUG (end)
+
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+
+                #DEBUG(start)
+                """
+                print_char4("i=")
+                print_char4(str(i))
+                print_char('\n')
+                print_char4("bef:")
+                gstartopen(bit_array[i])
+                gstopopen(c_bit_array[i])
+                gprint_reg_plain(c_bit_array[i])
+                print_char('\n')
+                print_char4("aft:")
+                gstartopen(op_bit_array[i])
+                gstopopen(c_op_bit_array[i])
+                gprint_reg_plain(c_op_bit_array[i])
+                print_char('\n')
+                """
+                # DEBUG(end)
+
+            # minimize communication bits
+            """
+            tmp_step = step
+            for i in range(util.log2(step)):
+                tmp_step = tmp_step/2
+                print("num: "+str(tmp_step)+'\n')
+                for j in range(tmp_step):
+                    tmp_bit_array = [sgf2n() for _ in range(tmp_step)]
+                    ge_startmult(op_bit_array[2 * j], op_bit_array[2 * j + 1])
+                    ge_stopmult(tmp_bit_array[j])
+                    op_bit_array[j] = tmp_bit_array[j]
+            #res = op_bit_array[0].e_bit_inject()
+            #return res
+            return op_bit_array[0]
+            """
+
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+
+            # return tmp_bit_array[step - 1]
+            res = tmp_bit_array[step - 1].e_bit_inject()
+            return res
+        elif isinstance(other, cint):
+            step = 64
+            tmp = sint()
+            subml(tmp, self, other)
+
+            bit_array = [sgf2n() for _ in range(step)]
+            op_bit_array = [sgf2n() for _ in range(step)]
+            e_bitdec(tmp, step, *bit_array)
+
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+
+            # return tmp_bit_array[step - 1]
+            res = tmp_bit_array[step - 1].e_bit_inject()
+            return res
+        elif isinstance(other, int):
+            step = 64
+            tmp = sint()
+            other_val = cint(other)
+            subml(tmp, self, other_val)
+
+            bit_array = [sgf2n() for _ in range(step)]
+            op_bit_array = [sgf2n() for _ in range(step)]
+            e_bitdec(tmp, step, *bit_array)
+
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+
+            # return tmp_bit_array[step - 1]
+            res = tmp_bit_array[step - 1].e_bit_inject()
+            return res
+        else:
+            raise NotImplementedError
 
     def __ne__(self, other, bit_length=None, security=None):
+        """
+        # original_ne
         return 1 - self.equal(other, bit_length, security)
+        """
+
+        # BIU-NEC_eq
+        if isinstance(other, sint):
+            step = 64
+            tmp = sint()
+            bit_res = sgf2n()
+            subs(tmp, self, other)
+            bit_array = [sgf2n() for _ in range(step)]
+            op_bit_array = [sgf2n() for _ in range(step)]
+            e_bitdec(tmp, step, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+
+            # minimize communication bits
+            """
+            tmp_step = step
+            for i in range(util.log2(step)):
+                tmp_step = tmp_step / 2
+                for j in range(tmp_step):
+                    tmp_bit_array = [sgf2n() for _ in range(tmp_step)]
+                    ge_startmult(op_bit_array[2 * j], op_bit_array[2 * j + 1])
+                    ge_stopmult(tmp_bit_array[j])
+                    op_bit_array[j] = tmp_bit_array[j]
+            gaddsi(bit_res, op_bit_array[0], 1)
+            res = bit_res.e_bit_inject()
+            return res
+            """
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+
+            gaddsi(bit_res, tmp_bit_array[step - 1], 1)
+            # return bit_res
+            res = bit_res.e_bit_inject()
+            return res
+        elif isinstance(other, cint):
+            step = 64
+            tmp = sint()
+            bit_res = sgf2n()
+            subml(tmp, self, other)
+            bit_array = [sgf2n() for _ in range(step)]
+            op_bit_array = [sgf2n() for _ in range(step)]
+            e_bitdec(tmp, step, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+
+            gaddsi(bit_res, tmp_bit_array[step - 1], 1)
+            # return bit_res
+            res = bit_res.e_bit_inject()
+            return res
+        elif isinstance(other, int):
+            step = 64
+            tmp = sint()
+            bit_res = sgf2n()
+            other_val = cint(other)
+            subml(tmp, self, other_val)
+            bit_array = [sgf2n() for _ in range(step)]
+            op_bit_array = [sgf2n() for _ in range(step)]
+            e_bitdec(tmp, step, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+
+            gaddsi(bit_res, tmp_bit_array[step - 1], 1)
+            # return bit_res
+            res = bit_res.e_bit_inject()
+            return res
+        else:
+            raise NotImplementedError
 
     less_than = __lt__
     greater_than = __gt__
@@ -1094,6 +1961,232 @@ class sint(_secret, _int):
             if 2**int(round(l)) == modulus:
                 return self.mod2m(int(l))
         raise NotImplementedError('Modulo only implemented for powers of two.')
+
+    ### added by hikaru (start) ####
+    @vectorize
+    def __floordiv__(self, other):
+        ans = sint()
+        e_u_floordivs(ans,self,other)
+        # n = 64
+        # h_0 = 6
+        # n_dash = 71
+        # m = 206
+        # now, cast_size = 256 > m = 206
+
+        # n = 64
+        # h_0 = 6
+        # # h_0 = 2
+        # n_dash = 71
+        #
+        # ans = sint()
+        # Y_h = [sint() for _ in range(h_0 + 2)]
+        # N_h = [sint() for _ in range(h_0 + 2)]
+        # epsilon_h = [sint() for _ in range(h_0 + 1)]
+        # tmp_N_h = [sint() for _ in range(h_0 + 1)]
+        # tmp_epsilon = [sint() for _ in range(h_0 + 1)]
+        # N = sint()
+        # D = sint()
+        # D_0 = sint()
+        # tmp_delta = sint()
+        # delta = sint()
+        # tmp_input = sint()
+        #
+        # # debug (start)
+        # # clr_Y_h = [cint() for _ in range(h_0 + 2)]
+        # # clr_N_h = [cint() for _ in range(h_0 + 2)]
+        # # clr_epsilon_h = [cint() for _ in range(h_0 + 1)]
+        # # clr_tmp_N_h = [cint() for _ in range(h_0 + 1)]
+        # # clr_tmp_epsilon = [cint() for _ in range(h_0 + 1)]
+        # # clr_tmp_delta = cint()
+        # # clr_delta = cint()
+        # # clr_tmp_input = cint()
+        # # debug (end)
+        #
+        # e_reci_guess_from64_to256(Y_h[0], other)
+        # # debug (start)
+        # # clr_Y_0 = cint()
+        # # e_asm_mp_open(clr_Y_0,Y_h[0])
+        # # print_char4("Y_0=")
+        # # print_reg_plain(clr_Y_0)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_cast_up(N,self)
+        # # debug (start)
+        # # clr_N = cint()
+        # # e_asm_mp_open(clr_N, N)
+        # # print_char4("N=")
+        # # print_reg_plain(clr_N)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_cast_up(D,other)
+        # # debug (start)
+        # # clr_D = cint()
+        # # e_asm_mp_open(clr_D, D)
+        # # print_char4("D=")
+        # # print_reg_plain(clr_D)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_mp_mult(N_h[0],N,Y_h[0])
+        # # debug (start)
+        # # clr_N_0 = cint()
+        # # e_asm_mp_open(clr_N_0, N_h[0])
+        # # print_char4("N_0=")
+        # # print_reg_plain(clr_N_0)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_mp_mult(D_0,D,Y_h[0])
+        # # debug (start)
+        # # clr_D_0 = cint()
+        # # e_asm_mp_open(clr_D_0, D_0)
+        # # print_char4("D_0=")
+        # # print_reg_plain(clr_D_0)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # # subsir: (2^n' \cdot 1) - D_0 (start)
+        # mp_1 = 2 ** (n_dash)
+        # # cut by max of int, i.e., 31bit (not 32bit)
+        # max_of_int_1 = mp_1 & 0x7fffffff
+        # max_of_int_2 = (mp_1 >> 31) & 0x7fffffff
+        # max_of_int_3 = (mp_1 >> 62) & 0x7fffffff
+        # max_of_int_4 = (mp_1 >> 93) & 0x7fffffff
+        # max_of_int_5 = (mp_1 >> 124) & 0x7fffffff
+        # max_of_int_6 = (mp_1 >> 155) & 0x7fffffff
+        # max_of_int_7 = (mp_1 >> 186) & 0x7fffffff
+        # max_of_int_8 = (mp_1 >> 217) & 0x7fffffff
+        # last_byte = (mp_1 >> 248) & 0xff
+        #
+        # e_mp_subsir(epsilon_h[0], max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6,
+        #             max_of_int_7, max_of_int_8, last_byte, D_0)
+        # # subsir: (2^n' \cdot 1) - D_0 (end)
+        #
+        # # debug (start)
+        # # clr_epsilon_0 = cint()
+        # # e_asm_mp_open(clr_epsilon_0, epsilon_h[0])
+        # # print_char4("e_0=")
+        # # print_reg_plain(clr_epsilon_0)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # # addsi: (2^n' \cdot 1) + \epsilon (start)
+        # e_mp_addsi(Y_h[1], epsilon_h[0], max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6,
+        #            max_of_int_7, max_of_int_8, last_byte)
+        # # addsi: (2^n' \cdot 1) + \epsilon (end)
+        #
+        # # debug (start)
+        # # clr_Y_1 = cint()
+        # # e_asm_mp_open(clr_Y_1, Y_h[1])
+        # # print_char4("Y_1=")
+        # # print_reg_plain(clr_Y_1)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_mp_mult(N_h[1], N_h[0], Y_h[1])
+        #
+        # # debug (start)
+        # # clr_N_1 = cint()
+        # # e_asm_mp_open(clr_N_1, N_h[1])
+        # # print_char4("N_1=")
+        # # print_reg_plain(clr_N_1)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # for h in range(1,h_0 + 1):
+        #     e_mp_mult(epsilon_h[h], epsilon_h[h - 1], epsilon_h[h - 1])
+        #
+        #     # debug (start)
+        #     # e_asm_mp_open(clr_epsilon_h[h], epsilon_h[h])
+        #     # print_char4("e_h=")
+        #     # print_reg_plain(clr_epsilon_h[h])
+        #     # print_char4("\n")
+        #     # debug (end)
+        #
+        #     e_mp_right_shift(tmp_N_h[h], n_dash, N_h[h])
+        #
+        #     # debug (start)
+        #     # e_asm_mp_open(clr_tmp_N_h[h], tmp_N_h[h])
+        #     # print_char4("tNh=")
+        #     # print_reg_plain(clr_tmp_N_h[h])
+        #     # print_char4("\n")
+        #     # debug (end)
+        #
+        #     e_mp_right_shift(tmp_epsilon[h], n_dash, epsilon_h[h])
+        #     epsilon_h[h] = tmp_epsilon[h]
+        #
+        #     # debug (start)
+        #     # e_asm_mp_open(clr_tmp_epsilon[h], tmp_epsilon[h])
+        #     # print_char4("teh=")
+        #     # print_reg_plain(clr_tmp_epsilon[h])
+        #     # print_char4("\n")
+        #     # debug (end)
+        #
+        #     # addsi: (2^n' \cdot 1) + \epsilon (start)
+        #     e_mp_addsi(Y_h[h + 1], tmp_epsilon[h], max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5,
+        #                max_of_int_6, max_of_int_7, max_of_int_8, last_byte)
+        #     # addsi: (2^n' \cdot 1) + \epsilon (end)
+        #
+        #     # debug (start)
+        #     # e_asm_mp_open(clr_Y_h[h+1], Y_h[h+1])
+        #     # print_char4("Y_+=")
+        #     # print_reg_plain(clr_Y_h[h+1])
+        #     # print_char4("\n")
+        #     # debug (end)
+        #
+        #     e_mp_mult(N_h[h + 1], tmp_N_h[h], Y_h[h + 1])
+        #
+        #     # debug (start)
+        #     # e_asm_mp_open(clr_N_h[h+1], N_h[h+1])
+        #     # print_char4("N_+=")
+        #     # print_reg_plain(clr_N_h[h+1])
+        #     # print_char4("\n")
+        #     # debug (end)
+        #
+        # e_mp_mult(tmp_delta, Y_h[0], N)
+        #
+        # # debug (start)
+        # # e_asm_mp_open(clr_tmp_delta, tmp_delta)
+        # # print_char4("t_d=")
+        # # print_reg_plain(clr_tmp_delta)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # mp_2_power = 2 ** (n_dash - n)
+        # # cut by max of int, i.e., 31bit (not 32bit)
+        # max_of_int_1 = mp_2_power & 0x7fffffff
+        # max_of_int_2 = (mp_2_power >> 31) & 0x7fffffff
+        # max_of_int_3 = (mp_2_power >> 62) & 0x7fffffff
+        # max_of_int_4 = (mp_2_power >> 93) & 0x7fffffff
+        # max_of_int_5 = (mp_2_power >> 124) & 0x7fffffff
+        # max_of_int_6 = (mp_2_power >> 155) & 0x7fffffff
+        # max_of_int_7 = (mp_2_power >> 186) & 0x7fffffff
+        # max_of_int_8 = (mp_2_power >> 217) & 0x7fffffff
+        # last_byte = (mp_2_power >> 248) & 0xff
+        # e_mp_mulsi(delta, tmp_delta, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5,
+        #            max_of_int_6, max_of_int_7, max_of_int_8, last_byte)
+        #
+        # # debug (start)
+        # # e_asm_mp_open(clr_delta, delta)
+        # # print_char4("d=")
+        # # print_reg_plain(clr_delta)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_mp_adds(tmp_input, delta, N_h[h_0 + 1])
+        #
+        # # debug (start)
+        # # e_asm_mp_open(clr_tmp_input, tmp_input)
+        # # print_char4("inp=")
+        # # print_reg_plain(clr_tmp_input)
+        # # print_char4("\n")
+        # # debug (end)
+        #
+        # e_mp_right_shift_mod(ans, 2 * n_dash, tmp_input)
+        return ans
+    ### added by hikaru (end) ####
 
     @read_mem_value
     def mod2m(self, m, bit_length=None, security=None, signed=True):
@@ -1159,15 +2252,564 @@ class sint(_secret, _int):
         security = security or program.security
         return floatingpoint.BitDec(self, bit_length, bit_length, security)
 
+    # ADDED
+    @vectorize
+    def e_bit_decompose(self, step):
+
+        # return Array (start)
+        a = Array(step,sgf2n)
+        # return Array (end)
+
+        # square_root round decomposition (start)
+        # res = [sgf2n() for _ in range(step)]
+        # tmp_res = [sgf2n() for _ in range(64)]
+        # e_bitdec(self, 64, *tmp_res)
+        # square_root round decomposition (end)
+
+        # n - 1 round decomposition (start)
+        res = [sgf2n() for _ in range(step)]
+        e_bitdec(self, step, *res)
+        # n - 1 round decomposition (end)
+
+
+        for j in range(step):
+            # square root round decomp. (start)
+            # res[j] = tmp_res[j]
+            # square root round decomp. (end)
+
+            # return Array (start)
+            a._store(a.value_type.conv(res[j]), a.get_address(j))
+            # return Array (end)
+
+        #return res
+
+        # return Array (start)
+        return a
+        # return Array (end)
+
+    @vectorize
+    def e_mp_bit_decompose(self, step):
+        # return Array (start)
+        a = Array(step, sgf2n)
+        # return Array (end)
+
+        # n - 1 round decomposition (start)
+        res = [sgf2n() for _ in range(step)]
+        e_mp_bitdec(self, step, *res)
+        # n - 1 round decomposition (end)
+
+        for j in range(step):
+            # return Array (start)
+            a._store(a.value_type.conv(res[j]), a.get_address(j))
+            # return Array (end)
+
+        # return res
+
+        # return Array (start)
+        return a
+        # return Array (end)
+
+
+    @vectorize
+    def e_truncation(self, denom):
+        tmp_res = sint()
+        e_trunc(self, denom, *tmp_res)
+        return tmp_res
+
+    @vectorize
+    def e_power2(self, bit):
+        res = sint()
+        e_pow2(self, bit,  *res)
+
+        return res
+
+    @vectorize
+    def e_mp_addition(self, s_reg):
+        res = sint()
+        e_mp_adds(res, self, s_reg)
+        return res
+
+    @vectorize
+    def e_mp_mixed_addition(self, c_reg):
+        res = sint()
+        e_mp_addm(res, self, c_reg)
+        return res
+
+    @vectorize
+    def e_mp_immediate_addition(self, num):
+        num_on_ring = num % (2 ** 256)
+        # cut by max of int, i.e., 31bit (not 32bit)
+        max_of_int_1 = num_on_ring & 0x7fffffff
+        max_of_int_2 = (num_on_ring >> 31) & 0x7fffffff
+        max_of_int_3 = (num_on_ring >> 62) & 0x7fffffff
+        max_of_int_4 = (num_on_ring >> 93) & 0x7fffffff
+        max_of_int_5 = (num_on_ring >> 124) & 0x7fffffff
+        max_of_int_6 = (num_on_ring >> 155) & 0x7fffffff
+        max_of_int_7 = (num_on_ring >> 186) & 0x7fffffff
+        max_of_int_8 = (num_on_ring >> 217) & 0x7fffffff
+        last_byte = (num_on_ring >> 248) & 0xff
+
+        res = sint()
+        e_mp_addsi(res, self, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6, max_of_int_7, max_of_int_8, last_byte)
+        return res
+
+    @vectorize
+    def e_mp_sub(self, s_reg):
+        res = sint()
+        e_mp_subs(res, self, s_reg)
+        return res
+
+    @vectorize
+    def e_mp_mixed_sub_left(self, c_reg):
+        res = sint()
+        e_mp_subml(res, self, c_reg)
+        return res
+
+    @vectorize
+    def e_mp_immediate_sub_left(self, num):
+        num_on_ring = num % (2 ** 256)
+        # cut by max of int, i.e., 31bit (not 32bit)
+        max_of_int_1 = num_on_ring & 0x7fffffff
+        max_of_int_2 = (num_on_ring >> 31) & 0x7fffffff
+        max_of_int_3 = (num_on_ring >> 62) & 0x7fffffff
+        max_of_int_4 = (num_on_ring >> 93) & 0x7fffffff
+        max_of_int_5 = (num_on_ring >> 124) & 0x7fffffff
+        max_of_int_6 = (num_on_ring >> 155) & 0x7fffffff
+        max_of_int_7 = (num_on_ring >> 186) & 0x7fffffff
+        max_of_int_8 = (num_on_ring >> 217) & 0x7fffffff
+        last_byte = (num_on_ring >> 248) & 0xff
+
+        res = sint()
+        e_mp_subsil(res, self, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6, max_of_int_7, max_of_int_8, last_byte)
+        return res
+
+    @vectorize
+    def e_mp_immediate_sub_right(self, num):
+        num_on_ring = num % (2 ** 256)
+        # cut by max of int, i.e., 31bit (not 32bit)
+        max_of_int_1 = num_on_ring & 0x7fffffff
+        max_of_int_2 = (num_on_ring >> 31) & 0x7fffffff
+        max_of_int_3 = (num_on_ring >> 62) & 0x7fffffff
+        max_of_int_4 = (num_on_ring >> 93) & 0x7fffffff
+        max_of_int_5 = (num_on_ring >> 124) & 0x7fffffff
+        max_of_int_6 = (num_on_ring >> 155) & 0x7fffffff
+        max_of_int_7 = (num_on_ring >> 186) & 0x7fffffff
+        max_of_int_8 = (num_on_ring >> 217) & 0x7fffffff
+        last_byte = (num_on_ring >> 248) & 0xff
+
+        res = sint()
+        e_mp_subsir(res, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6, max_of_int_7, max_of_int_8, last_byte, self)
+        return res
+
+    @vectorize
+    def e_mp_multiplication(self, multiplier):
+        res = sint()
+        e_mp_mult(res, self, multiplier)
+        return res
+
+    @vectorize
+    def e_mp_mixed_multiplication(self, c_reg):
+        res = sint()
+        e_mp_mulm(res, self, c_reg)
+        return res
+
+    @vectorize
+    def e_mp_immediate_multiplication(self, num):
+        num_on_ring = num % (2 ** 256)
+        # cut by max of int, i.e., 31bit (not 32bit)
+        max_of_int_1 = num_on_ring & 0x7fffffff
+        max_of_int_2 = (num_on_ring >> 31) & 0x7fffffff
+        max_of_int_3 = (num_on_ring >> 62) & 0x7fffffff
+        max_of_int_4 = (num_on_ring >> 93) & 0x7fffffff
+        max_of_int_5 = (num_on_ring >> 124) & 0x7fffffff
+        max_of_int_6 = (num_on_ring >> 155) & 0x7fffffff
+        max_of_int_7 = (num_on_ring >> 186) & 0x7fffffff
+        max_of_int_8 = (num_on_ring >> 217) & 0x7fffffff
+        last_byte = (num_on_ring >> 248) & 0xff
+
+        res = sint()
+        e_mp_mulsi(res, self, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6, max_of_int_7, max_of_int_8, last_byte)
+        return res
+
+    # @vectorize
+    # def e_get_input_from_file(self, p_id, num_token):
+    #     a = Array(num_token, sint)
+    #
+    #     res = [sint() for _ in range(num_token)]
+    #     e_read_from_file(self, p_id, num_token, *res)
+    #
+    #     for j in range(num_token):
+    #         a._store(a.value_type.conv(res[j]), a.get_address(j))
+    #
+    #     return a
+
+    @classmethod
+    def e_get_input_from_file(cls, p_id, num_token):
+        tmp = sint()
+        res = [sint() for _ in range(num_token)]
+        e_read_from_file(tmp, p_id, num_token, *res)
+        a = Array(num_token, sint)
+
+        if num_token == 1:
+            return res[0]
+        else:
+            for j in range(num_token):
+                a._store(a.value_type.conv(res[j]), a.get_address(j))
+            return a
+
+    @classmethod
+    def e_load_mp256_num(cls, num):
+        num_on_ring = num % (2**256)
+        # cut by max of int, i.e., 31bit (not 32bit)
+        max_of_int_1 = num_on_ring & 0x7fffffff
+        max_of_int_2 = (num_on_ring >> 31) & 0x7fffffff
+        max_of_int_3 = (num_on_ring >> 62) & 0x7fffffff
+        max_of_int_4 = (num_on_ring >> 93) & 0x7fffffff
+        max_of_int_5 = (num_on_ring >> 124) & 0x7fffffff
+        max_of_int_6 = (num_on_ring >> 155) & 0x7fffffff
+        max_of_int_7 = (num_on_ring >> 186) & 0x7fffffff
+        max_of_int_8 = (num_on_ring >> 217) & 0x7fffffff
+        last_byte = (num_on_ring >> 248) & 0xff
+
+        tmp = sint()
+        e_mp_ldsi(tmp, max_of_int_1, max_of_int_2, max_of_int_3, max_of_int_4, max_of_int_5, max_of_int_6, max_of_int_7, max_of_int_8, last_byte)
+        return tmp
+
+    @vectorize
+    def e_round_and_extend(self, m):
+        # assume that m = f
+        ring_size = 64
+        two_pow_f = 2 ** (m-1)
+        s_two_pow_f = sint()
+        v = sint()
+        res = sint()
+        bit_array = [sgf2n() for _ in range(ring_size)]
+        w = [sgf2n() for _ in range(ring_size)]
+
+        # DEBUG (start)
+        # clr_pow = cint()
+        # clr_v = cint()
+        # clear_bit_array = [cgf2n() for _ in range(ring_size)]
+        # DEBUG (end)
+
+        #ldsi(s_two_pow_f, two_pow_f)
+        s_two_pow_f = sint(two_pow_f)
+
+        #DEBUG (start)
+        # startopen(s_two_pow_f)
+        # stopopen(clr_pow)
+        # print_reg_plain(clr_pow)
+        # DEBUG (end)
+
+        adds(v, self, s_two_pow_f)
+        # DEBUG (start)
+        # startopen(v)
+        # stopopen(clr_v)
+        # print_reg_plain(clr_v)
+        # DEBUG (end)
+
+        e_bitdec(v, ring_size, *bit_array)
+        for i in range(ring_size):
+            # DEBUG (strat)
+            # print_char4("i="+str(i))
+            # print_char('\n')
+            # DEBUG(end)
+
+            if i <= ring_size - m - 1:
+                w[i] = bit_array[i + m]
+
+                # DEBUG (start)
+                # gstartopen(w[i])
+                # gstopopen(clear_bit_array[i])
+                # gprint_reg_plain(clear_bit_array[i])
+                # print_char('\n')
+                # DEBUG (end)
+
+            else:
+                w[i] = bit_array[ring_size - 1]
+
+                # DEBUG (start)
+                # gstartopen(w[i])
+                # gstopopen(clear_bit_array[i])
+                # gprint_reg_plain(clear_bit_array[i])
+                # print_char('\n')
+                # DEBUG (end)
+
+        e_bitrec(res, ring_size, *w)
+        return res
+
+    @vectorize
+    def e_CastUp_256(self):
+        res = sint()
+        e_cast_up(res, self)
+        return res
+
+    @vectorize
+    def e_prefix_or(self):
+        ring_size = 64
+        bit_array = [sgf2n() for _ in range(ring_size)]
+        e_prefixor_bit(self,ring_size,*bit_array)
+        return bit_array
+
+    @vectorize
+    def e_msnzb(self):
+        ring_size = 64
+        bit_array = [sgf2n() for _ in range(ring_size)]
+        e_msnzb(self, ring_size, *bit_array)
+        return bit_array
+
+    @vectorize
+    def e_s_msnzb(self):
+        ring_size = 64
+        bit_array = [sgf2n() for _ in range(ring_size)]
+        sign = [sgf2n() for _ in range(1)]
+        abs_val = [sint() for _ in range(1)]
+        e_s_msnzb(self, ring_size, sign[0],abs_val[0],*bit_array)
+        return sign[0], abs_val[0], bit_array
+
+    @vectorize
+    def e_reci_guess_64_256(self):
+        res = sint()
+        e_reci_guess_from64_to256(res,self)
+        return res
+
+    @vectorize
+    def e_s_reci_guess_64_256(self):
+        res = sint()
+        sign = [sgf2n() for _ in range(1)]
+        abs_val = [sint() for _ in range(1)]
+        e_s_reci_guess_from64_to256(res, sign[0], abs_val[0], self)
+        return res, sign[0], abs_val[0]
+
+    @vectorize
+    def e_right_shift_256(self, shift_num):
+        res = sint()
+        e_mp_right_shift(res, shift_num, self)
+        return res
+
+    @vectorize
+    def e_right_shift_256_mod_64(self, shift_num):
+        res = sint()
+        e_mp_right_shift_mod(res, shift_num, self)
+        return res
+
+    @vectorize
+    def e_s_right_shift_256_mod_64(self, shift_num):
+        res = sint()
+        sign = sgf2n()
+        gldsi(sign, 0x1)
+        e_s_mp_right_shift_mod(res, shift_num, self, sign)
+        return res
+
+    @vectorize
+    def e_reci_appro(self, m):
+        ring_size = 64
+        res = sint()
+        T = [sgf2n() for _ in range(ring_size)]
+        y_bit_array = [sgf2n() for _ in range(ring_size)]
+        x_bit_array = [sgf2n() for _ in range(ring_size)]
+        T_left = [sgf2n() for _ in range(ring_size)]
+        T_right = [sgf2n() for _ in range(ring_size)]
+        T_prod = [sgf2n() for _ in range(ring_size)]
+        Y_left = [sgf2n() for _ in range(ring_size)]
+        Y_prod = [sgf2n() for _ in range(ring_size)]
+
+        e_bitdec(self, ring_size, *x_bit_array)
+        for i in range(m-1, ring_size):
+            gldsi(T[i], 0)
+            y_bit_array[i] = x_bit_array[ring_size - 1]
+
+        # loop for i = m-2, ... ,0
+        for i in range(m-2, -1, -1):
+
+            gadds(T_left[i], x_bit_array[i], x_bit_array[ring_size - 1])
+            gaddsi(T_right[i], T[i + 1], 1)
+            gmuls(T_prod[i], T_left[i], T_right[i])
+            # ge_startmult(T_left[i], T_right[i])
+            # ge_stopmult(T_prod[i])
+            gadds(T[i], T_prod[i], T[i+1])
+
+            gaddsi(Y_left[i], x_bit_array[ring_size - 1], 1)
+            gmuls(Y_prod[i], Y_left[i], T[i+1])
+            # ge_startmult(Y_left[i], T[i+1])
+            # ge_stopmult(Y_prod[i])
+            gadds(y_bit_array[m-2-i], Y_prod[i], T[i])
+
+        e_bitrec(res, ring_size, *y_bit_array)
+
+        return res
+
+    @vectorize
+    def e_multi_multiplication(self, other):
+        res = sint()
+        e_multi_startmult(self, other)
+        e_multi_stopmult(res)
+        return res
+
+    def e_int2fl(self):
+        gamma = 32 # when greater than 32 -> error
+        #gamma = 63 # for log of sfix
+        l = 24
+
+        #line 1
+        lmda = gamma-1
+
+        #initialization
+        stmp1 = sint()
+        stmp2 = sint()
+        a2 = sint()
+        v = sint()
+        res_v = sint()
+        p = sint()
+        res_p = sint()
+        ptmp1 = sint()
+        ztmp1 = sint()
+
+        sum_b1 = [sint() for _ in range(lmda)]
+        sum_b2 = [sint() for _ in range(lmda)]
+        btmp1 = [sint() for _ in range(lmda)]
+        btmp2 = [sint() for _ in range(lmda)]
+        
+        #### for log of sfix ####
+        tmp = [sint() for _ in range(lmda)]
+        tmp2 = [sint() for _ in range(lmda)]
+
+        b_array = [sint() for _ in range(lmda)]
+
+        #line 2 & 3
+        res_s = (self < 0)
+        res_z = (self == 0)
+        
+        #line 4
+        mulsi(stmp1, res_s, 2)
+        submr(stmp2, cint(1), stmp1)
+        muls(a2, stmp2, self)
+        
+        #line 5 & 6
+        e_prefixor(a2, lmda, *b_array)
+
+        #line 7
+        submr(sum_b1[0], cint(2), b_array[0])
+        for i in range(1, lmda):
+            submr(btmp1[i], cint(1), b_array[i])
+
+            
+            mulsi(btmp2[i], btmp1[i], 2**i)
+            """
+            #### for log of sfix ####
+            if i % 2 == 0:
+                j = i/2
+                mulsi(tmp[i], btmp1[i], 2**j)
+                mulsi(btmp2[i], tmp[i], 2**j)
+            else:
+                j = (i-1)/2
+                mulsi(tmp[i], btmp1[i], 2**j)
+                mulsi(tmp2[i], tmp[i], 2**j)
+                mulsi(btmp2[i], tmp2[i], 2)
+            """
+            
+            adds(sum_b1[i], btmp2[i], sum_b1[i-1])
+        muls(v, a2, sum_b1[lmda-1])
+
+        #line 8
+        sum_b2[0] = b_array[0]
+        for i in range(1,lmda):
+            adds(sum_b2[i], b_array[i], sum_b2[i-1])
+        addsi(p, sum_b2[lmda-1], -lmda)
+
+        #line 9 & 10
+        if lmda > l:
+            e_trunc(v, gamma-l-1, *res_v)
+        else:
+            mulsi(res_v, v, 2**(l-gamma+1))
+        
+        #line 11
+        addsi(ptmp1, p, gamma-l-1)
+        submr(ztmp1, cint(1), res_z)
+        muls(res_p, ptmp1, ztmp1)
+
+        return sfloat(res_v, res_p, res_z, res_s)
+
+
+    # def if_else(self, a, b):
+    #     # assume that self is sint(1) or sint(0)
+    #     tmp_res = sint()
+    #     ans = sint()
+    #     diff = sint()
+    #     if isinstance(a, sint):
+    #         if isinstance(b, sint):
+    #             subs(diff, a, b)
+    #             e_startmult(self, diff)
+    #             e_stopmult(tmp_res)
+    #             adds(ans, tmp_res, b)
+    #             return ans
+    #         elif isinstance(b, cint):
+    #             subml(diff, a, b)
+    #             e_startmult(self, diff)
+    #             e_stopmult(tmp_res)
+    #             addm(ans, tmp_res, b)
+    #             return ans
+    #         elif isinstance(b, int):
+    #             cast_b = cint(b)
+    #             subml(diff, a, cast_b)
+    #             e_startmult(self, diff)
+    #             e_stopmult(tmp_res)
+    #             addm(ans, tmp_res, b)
+    #             return ans
+    #         else:
+    #             raise NotImplementedError()
+    #     elif isinstance(a, cint):
+    #         if isinstance(b, sint):
+    #             submr(diff, a, b)
+    #             e_startmult(self, diff)
+    #             e_stopmult(tmp_res)
+    #             adds(ans, tmp_res, b)
+    #             return ans
+    #         elif isinstance(b, cint):
+    #             c_diff = cint()
+    #             subc(c_diff, a, b)
+    #             mulm(tmp_res, self, c_diff)
+    #             addm(ans, tmp_res, b)
+    #             return ans
+    #         elif isinstance(b, int):
+    #             cast_b = cint(b)
+    #             c_diff = cint()
+    #             subc(c_diff, a, cast_b)
+    #             mulm(tmp_res, self, c_diff)
+    #             addm(ans, tmp_res, cast_b)
+    #             return ans
+    #         else:
+    #             raise NotImplementedError()
+    #     elif isinstance(a, int):
+    #         cast_a = cint(a)
+    #         if isinstance(b, sint):
+    #             submr(diff, cast_a, b)
+    #             e_startmult(self, diff)
+    #             e_stopmult(tmp_res)
+    #             adds(ans, tmp_res, b)
+    #             return ans
+    #         elif isinstance(b, cint):
+    #             c_diff = cint()
+    #             subc(c_diff, cast_a, b)
+    #             mulm(tmp_res, self, c_diff)
+    #             addm(ans, tmp_res, b)
+    #             return ans
+    #         elif isinstance(b, int):
+    #             cast_b = cint(b)
+    #             c_diff = cint()
+    #             subc(c_diff, cast_a, cast_b)
+    #             mulm(tmp_res, self, c_diff)
+    #             addm(ans, tmp_res, cast_b)
+    #             return ans
+    #         else:
+    #             raise NotImplementedError()
+    # ADDED END
+
 class sgf2n(_secret, _gf2n):
     __slots__ = []
     instruction_type = 'gf2n'
     clear_type = cgf2n
     reg_type = 'sg'
-
-    @classmethod
-    def get_type(cls, length):
-        return cls
 
     @classmethod
     def get_raw_input_from(cls, player):
@@ -1270,10 +2912,176 @@ class sgf2n(_secret, _gf2n):
         masked = sum([b * (one << wanted_positions[i]) for i,b in enumerate(random_bits)], self).reveal()
         return [self.clear_type((masked >> wanted_positions[i]) & one) + r for i,r in enumerate(random_bits)]
 
-for t in (sint, sgf2n):
-    t.bit_type = t
-    t.basic_type = t
-    t.default_type = t
+    @vectorize
+    def e_bit_inject(self):
+        res = [sint()]
+        # res = sint()
+        e_bitinj(self, *res)
+        return res[0]
+
+    @vectorize
+    def e_mp_bit_inject(self):
+        res = [sint()]
+        # res = sint()
+        e_mp_bitinj(self, *res)
+        return res[0]
+
+    # @vectorize
+    # def e_mp_skew_inject(self):
+    #     x1 = sint()
+    #     x2 = sint()
+    #     x3 = sint()
+    #     # res = sint()
+    #     e_mp_skew_bit_inj(self, x1, x2, x3)
+    #     # return (x1, x2, x3)
+    #     return x1
+
+
+    @vectorize
+    def ge_get_input_from_file(self, p_id, num_token):
+        a = Array(num_token, sgf2n)
+
+        res = [sgf2n() for _ in range(num_token)]
+        ge_read_from_file(self, p_id, num_token, *res)
+
+        for j in range(num_token):
+            a._store(a.value_type.conv(res[j]), a.get_address(j))
+
+        return a
+
+    def if_else(self, a, b):
+        inj_res = [sint()]
+        tmp_res = sint()
+        ans = sint()
+        e_bitinj(self, *inj_res)
+        diff = sint()
+        if isinstance(a, sint):
+            if isinstance(b, sint):
+                subs(diff, a, b)
+                muls(tmp_res, inj_res[0], diff)
+                # e_startmult(inj_res[0], diff)
+                # e_stopmult(tmp_res)
+                adds(ans, tmp_res, b)
+                return ans
+            elif isinstance(b, cint):
+                subml(diff, a, b)
+                muls(tmp_res, inj_res[0], diff)
+                # e_startmult(inj_res[0], diff)
+                # e_stopmult(tmp_res)
+                addm(ans, tmp_res, b)
+                return ans
+            elif isinstance(b, int):
+                cast_b = cint(b)
+                subml(diff, a, cast_b)
+                muls(tmp_res, inj_res[0], diff)
+                # e_startmult(inj_res[0], diff)
+                # e_stopmult(tmp_res)
+                addm(ans, tmp_res, cast_b)
+                return ans
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, cint):
+            if isinstance(b, sint):
+                submr(diff, a, b)
+                muls(tmp_res, inj_res[0], diff)
+                # e_startmult(inj_res[0], diff)
+                # e_stopmult(tmp_res)
+                adds(ans, tmp_res, b)
+                return ans
+            elif isinstance(b, cint):
+                c_diff = cint()
+                subc(c_diff, a, b)
+                mulm(tmp_res, inj_res[0], c_diff)
+                addm(ans, tmp_res, b)
+                return ans
+            elif isinstance(b, int):
+                cast_b = cint(b)
+                c_diff = cint()
+                subc(c_diff, a, cast_b)
+                mulm(tmp_res, inj_res[0], c_diff)
+                addm(ans, tmp_res, cast_b)
+                return ans
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, int):
+            cast_a = cint(a)
+            if isinstance(b, sint):
+                submr(diff, cast_a, b)
+                muls(tmp_res, inj_res[0], diff)
+                # e_startmult(inj_res[0], diff)
+                # e_stopmult(tmp_res)
+                adds(ans, tmp_res, b)
+                return ans
+            elif isinstance(b, cint):
+                c_diff = cint()
+                subc(c_diff, cast_a, b)
+                mulm(tmp_res, inj_res[0], c_diff)
+                addm(ans, tmp_res, b)
+                return ans
+            elif isinstance(b, int):
+                cast_b = cint(b)
+                c_diff = cint()
+                subc(c_diff, cast_a, cast_b)
+                mulm(tmp_res, inj_res[0], c_diff)
+                addm(ans, tmp_res, cast_b)
+                return ans
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, sfix):
+            if isinstance(b, sfix):
+                subs(diff, a.v, b.v)
+                muls(tmp_res, inj_res[0], diff)
+                adds(ans, tmp_res, b.v)
+                return sfix(ans)
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, cfix):
+            if isinstance(b, cfix):
+                diff = cint()
+                subc(diff, a.v, b.v)
+                mulm(tmp_res, inj_res[0], diff)
+                addm(ans, tmp_res, b.v)
+                return sfix(ans)
+            else:
+                raise NotImplementedError()
+        elif isinstance(a, sfloat):
+            if isinstance(b, sfloat):
+                ans_v = sint()
+                ans_p = sint()
+                ans_z = sint()
+                ans_s = sint()
+                tmp_v = sint()
+                tmp_p = sint()
+                tmp_z = sint()
+                tmp_s = sint()
+                diff_v = sint()
+                diff_p = sint()
+                diff_z = sint()
+                diff_s = sint()
+
+                subs(diff_v, a.v, b.v)
+                muls(tmp_v, inj_res[0], diff_v)
+                adds(ans_v, tmp_v, b.v)
+
+                subs(diff_p, a.p, b.p)
+                muls(tmp_p, inj_res[0], diff_p)
+                adds(ans_p, tmp_p, b.p)
+
+                subs(diff_z, a.z, b.z)
+                muls(tmp_z, inj_res[0], diff_z)
+                adds(ans_z, tmp_z, b.z)
+
+                subs(diff_s, a.s, b.s)
+                muls(tmp_s, inj_res[0], diff_s)
+                adds(ans_s, tmp_s, b.s)
+                return sfloat(ans_v, ans_p, ans_z, ans_s)
+            else:
+                raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+
+sint.basic_type = sint
+sgf2n.basic_type = sgf2n
 
 
 class sgf2nint(sgf2n):
@@ -1677,13 +3485,62 @@ class cfix(_number):
     def mul(self, other):
         other = parse_type(other)
         if isinstance(other, cfix):
-            sgn = cint(1 - 2 * (self.v * other.v < 0))
-            absolute = self.v * other.v * sgn
-            val = sgn * (absolute >> self.f)
+            # original(start)
+            # print("[types.py::cfix.mul] debug1"+'\n')
+            # sgn = cint(1 - 2 * (self.v * other.v < 0))
+            # absolute = self.v * other.v * sgn
+            # val = sgn * (absolute >> self.f)
+            # original(end)
+
+            # ADDED (start)
+            # DEBUG(start)
+            # print_char4("self")
+            # print_char4(":")
+            # self.v.print_reg_plain()
+            # print_char('\n')
+            # print_char4("othe")
+            # print_char4("r:")
+            # other.v.print_reg_plain()
+            # print_char('\n')
+            # DEBUG(end)
+
+            # val = self.v * other.v
+            prod = self.v * other.v
+
+            # DEBUG(start)
+            # print_char4("prod")
+            # print_char4(":")
+            # prod.print_reg_plain()
+            # print_char('\n')
+            # DEBUG(end)
+
+            val = prod >> self.f
+            # ADDED (end)
             return cfix(val)
         elif isinstance(other, sfix):
-            res = sfix((self.v * other.v) >> self.f)
-            return res
+            # original (start)
+            # res = sfix((self.v * other.v) >> self.f)
+            # return res
+            # original (end)
+            # parallel (i.e., round optimized)
+            n = 64
+            part_of_w = sint()
+            w = sint()
+            val = sint()
+            bit_array = [sgf2n() for _ in range(n)]
+            tmp_array = [sgf2n() for _ in range(n)]
+            d = self.k - self.f
+
+            mulm(part_of_w, other.v, self.v)
+            addsi(w, part_of_w, 2 ** (self.f - 1))
+            e_bitdec(w, n, *bit_array)
+            for i in range(n):
+                if i <= n - self.f - 1:
+                    tmp_array[i] = bit_array[i + self.f]
+                else:
+                    tmp_array[i] = bit_array[d + self.f - 1]
+            e_bitrec(val, n, *tmp_array)
+            return sfix(val)
         else:
             raise CompilerError('Invalid type %s for cfix.__mul__' % type(other))
     
@@ -1781,7 +3638,11 @@ class sfix(_number):
     """ Shared fixed point type. """
     __slots__ = ['v', 'f', 'k', 'size']
     reg_type = 's'
-    kappa = 40
+    # original (start)
+    # kappa = 40
+    # original (end)
+    kappa = 0
+
     @classmethod
     def set_precision(cls, f, k = None):
         cls.f = f
@@ -1823,6 +3684,7 @@ class sfix(_number):
         if isinstance(_v, sint):
             self.v = _v
         elif isinstance(_v, cfix.scalars):
+            # self.v = sint(_v)
             self.v = sint(int(round(_v * (2 ** f))), size=self.size)
         elif isinstance(_v, sfloat):
             p = (f + _v.p)
@@ -1861,15 +3723,81 @@ class sfix(_number):
 
     @vectorize 
     def mul(self, other):
+        n = 64
         other = parse_type(other)
-        if isinstance(other, (sfix, cfix)):
-            val = floatingpoint.TruncPr(self.v * other.v, self.k * 2, self.f, self.kappa)
+        # original (start)
+        # if isinstance(other, (sfix, cfix)):
+        #     val = floatingpoint.TruncPr(self.v * other.v, self.k * 2, self.f, self.kappa)
+        #     return sfix(val)
+        # elif isinstance(other, cfix.scalars):
+        #     scalar_fix = cfix(other)
+        #     return self * scalar_fix
+        # else:
+        #     raise CompilerError('Invalid type %s for sfix.__mul__' % type(other))
+        # original (end)
+
+        # ADDED (start)
+        if isinstance(other, sfix):
+            part_of_w = sint()
+            w = sint()
+            val = sint()
+            bit_array = [sgf2n() for _ in range(n)]
+            tmp_array = [sgf2n() for _ in range(n)]
+            d = self.k - self.f
+
+            muls(part_of_w, self.v, other.v)
+            addsi(w, part_of_w, 2 ** (self.f - 1))
+
+            e_bitdec(w, n, *bit_array)
+
+            for i in range(n):
+                if i <= n - self.f - 1:
+                    tmp_array[i] = bit_array[i + self.f]
+                else:
+                    tmp_array[i] = bit_array[n - 1]
+
+            e_bitrec(val, n, *tmp_array)
+            return sfix(val)
+        elif isinstance(other, cfix):
+            part_of_w = sint()
+            w = sint()
+            val = sint()
+            bit_array = [sgf2n() for _ in range(n)]
+            tmp_array = [sgf2n() for _ in range(n)]
+            d = self.k - self.f
+
+            mulm(part_of_w, self.v, other.v)
+            addsi(w, part_of_w, 2 ** (self.f - 1))
+            e_bitdec(w, n, *bit_array)
+            for i in range(n):
+                if i <= n - self.f - 1:
+                    tmp_array[i] = bit_array[i + self.f]
+                else:
+                    tmp_array[i] = bit_array[n - 1]
+            e_bitrec(val, n, *tmp_array)
             return sfix(val)
         elif isinstance(other, cfix.scalars):
             scalar_fix = cfix(other)
-            return self * scalar_fix
+            part_of_w = sint()
+            w = sint()
+            val = sint()
+            bit_array = [sgf2n() for _ in range(n)]
+            tmp_array = [sgf2n() for _ in range(n)]
+            d = self.k - self.f
+
+            mulm(part_of_w, self.v, scalar_fix.v)
+            addsi(w, part_of_w, 2 ** (self.f - 1))
+            e_bitdec(w, n, *bit_array)
+            for i in range(n):
+                if i <= n - self.f - 1:
+                    tmp_array[i] = bit_array[i + self.f]
+                else:
+                    tmp_array[i] = bit_array[n - 1]
+            e_bitrec(val, n, *tmp_array)
+            return sfix(val)
         else:
             raise CompilerError('Invalid type %s for sfix.__mul__' % type(other))
+        # ADDED (end)
 
     @vectorize 
     def __sub__(self, other):
@@ -1885,59 +3813,745 @@ class sfix(_number):
 
     @vectorize
     def __eq__(self, other):
+        # original (start)
+        # other = parse_type(other)
+        # if isinstance(other, (cfix, sfix)):
+        #     return self.v.equal(other.v, self.k, self.kappa)
+        # else:
+        #     raise NotImplementedError
+        # original (end)
+
+        ring_size = 64
+
+        step = self.k
+        tmp = sint()
+
+        bit_array = [sgf2n() for _ in range(ring_size)]
+        op_bit_array = [sgf2n() for _ in range(step)]
+
+        # BIU-NEC_eq
         other = parse_type(other)
-        if isinstance(other, (cfix, sfix)):
-            return self.v.equal(other.v, self.k, self.kappa)
+        if isinstance(other, sfix):
+            subs(tmp, self.v, other.v)
+            e_bitdec(tmp, ring_size, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+            # minimize communication rounds (when n - 1 round bit-decomposition is used)
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+            # return tmp_bit_array[step - 1]
+            res = tmp_bit_array[step - 1].e_bit_inject()
+        elif isinstance(other, cfix):
+            subml(tmp, self.v, other.v)
+            e_bitdec(tmp, ring_size, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+            # minimize communication rounds (when n - 1 round bit-decomposition is used)
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+            # return tmp_bit_array[step - 1]
+            res = tmp_bit_array[step - 1].e_bit_inject()
+        elif isinstance(other, int):
+            other_val = cfix(other)
+            subml(tmp, self.v, other_val.v)
+            e_bitdec(tmp, ring_size, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+            # minimize communication rounds (when n - 1 round bit-decomposition is used)
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+            # return tmp_bit_array[step - 1]
+            res = tmp_bit_array[step - 1].e_bit_inject()
         else:
             raise NotImplementedError
+
+        return res
 
     @vectorize
     def __le__(self, other):
-        other = parse_type(other)
-        if isinstance(other, (cfix, sfix)):
-            return self.v.less_equal(other.v, self.k, self.kappa)
+        # original (start)
+        # other = parse_type(other)
+        # if isinstance(other, (cfix, sfix)):
+        #     return self.v.less_equal(other.v, self.k, self.kappa)
+        # else:
+        #     raise NotImplementedError
+        # original (end)
+
+        # BIU-NEC_le
+        ring_size = 64
+        # other = parse_type(other)
+        step = self.k
+        tmp = sint()
+        bit_array_sub = [sgf2n() for _ in range(ring_size)]
+
+        # signed ver. (start)
+        prod_left = sgf2n()
+        prod_right = sgf2n()
+        prod = sgf2n()
+        ans = sgf2n()
+        bit_array_self = [sgf2n() for _ in range(ring_size)]
+        bit_array_other = [sgf2n() for _ in range(ring_size)]
+        # signed ver. (end)
+
+        if isinstance(other, sfix):
+            subs(tmp, other.v, self.v)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, step, *bit_array_self)
+            e_bitdec(other.v, step, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_other[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+
+            # gaddsi(bit_res, bit_array[step - 1], 1)
+            # res = bit_res.e_bit_inject()
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            res = bit_res.e_bit_inject()
+            # signed ver. (end)
+        elif isinstance(other, cfix):
+            # submr(tmp, other.v, self.v)
+            # e_bitdec(tmp, ring_size, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self.v, step, *bit_array_self)
+            # sign = cgf2n(other.v >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gaddm(prod_right, bit_array_sub[step - 1], sign)
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # bit_res = sgf2n()
+            #
+            # # gaddsi(bit_res, bit_array[step - 1], 1)
+            # # res = bit_res.e_bit_inject()
+            #
+            # # signed ver. (start)
+            # gaddsi(bit_res, ans, 1)
+            # res = bit_res.e_bit_inject()
+            # # signed ver. (end)
+            raise NotImplementedError
+        elif isinstance(other, int):
+            other_val = cint(other * (2**self.f))
+            submr(tmp, other_val, self.v)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, step, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gaddm(prod_right, bit_array_sub[step - 1], sign)
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+
+            # gaddsi(bit_res, bit_array[step - 1], 1)
+            # res = bit_res.e_bit_inject()
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            res = bit_res.e_bit_inject()
+            # signed ver. (end)
         else:
             raise NotImplementedError
+
+        return res
 
     @vectorize 
     def __lt__(self, other):
-        other = parse_type(other)
-        if isinstance(other, (cfix, sfix)):
-            return self.v.less_than(other.v, self.k, self.kappa)
+        # original (start)
+        # other = parse_type(other)
+        # if isinstance(other, (cfix, sfix)):
+        #     return self.v.less_than(other.v, self.k, self.kappa)
+        # else:
+        #     raise NotImplementedError
+        # original (end)
+
+        # BIU-NEC_lt
+        ring_size = 64
+        # other = parse_type(other)
+
+        step = self.k
+        tmp = sint()
+        bit_array_sub = [sgf2n() for _ in range(ring_size)]
+
+        # signed ver. (start)
+        prod_left = sgf2n()
+        prod_right = sgf2n()
+        prod = sgf2n()
+        ans = sgf2n()
+        bit_array_self = [sgf2n() for _ in range(ring_size)]
+        bit_array_other = [sgf2n() for _ in range(ring_size)]
+        # signed ver. (end)
+
+        if isinstance(other, sfix):
+            subs(tmp, self.v, other.v)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, ring_size, *bit_array_self)
+            e_bitdec(other.v, ring_size, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+        elif isinstance(other, cfix):
+            # subml(tmp, self.v, other.v)
+            # e_bitdec(tmp, ring_size, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self.v, ring_size, *bit_array_self)
+            # sign = cgf2n(other.v >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # # result = bit_array_sub[step - 1].e_bit_inject()
+            #
+            # # signed ver. (start)
+            # result = ans.e_bit_inject()
+            # # signed ver. (end)
+            raise NotImplementedError
+        elif isinstance(other, int):
+            other_val = cint(other * (2**self.f))
+            subml(tmp, self.v, other_val)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, ring_size, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+
         else:
             raise NotImplementedError
+        return result
 
     @vectorize
     def __ge__(self, other):
-        other = parse_type(other)
-        if isinstance(other, (cfix, sfix)):
-            return self.v.greater_equal(other.v, self.k, self.kappa)
+        # original (start)
+        # other = parse_type(other)
+        # if isinstance(other, (cfix, sfix)):
+        #     return self.v.greater_equal(other.v, self.k, self.kappa)
+        # else:
+        #     raise NotImplementedError
+        # original (end)
+
+        # BIU-NEC_ge
+        ring_size = 64
+        # other = parse_type(other)
+        step = self.k
+
+        tmp = sint()
+        bit_array_sub = [sgf2n() for _ in range(ring_size)]
+
+        # signed ver. (start)
+        prod_left = sgf2n()
+        prod_right = sgf2n()
+        prod = sgf2n()
+        ans = sgf2n()
+        bit_array_self = [sgf2n() for _ in range(ring_size)]
+        bit_array_other = [sgf2n() for _ in range(ring_size)]
+        # signed ver. (end)
+
+        if isinstance(other, sfix):
+            subs(tmp, self.v, other.v)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, ring_size, *bit_array_self)
+            e_bitdec(other.v, ring_size, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+            # gaddsi(bit_res, bit_array[step - 1], 1)
+            # res = bit_res.e_bit_inject()
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            res = bit_res.e_bit_inject()
+            # signed ver. (end)
+        elif isinstance(other, cfix):
+            # subml(tmp, self.v, other.v)
+            # e_bitdec(tmp, ring_size, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self.v, ring_size, *bit_array_self)
+            # sign = cgf2n(other.v >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # bit_res = sgf2n()
+            # # gaddsi(bit_res, bit_array[step - 1], 1)
+            # # res = bit_res.e_bit_inject()
+            #
+            # # signed ver. (start)
+            # gaddsi(bit_res, ans, 1)
+            # res = bit_res.e_bit_inject()
+            # # signed ver. (end)
+            raise NotImplementedError
+        elif isinstance(other, int):
+            other_val = cint(other * (2**self.f))
+            subml(tmp, self.v, other_val)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, ring_size, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_self[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            bit_res = sgf2n()
+            # gaddsi(bit_res, bit_array[step - 1], 1)
+            # res = bit_res.e_bit_inject()
+
+            # signed ver. (start)
+            gaddsi(bit_res, ans, 1)
+            res = bit_res.e_bit_inject()
+            # signed ver. (end)
+
         else:
             raise NotImplementedError
+
+        return res
 
     @vectorize
     def __gt__(self, other):
-        other = parse_type(other)
-        if isinstance(other, (cfix, sfix)):
-            return self.v.greater_than(other.v, self.k, self.kappa)
+        # original (start)
+        # other = parse_type(other)
+        # if isinstance(other, (cfix, sfix)):
+        #     return self.v.greater_than(other.v, self.k, self.kappa)
+        # else:
+        #     raise NotImplementedError
+        # original (end)
+
+        # BIU-NEC_gt
+        ring_size = 64
+        # other = parse_type(other)
+        step = self.k
+        tmp = sint()
+        bit_array_sub = [sgf2n() for _ in range(ring_size)]
+
+        # signed ver. (start)
+        prod_left = sgf2n()
+        prod_right = sgf2n()
+        prod = sgf2n()
+        ans = sgf2n()
+        bit_array_self = [sgf2n() for _ in range(ring_size)]
+        bit_array_other = [sgf2n() for _ in range(ring_size)]
+        # signed ver. (end)
+
+        if isinstance(other, sfix):
+            subs(tmp, other.v, self.v)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, step, *bit_array_self)
+            e_bitdec(other.v, step, *bit_array_other)
+            gadds(prod_left, bit_array_self[step - 1], bit_array_other[step - 1])
+            gadds(prod_right, bit_array_sub[step - 1], bit_array_other[step - 1])
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            #result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
+        elif isinstance(other, cfix):
+            # submr(tmp, other.v, self.v)
+            # e_bitdec(tmp, ring_size, *bit_array_sub)
+            #
+            # # signed ver. (start)
+            # e_bitdec(self.v, step, *bit_array_self)
+            # sign = cgf2n(other.v >> (step - 1))
+            # gaddm(prod_left, bit_array_self[step - 1], sign)
+            # gaddm(prod_right, bit_array_sub[step - 1], sign)
+            # gmuls(prod, prod_left, prod_right)
+            # # ge_startmult(prod_left, prod_right)
+            # # ge_stopmult(prod)
+            # gadds(ans, prod, bit_array_sub[step - 1])
+            # # signed ver. (end)
+            #
+            # #result = bit_array_sub[step - 1].e_bit_inject()
+            #
+            # # signed ver. (start)
+            # result = ans.e_bit_inject()
+            # # signed ver. (end)
+            raise NotImplementedError
+        elif isinstance(other, int):
+            other_val = cint(other * (2 ** self.f))
+            submr(tmp, other_val, self.v)
+            e_bitdec(tmp, ring_size, *bit_array_sub)
+
+            # signed ver. (start)
+            e_bitdec(self.v, step, *bit_array_self)
+            if other >= 0:
+                sign = cgf2n(0)
+            else:
+                sign = cgf2n(1)
+            # sign = cgf2n(other_val >> (step - 1))
+            # sign = cgf2n(other_val >> (step - 1))
+            gaddm(prod_left, bit_array_self[step - 1], sign)
+            gaddm(prod_right, bit_array_sub[step - 1], sign)
+            gmuls(prod, prod_left, prod_right)
+            # ge_startmult(prod_left, prod_right)
+            # ge_stopmult(prod)
+            gadds(ans, prod, bit_array_sub[step - 1])
+            # signed ver. (end)
+
+            # result = bit_array_sub[step - 1].e_bit_inject()
+
+            # signed ver. (start)
+            result = ans.e_bit_inject()
+            # signed ver. (end)
         else:
             raise NotImplementedError
 
+        return result
+
     @vectorize
     def __ne__(self, other):
+        # original (start)
+        # other = parse_type(other)
+        # if isinstance(other, (cfix, sfix)):
+        #     return self.v.not_equal(other.v, self.k, self.kappa)
+        # else:
+        #     raise NotImplementedError
+        # original (end)
+
+        # BIU-NEC_eq
+        ring_size = 64
+        step = self.k
+        tmp = sint()
+        bit_res = sgf2n()
+        bit_array = [sgf2n() for _ in range(ring_size)]
+        op_bit_array = [sgf2n() for _ in range(step)]
         other = parse_type(other)
-        if isinstance(other, (cfix, sfix)):
-            return self.v.not_equal(other.v, self.k, self.kappa)
+        if isinstance(other, sfix):
+            subs(tmp, self.v, other.v)
+            e_bitdec(tmp, ring_size, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+            gaddsi(bit_res, tmp_bit_array[step - 1], 1)
+            # return bit_res
+            res = bit_res.e_bit_inject()
+        elif isinstance(other, cfix):
+            subml(tmp, self.v, other.v)
+            e_bitdec(tmp, ring_size, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+            gaddsi(bit_res, tmp_bit_array[step - 1], 1)
+            # return bit_res
+            res = bit_res.e_bit_inject()
+        elif isinstance(other, int):
+            other_val = cfix(other)
+            subml(tmp, self.v, other_val.v)
+            e_bitdec(tmp, ring_size, *bit_array)
+            for i in range(step):
+                gaddsi(op_bit_array[i], bit_array[i], 1)
+            # minimize communication rounds
+            tmp_bit_array = [sgf2n() for _ in range(step)]
+            gmuls(tmp_bit_array[1], op_bit_array[0], op_bit_array[1])
+            # ge_startmult(op_bit_array[0], op_bit_array[1])
+            # ge_stopmult(tmp_bit_array[1])
+            for i in range(2, step):
+                gmuls(tmp_bit_array[i], op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_startmult(op_bit_array[i], tmp_bit_array[i - 1])
+                # ge_stopmult(tmp_bit_array[i])
+            gaddsi(bit_res, tmp_bit_array[step - 1], 1)
+            # return bit_res
+            res = bit_res.e_bit_inject()
         else:
             raise NotImplementedError
+
+        return res
 
     @vectorize
     def __div__(self, other):
         other = parse_type(other)
         if isinstance(other, sfix):
-            return sfix(library.FPDiv(self.v, other.v, self.k, self.f, self.kappa))
+            # original (start)
+            # return sfix(library.FPDiv(self.v, other.v, self.k, self.f, self.kappa))
+            # original (end)
+
+
+            # CCS18 ver. (start)
+            # # f = 16, d = 32, n = 64
+            #
+            # d = self.k - self.f
+            # f = self.f
+            #
+            # # DEBUG (start)
+            # # print("d:%d" % d)
+            # # print("f:%d" % f)
+            # # DEBUG (end)
+            #
+            # T = int(math.floor(math.log((d+f), 2)))
+            #
+            # # test for accuracy (start)
+            # # T = int(math.floor(math.log((d + 2*f), 2)))
+            # # T = d + f
+            # # T = d + 2 * f
+            # # test for accuracy (end)
+            #
+            # d_dash = int(math.floor(d/2))
+            # w = sint()
+            # prod = sint()
+            # eta = [sint() for _ in range(T+1)]
+            # eta_dash = [sint() for _ in range(T+1)]
+            # pi = [sint() for _ in range(T+1)]
+            # w_dot_pi_0 = sint()
+            # v = [sint() for _ in range(T+1)]
+            # v_dash = [sint() for _ in range(T+1)]
+            # z = sint()
+            #
+            # # DEBUG (start)
+            # # clear_v = cint()
+            # # clear_w = cint()
+            # # clear_prod = cint()
+            # # clear_eta = [cint() for _ in range(T + 1)]
+            # # clear_eta_dash = [cint() for _ in range(T + 1)]
+            # # clear_pi = [cint() for _ in range(T + 1)]
+            # # #clear_w_dot_pi_0 = sint()
+            # # clear_V = [cint() for _ in range(T + 1)]
+            # # clear_V_dash = [cint() for _ in range(T + 1)]
+            # # DEBUG (end)
+            #
+            # w = other.v.e_reci_appro(d_dash+f)
+            # # DEBUG (start)
+            # # startopen(other.v)
+            # # stopopen(clear_v)
+            # # print_char4("othe")
+            # # print_char4("r.v:")
+            # # print_reg_plain(clear_v)
+            # # print_char('\n')
+            # #
+            # # startopen(w)
+            # # stopopen(clear_w)
+            # # print_char4("w:")
+            # # print_reg_plain(clear_w)
+            # # print_char('\n')
+            # # DEBUG (end)
+            #
+            # constant = cint(2**(d_dash+f-1))
+            #
+            # muls(prod, other.v, w)
+            # # e_startmult(other.v, w)
+            # # e_stopmult(prod)
+            #
+            # submr(eta[0], constant, prod)
+            # addm(pi[0], eta[0], constant)
+            #
+            # # DEBUG (start)
+            # # startopen(prod)
+            # # stopopen(clear_prod)
+            # # print_char4("prod")
+            # # print_char4(":")
+            # # print_reg_plain(clear_prod)
+            # # print_char('\n')
+            # #
+            # # startopen(eta[0])
+            # # stopopen(clear_eta[0])
+            # # print_char4("eta0")
+            # # print_char4(":")
+            # # print_reg_plain(clear_eta[0])
+            # # print_char('\n')
+            # #
+            # # print_char4("cons")
+            # # print_char4(":")
+            # # print_reg_plain(constant)
+            # # print_char('\n')
+            # #
+            # # startopen(pi[0])
+            # # stopopen(clear_pi[0])
+            # # print_char4("pi0")
+            # # print_char4(":")
+            # # print_reg_plain(clear_pi[0])
+            # # print_char('\n')
+            # # DEBUG (end)
+            #
+            # for k in range(1,T+1):
+            #     muls(eta_dash[k], eta[k-1], eta[k-1])
+            #     # e_startmult(eta[k-1], eta[k-1])
+            #     # e_stopmult(eta_dash[k])
+            #     eta[k] = eta_dash[k].e_round_and_extend(d_dash+f-1)
+            #
+            #     # DEBUG (start)
+            #     # startopen(eta[k])
+            #     # stopopen(clear_eta[k])
+            #     # print_char4("eta"+str(k))
+            #     # print_char4(":")
+            #     # print_reg_plain(clear_eta[k])
+            #     # print_char('\n')
+            #     # DEBUG (end)
+            #
+            #     addm(pi[k], eta[k], constant)
+            #
+            #     # DEBUG (start)
+            #     # startopen(pi[k])
+            #     # stopopen(clear_pi[k])
+            #     # print_char4("pi"+str(k))
+            #     # print_char4(":")
+            #     # print_reg_plain(clear_pi[k])
+            #     # print_char('\n')
+            #     # DEBUG (end)
+            #
+            # muls(w_dot_pi_0, w, pi[0])
+            # # e_startmult(w, pi[0])
+            # # e_stopmult(w_dot_pi_0)
+            # v_dash[0] = w_dot_pi_0
+            #
+            # for k in range(1, T+1):
+            #     v[k - 1] = v_dash[k - 1].e_round_and_extend(d_dash + f - 1)
+            #     muls(v_dash[k], v[k - 1], pi[k])
+            #     # e_startmult(v[k - 1], pi[k])
+            #     # e_stopmult(v_dash[k])
+            #
+            #     # DEBUG (start)
+            #     # startopen(v[k - 1])
+            #     # stopopen(clear_V[k - 1])
+            #     # print_char4("v"+str(k - 1))
+            #     # print_char4(":")
+            #     # print_reg_plain(clear_V[k - 1])
+            #     # print_char('\n')
+            #     #
+            #     # startopen(v_dash[k])
+            #     # stopopen(clear_V_dash[k])
+            #     # print_char4("v_da")
+            #     # print_char4("sh" + str(k))
+            #     # print_char4(":")
+            #     # print_reg_plain(clear_V_dash[k])
+            #     # print_char('\n')
+            #     # DEBUG (end)
+            #
+            # z = v_dash[T].e_round_and_extend((2 * d_dash) - 2)
+            # ans = self * sfix(z)
+            # CCS18 ver. (end)
+
+            # SCIS2018 ver. (start)
+
+            tmp_ans = sint()
+            #e_u_divs(tmp_ans,self.v,other.v)
+            e_s_divs(tmp_ans,self.v,other.v)
+
+            ans = sfix(tmp_ans)
+            # SCIS 2018 ver. (end)
+
+            return ans
         elif isinstance(other, cfix):
-            return sfix(library.sint_cint_division(self.v, other.v, self.k, self.f, self.kappa))
+            # original (start)
+            # return sfix(library.sint_cint_division(self.v, other.v, self.k, self.f, self.kappa))
+            # original (end)
+            raise NotImplementedError
         else:
             raise TypeError('Incompatible fixed point types in division')
 
@@ -1949,14 +4563,249 @@ class sfix(_number):
         val = self.v.reveal()
         return cfix(val)
 
+    def e_fp2fl(self):
+        #initialization
+        ptmp1 = sint(); ptmp2 = sint()
+        z_inv = sint()
+        res_p = sint()
+
+        #line 1
+        x = self.v.e_int2fl()
+
+        #line 2
+        submr(ptmp1, cint(self.f), x.p)
+        mulsi(ptmp2, ptmp1, -1)
+        submr(z_inv, cint(1), x.z)
+        muls(res_p, ptmp2, z_inv)
+
+        return sfloat(x.v, res_p, x.z, x.s)
+
+
+    def e_floor(self):
+        n = 64
+        val = sint()
+        bit_array = [sgf2n() for _ in range(n)]
+        tmp_array = [sgf2n() for _ in range(n)]
+
+        e_bitdec(self.v, n, *bit_array)
+
+        for i in range(n):
+            if i < 16:
+                tmp_array[i] = sgf2n(0)
+            else :
+                tmp_array[i] = bit_array[i]
+        
+        e_bitrec(val, n, *tmp_array)
+        return sfix(val)
+
+    def e_round(self):
+        n = 64
+        val = sint()
+        bit_array = [sgf2n() for _ in range(n)]
+        tmp_array = [sgf2n() for _ in range(n)]
+
+        e_bitdec(self.v, n, *bit_array)
+        d = bit_array[15]
+        d_int = d.e_bit_inject() * (2**16)
+
+        for i in range(n):
+            if i < 16:
+                tmp_array[i] = sgf2n(0)
+            else :
+                tmp_array[i] = bit_array[i]
+        
+        e_bitrec(val, n, *tmp_array)
+        
+        return sfix(val + d_int)
+        
+    def e_exp(self):
+        #N = 16; N_inv = 0.0625
+        #N = 8; N_inv = 0.125
+        N = 4; N_inv = 0.25
+
+        taylor_degree = 3
+        #taylor_degree = 2
+
+        # make table : table[key][value]
+        table = []
+        for i in range(-11,22):
+            for j in range(N):
+                table.append([cfix(i+j*N_inv), cfix(np.exp(i+j*N_inv))])
+        l = len(table)
+
+        # calculate integer / decimal part of N*x
+        Nx = N * self
+        Nx_int = Nx.e_round() # integer part of N*x
+        Nx_dec = Nx - Nx_int  # decimal part of N*x
+
+        # calculate value of exp(Nx_int/N) by looking up the table
+        exp_int = sfix(0.0)
+        Nx_int *= N_inv
+        for i in range(l):
+            flag = (Nx_int == table[i][0])
+            exp_int += flag.if_else(table[i][1], cfix(0))
+        
+        # calculate value of exp(Nx_dec/N) by Taylor series approximation
+        x_dec = Nx_dec * N_inv
+        if taylor_degree == 2:
+            exp_dec = 1 + x_dec*(1 + 0.5*x_dec)
+        elif taylor_degree == 3:
+            exp_dec = 1 + x_dec*(1 + x_dec*(0.5 + 0.16666666666*x_dec))
+        else:
+            exp_dec = sfix(0)
+            print("Taylor series degree unimplemented")
+        
+        ans = exp_int * exp_dec
+        return ans
+
+    def e_exp2(self):
+        """
+        ### Ver.1 transform from e^x ### 
+        return (self*np.log(2)).e_exp()
+        """
+        
+        """
+        ### Ver.2 Protocol 10 in "Benchmarking~" ###
+        s = (self < 0)
+        x = s.if_else(-1*self, self)
+
+        x_int = x.e_floor()          # integer part (in sfix)
+        x_dec = x - x_int            # decimal part
+        x_int = (x_int * 2**(-16)).v # integer part (in sint)
+
+        res_int = sint()
+        e_pow2(x_int, self.k, *res_int)
+        
+        res_dec = 1.00000359714456 +\
+                x_dec*(0.692969550931914 +\
+                    x_dec*(0.241621322662927 +\
+                        x_dec*(0.0517177354601992 +\
+                            x_dec*0.0136839828938349)))
+
+        res = sfix(res_int*(2**16)) * res_dec
+        res = s.if_else(sfix(1)/res, res)
+        return res
+        """
+
+        
+        ### Ver.3 Table Look-up ### 
+        #degree = 3
+        degree = 4
+        x_int = self.e_floor()  # integer part (in sfix)
+        x_dec = self - x_int    # decimal part
+
+        # make table
+        table = []
+        for i in range(-16,31):
+                table.append(cfix(2**i))
+        l = len(table) 
+
+        # calculate integer part by looking up the table
+        res_int = sfix(0.0)
+        for i in range(-16, 31):
+            flag = (i == x_int + 16)
+            res_int += flag.if_else(table[i], cfix(0.0))
+        
+        # calculate decimal part using chebyshev approximation
+        if degree == 4:
+            res_dec = 1.00000359714456 +\
+                x_dec*(0.692969550931914 +\
+                    x_dec*(0.241621322662927 +\
+                        x_dec*(0.0517177354601992 +\
+                            x_dec*0.0136839828938349)))
+        elif degree == 3:
+            res_dec = 1.00000359714456 +\
+                x_dec*(0.692969550931914 +\
+                    x_dec*(0.241621322662927 +\
+                        x_dec*0.0517177354601992))
+        else:
+            res_dec = sfix(0)
+            print("series degree unimplemented")
+
+        res = res_int * res_dec
+        return res
+        
+        
+    def e_log2(self):
+        
+        ### ver.1 Pade approximation ###
+        x = self.e_fp2fl()
+
+        v_fix = sfix(x.v)                # v_fix = x.v * 2^-16
+        nu = v_fix * (0.5**(x.vlen-16))  #    nu = x.v * 2^-vlen
+
+        # Pade approximation : P/Q ~ log(nu)
+        P = -2.05466671951 - 8.8626599391*nu + 6.10585199015*nu*nu + 4.81147460989*nu*nu*nu
+        Q = 0.353553425277 + 4.54517087629*nu + 6.42784209029*nu*nu + nu*nu*nu  
+        P_over_Q = P/Q
+
+        # return 0 when input <= 0
+        flag = (self <= sfix(0))
+        res = flag.if_else(sfix(0), P_over_Q + sfix(x.p*(2**16)) + x.vlen)
+
+        return res
+        
+
+        """
+        ### ver.2 Newton Method ###
+        x = self.e_fp2fl()
+
+        v_fix = sfix(x.v)                # v_fix = x.v * 2^-16
+        nu = v_fix * (0.5**(x.vlen-16))  #    nu = x.v * 2^-vlen
+
+        # calculate log(nu) by Newton method
+        res = sfix(-0.75)
+        for i in range(3):
+            tmp = sfix(1.0/np.log(2)) * (1 - nu * (-res).e_exp2())
+            res = res-tmp
+
+        return res + sfix(x.p*(2**16)) + x.vlen
+        """
+
+        """
+        ### ver.3 Remez approximation ###
+        x = self.e_fp2fl()
+
+        v_fix = sfix(x.v)                 # v_fix = x.v * 2^-16
+        nu = v_fix * (0.5**(x.vlen-16))*2 #    nu = x.v * 2^-vlen * 2
+        
+        res = -1.941064448 +\
+            nu*(3.529305040 +\
+                nu*(-2.461222169 +\
+                    nu*(1.130626210 +\
+                        nu*(-0.2887399591 +\
+                            nu*0.03110401824))))
+        res *= np.log2(np.e)
+
+        return res + sfix(x.p*(2**16)) + x.vlen -1
+        """
+
 # this is for 20 bit decimal precision
 # with 40 bitlength of entire number
 # these constants have been chosen for multiplications to fit in 128 bit prime field
 # (precision n1) 41 + (precision n2) 41 + (stat_sec) 40 = 82 + 40 = 122 <= 128
 # with statistical security of 40
 
-fixed_lower = 20
-fixed_upper = 40
+# original (start)
+# fixed_lower = 20
+# fixed_upper = 40
+# original (end)
+
+
+# n = d + 2f
+# f = 16, d = 32, n = 64
+# fixed_lower = f, fixed_upper = d + f
+
+fixed_lower = 16
+fixed_upper = 48
+
+
+# n = d + 2f
+# f = 8, d = 16, n = 64
+# fixed_lower = f, fixed_upper = d + f
+
+#fixed_lower = 8
+#fixed_upper = 24
 
 sfix.set_precision(fixed_lower, fixed_upper)
 cfix.set_precision(fixed_lower, fixed_upper)
@@ -1970,8 +4819,10 @@ class sfloat(_number):
         s: sign bit
         """
     __slots__ = ['v', 'p', 'z', 's', 'size']
-
     # single precision
+
+    # n > 2 * vlen
+    # n = 64
     vlen = 24
     plen = 8
     kappa = 40
@@ -2003,6 +4854,11 @@ class sfloat(_number):
             p = int(math.floor(math.log(abs(v), 2))) - vlen + 1
             vv = v
             v = int(round(abs(v) * 2 ** (-p)))
+           # v = abs(v) >> p
+          #  print(abs(v))
+          #  print(math.log(abs(v), 2))
+          #  print(abs(v)*2**(-p))
+          #  print(round(abs(v)))
             if v == 2 ** vlen:
                 p += 1
                 v /= 2
@@ -2078,6 +4934,8 @@ class sfloat(_number):
     @vectorize
     def add(self, other):
         if isinstance(other, sfloat):
+            #oiginal(start)
+            """
             a,c,d,e = [sint() for i in range(4)]
             t = sint()
             t2 = sint()
@@ -2149,74 +5007,638 @@ class sfloat(_number):
             s = (1 - b)*(a*other.s + aneg*self.s) + b*(c*other.s + cneg*self.s)
             s = zprod*s + (other.z - zz)*self.s + (self.z - zz)*other.s
             return sfloat(v, p, z, s)
+            """
+            #original(end)
+
+
+            #a,b,c,d = [sgf2n() in _range(self.vlen)]
+
+
+            a_var = sint()
+            b_var = sint()
+            c_var = sint()
+            p_max = sint()
+            p_max1 = sint()
+            p_max2 = sint()
+            p_min = sint()
+            p_min1 = sint()
+            p_min2 = sint()
+            v_max = sint()
+            v_max1 = sint()
+            v_max2 = sint()
+            v_max3 = sint()
+            v_max4 = sint()
+            v_max5 = sint()
+            v_max6 = sint()
+            v_maxl = sint()
+            v_maxr = sint()
+            v_min = sint()
+            v_min1 = sint()
+            v_min2 = sint()
+            v_min3 = sint()
+            v_min4 = sint()
+            v_min5 = sint()
+            v_min6 = sint()
+            v_minl = sint()
+            v_minr = sint()
+            s3 = sint()
+            s3tmp1 = sint()
+            s3tmp2 = sint()
+            s3tmp3 = sint()
+            delta = sint()
+            ddelta = sint()
+            two_del = sint()
+            v3 = sint()
+            v3tmp = sint()
+            v3tmp2 = sint()
+            v4 = sint()
+            v4tmp1 = sint()
+            v4tmp2 = sint()
+            v4tmp3 = sint()
+            v4tmp4 = sint()
+            v5 = sint()
+            v6 = sint()
+            v6tmp = sint()
+            dv3 = sint()
+            dv4 = sint()
+            dv3v4 = sint()
+            ell_del = sint()
+            ell_del2 = sint()
+            truncv = sint()
+            u = [sint() for _ in range(self.vlen + 2)]
+            h = [sint() for _ in range(self.vlen +2 )]
+            h2 = [sint() for _ in range(self.vlen + 2)]
+            u_var = [sint() for _ in range(self.vlen + 2)]
+            p0 = sint()
+            powp0 = [sint() for _ in range(self.vlen+2)]
+            res_p = sint()
+            res_p1 = sint()
+            res_p2 = sint()
+            res_p3 = sint()
+            res_p4 = sint()
+            res_p5 = sint()
+            res_p6 = sint()
+            res_p7 = sint()
+            res_p8 = sint()
+            res_v = sint()
+            res_v1 = sint()
+            res_v2 = sint()
+            res_v3 = sint()
+            res_v4 = sint()
+            z1_var = sint()
+            z2_var = sint()
+            z_var = sint()
+            res_s = sint()
+            res_s1 = sint()
+            res_s2 = sint()
+            res_s3 = sint()
+            res_s4 = sint()
+            res_s5 = sint()
+            res_s6 = sint()
+            res_s7 = sint()
+            res_s8 = sint()
+            res_s9 = sint()
+            res_s10 = sint()
+            res_s11 = sint()
+            res_s12 = sint()
+            res_s13 = sint()
+            res_s14 = sint()
+            res_s15 = sint()
+
+            #line 1 ~ 3
+            a = self.p >= other.p
+            b = self.p == other.p
+            c = self.v >= other.v
+
+            tmp = cint(1)
+
+            submr(a_var, tmp, a)
+            submr(b_var, tmp, b)
+            submr(c_var, tmp, c)
+
+            #line 4
+            muls(p_max1, a, self.p)
+            muls(p_max2, a_var, other.p)
+            adds(p_max, p_max1, p_max2)
+
+            #line 5
+            muls(p_min1, a, other.p)
+            muls(p_min2, a_var, self.p)
+            adds(p_min, p_min1, p_min2)
+
+            #line 6
+            muls(v_max1, a, self.v)
+            muls(v_max2, a_var, other.v)
+            adds(v_max3, v_max1, v_max2)
+            muls(v_maxl, b_var, v_max3)
+            muls(v_max4, c, self.v)
+            muls(v_max5, c_var, other.v)
+            adds(v_max6, v_max4, v_max5)
+            muls(v_maxr, b, v_max6)
+            adds(v_max, v_maxl, v_maxr)
+
+            #line 7
+            muls(v_min1, a_var, self.v)
+            muls(v_min2, a, other.v)
+            adds(v_min3, v_min1, v_min2)
+            muls(v_minl, b_var, v_min3)
+            muls(v_min4, c_var, self.v)
+            muls(v_min5, c, other.v)
+            adds(v_min6, v_min4, v_min5)
+            muls(v_minr, b, v_min6)
+            adds(v_min, v_minl, v_minr)
+
+            #line 8
+            adds(s3tmp1, self.s, other.s)
+            muls(s3tmp2, self.s, other.s)
+            mulsi(s3tmp3, s3tmp2, 2)
+            subs(s3, s3tmp1, s3tmp3)
+
+            #line 9
+            subs(delta, p_max, p_min)
+            d = self.vlen >= delta
+            muls(ddelta, d, delta)
+
+            #line 10
+            e_pow2(ddelta, self.vlen+1, *two_del)
+
+            #line 11
+            subs(v3tmp, v_max, s3)
+            mulsi(v3tmp2, v3tmp, 2)
+            addsi(v3, v3tmp2, 1)
+
+            #line 12
+            muls(v4tmp1, v_max, two_del)
+            mulsi(v4tmp2, s3, 2)
+            submr(v4tmp3, tmp, v4tmp2)
+            muls(v4tmp4, v4tmp3, v_min)
+
+            adds(v4, v4tmp4, v4tmp1)
+
+            d_var = sint()
+            submr(d_var, tmp, d)
+
+            #line 13
+            muls(dv3, d_var, v3)
+            muls(dv4, d, v4)
+            adds(dv3v4, dv3, dv4)
+
+            #line 14
+            vlen = cint()
+            ldi(vlen, self.vlen)
+            submr(ell_del, vlen, ddelta)
+            e_pow2(ell_del, self.vlen, *ell_del2)
+            muls(v5, ell_del2, dv3v4)
+
+            e_trunc(v5, self.vlen-1, *truncv)
+
+            #line 15 ~ 16
+            e_prefixor(truncv, self.vlen+2, *u)
+
+
+            #line 17
+            addsi(h[0], u[0], 0)
+            for i in range(1, self.vlen+2):
+                adds(h[i], u[i], h[i-1])
+
+            vlen2 = cint()
+            addci(vlen2, vlen, 2)
+
+            submr(p0, vlen2, h[self.vlen+1])
+
+            #line 18
+            for i in range(self.vlen + 2):
+                submr(u_var[i], tmp, u[i])
+
+            for i in range(self.vlen + 2):
+                mulsi(h2[i], u_var[i], 2 ** i)
+
+            addsi(powp0[0], h2[0], 1)
+            for i in range(1, self.vlen + 2):
+                adds(powp0[i], h2[i], powp0[i-1])
+
+            #line 19
+            muls(v6tmp, truncv, powp0[self.vlen + 1])
+            e_trunc(v6tmp, 2, *v6)
+
+            #line 20
+            subs(res_p1, p_max, p0)
+            submr(res_p2, tmp, d_var)
+            adds(res_p3, res_p1, res_p2)
+
+            #line 21
+            submr(z1_var, tmp, self.z)
+            submr(z2_var, tmp, other.z)
+            muls(z_var, z1_var, z2_var)
+            muls(res_v1, v6, z_var)
+
+            muls(res_v2, other.v, self.z)
+            muls(res_v3, self.v, other.z)
+
+            adds(res_v4, res_v2, res_v3)
+            adds(res_v, res_v1, res_v4)
+
+            #line 22
+            res_z = res_v == 0
+            res_z_var = sint()
+            submr(res_z_var, tmp, res_z)
+
+            #line 23
+            muls(res_p4, z_var, res_p3)
+            muls(res_p5, self.z, other.p)
+            muls(res_p6, other.z, self.p)
+            adds(res_p7, res_p4, res_p5)
+            adds(res_p8, res_p7, res_p6)
+            muls(res_p, res_p8, res_z_var)
+
+            #line 24
+            muls(res_s1, a_var, other.s)
+            muls(res_s2, a, self.s)
+            adds(res_s3, res_s1, res_s2)
+            muls(res_s4, b_var, res_s3)
+
+            muls(res_s5, c_var, other.s)
+            muls(res_s6, c, self.s)
+            adds(res_s7, res_s5, res_s6)
+            muls(res_s8, b, res_s7)
+
+            adds(res_s15, res_s4, res_s8)
+
+            #line 25
+            muls(res_s9, res_s15, z_var)
+
+            muls(res_s10, self.s, other.z)
+            muls(res_s11, res_s10, z1_var)
+
+            muls(res_s12, other.s, z2_var)
+            muls(res_s13, res_s12, self.z)
+
+            adds(res_s14, res_s9, res_s11)
+            adds(res_s, res_s14, res_s13)
+
+
+            return sfloat(res_v, res_p, res_z, res_s)
+
         else:
             return NotImplemented
+
     
     @vectorize
     def mul(self, other):
         if isinstance(other, sfloat):
+            #v1 = sint()
+            #v2 = sint()
+            #b = sint()
+            #c2expl = cint()
+            #comparison.ld2i(c2expl, self.vlen)
+            #if sfloat.round_nearest:
+                #v1 = comparison.TruncRoundNearest(self.v*other.v, 2*self.vlen,
+                                             #self.vlen-1, self.kappa)
+            #else:
+             #   comparison.Trunc(v1, self.v*other.v, 2*self.vlen, self.vlen-1, self.kappa, False)
+            #t = v1 - c2expl
+            #comparison.LTZ(b, t, self.vlen+1, self.kappa)
+            #comparison.Trunc(v2, b*v1 + v1, self.vlen+1, 1, self.kappa, False)
+            #z = self.z + other.z - self.z*other.z       # = OR(z1, z2)
+            #s = self.s + other.s - 2*self.s*other.s     # = XOR(s1,s2)
+            #p = (self.p + other.p - b + self.vlen)*(1 - z)
+            #return sfloat(v2, p, z, s)
+
             v1 = sint()
             v2 = sint()
-            b = sint()
-            c2expl = cint()
-            comparison.ld2i(c2expl, self.vlen)
-            if sfloat.round_nearest:
-                v1 = comparison.TruncRoundNearest(self.v*other.v, 2*self.vlen,
-                                             self.vlen-1, self.kappa)
-            else:
-                comparison.Trunc(v1, self.v*other.v, 2*self.vlen, self.vlen-1, self.kappa, False)
-            t = v1 - c2expl
-            comparison.LTZ(b, t, self.vlen+1, self.kappa)
-            comparison.Trunc(v2, b*v1 + v1, self.vlen+1, 1, self.kappa, False)
-            z = self.z + other.z - self.z*other.z       # = OR(z1, z2)
-            s = self.s + other.s - 2*self.s*other.s     # = XOR(s1,s2)
-            p = (self.p + other.p - b + self.vlen)*(1 - z)
-            return sfloat(v2, p, z, s)
+            v3 = sint()
+            v4 = sint()
+            v5 = sint()
+            res_v = sint()
+            res_p = sint()
+            res_z = sint()
+            res_s = sint()
+            tmpv3 = sint()
+            tmpv4 = sint()
+            p1 = sint()
+            p2 = sint()
+            p3 = sint()
+            p4 = sint()
+            z1 = sint()
+            z2 = sint()
+            s1 = sint()
+            s2 = sint()
+            s3 = sint()
+            w = sint()
+            b = [sint()]
+            v1_array = [sgf2n() for _ in range(2 * self.vlen + 1)]
+            v2_array = [sgf2n() for _ in range(self.vlen + 2)]
+            w_array = [sgf2n() for _ in range(self.vlen + 1)]
+
+            #line 1
+            muls(v1, self.v, other.v)
+
+            #line 2
+            e_bitdec(v1, 2 * self.vlen + 1, *v1_array)
+
+            #line 3 ~ 9
+            for i in range(self.vlen + 1):
+                v2_array[i] = v1_array[i + self.vlen - 1]
+
+            #line 10
+            e_bitrec(v2, self.vlen + 1, *v2_array)
+
+            #line 11
+            cvlen = cint(2 ** (self.vlen))
+            subml(w, v2, cvlen)
+
+            e_bitdec(w, self.vlen + 1, *w_array)
+
+            #line 13
+            e_bitinj(w_array[self.vlen], *b)
+
+            #line 14
+            tmp = cint(1)
+            submr(tmpv3, tmp, b[0])
+            muls(v3, tmpv3, v2)
+
+            mulsi(tmpv4, v2, 2)
+            muls(v4, tmpv4, b[0])
+
+            adds(v5, v4, v3)
+
+            #line 15 ~ 23
+            e_trunc(v5, 1, *res_v)
+
+            #line 26
+            tmpz = sint()
+            adds(p1, self.p, other.p)
+            addsi(p2, p1, self.vlen)
+            subs(p3, p2, b[0])
+            submr(tmpz, tmp, self.z)
+            muls(res_p, tmpz, p3)
+
+            #line 24
+            muls(z1, self.z, other.z)
+            adds(z2, self.z, other.z)
+            subs(res_z, z2, z1)
+
+            #line 23
+            tmps = cint(2)
+            adds(s1, self.s, other.s)
+            muls(s2, self.s, other.s)
+            mulm(s3, s2, tmps)
+            subs(res_s, s1, s3)
+
+            return sfloat(res_v, res_p, res_z, res_s)
+
         else:
             return NotImplemented
     
     def __sub__(self, other):
-        return self + -other
+        res_s = sint()
+        tmp = cint(1)
+        submr(res_s, tmp, other.s)
+        neg_val = sfloat(other.v, other.p, other.z, res_s)
+        return self + neg_val
+        # return self + -other
     
     def __rsub__(self, other):
         raise NotImplementedError()
 
     def __div__(self, other):
-        v = floatingpoint.SDiv(self.v, other.v + other.z * (2**self.vlen - 1),
-                               self.vlen, self.kappa)
-        b = v.less_than(two_power(self.vlen-1), self.vlen + 1, self.kappa)
-        overflow = v.greater_equal(two_power(self.vlen), self.vlen + 1, self.kappa)
-        underflow = v.less_than(two_power(self.vlen-2), self.vlen + 1, self.kappa)
-        v = (v + b * v) * (1 - overflow) * (1 - underflow) + \
-            overflow * (2**self.vlen - 1) + \
-            underflow * (2**(self.vlen-1)) * (1 - self.z)
-        p = (1 - self.z) * (self.p - other.p - self.vlen - b + 1)
-        z = self.z
-        s = self.s + other.s - 2 * self.s * other.s
+        v2_z2 = sint()
+        quotient_v = sint()
+        bv = sint()
+        double_bv = sint()
+        clr_one = cint(1)
+        diff = sint()
+        diff_bv = sint()
+        trunc_input = sint()
+        res_v = sint()
+        flag_z1 = sint()
+        diff_p = sint()
+        clr_len = cint(self.vlen)
+        diff_p_length = sint()
+        diff_p_length_1 = sint()
+        right_term = sint()
+        res_p = sint()
+        diff_s = sint()
+        res_s = sint()
+
+        # DEBUG (start)
+        # clr_quotient_v = cint()
+        # clr_b = cint()
+        # clr_res_v = cint()
+        # DEBUG (end)
+
+        # line 1
+        adds(v2_z2,other.v,other.z)
+        e_SDiv(quotient_v, self.v, v2_z2, self.vlen)
+        # e_u_floordivs(quotient_v, self.v, v2_z2)
+        # e_param_divs(quotient_v, self.v, v2_z2, self.vlen)
+
+        # debug (start)
+        # asm_open(clr_quotient_v, quotient_v)
+        # print_char4("v1:")
+        # print_reg_plain(clr_quotient_v)
+        # print_char('\n')
+        # debug (end)
+
+        # line 2
+        b = quotient_v < (2**self.vlen)
+
+        # debug (start)
+        # asm_open(clr_b, b)
+        # print_char4("b:")
+        # print_reg_plain(clr_b)
+        # print_char('\n')
+        # debug (end)
+
+        # line 3
+        muls(bv, b, quotient_v)
+        mulsi(double_bv, bv, 2)
+        submr(diff, clr_one, b)
+        # muls(diff_bv, diff, b)
+        muls(diff_bv, diff, quotient_v)
+        adds(trunc_input, double_bv, diff_bv)
+        e_trunc(trunc_input, 1, res_v)
+
+        # debug (start)
+        # asm_open(clr_res_v, res_v)
+        # print_char4("v3:")
+        # print_reg_plain(clr_res_v)
+        # print_char('\n')
+        # debug (end)
+
+        # line 4
+        submr(flag_z1, clr_one, self.z)
+        subs(diff_p, self.p, other.p)
+        subml(diff_p_length, diff_p, clr_len)
+        addsi(diff_p_length_1, diff_p_length, 1)
+        subs(right_term, diff_p_length_1, b)
+        muls(res_p, flag_z1, right_term)
+
+        # line 6
+        subs(diff_s, self.s, other.s)
+        muls(res_s, diff_s, diff_s)
+
+        # line 7
         sfloat.set_error(other.z)
-        return sfloat(v, p, z, s)
+
+        # line 8
+        return sfloat(res_v, res_p, self.z, res_s)
+
+        # original(start)
+        # v = floatingpoint.SDiv(self.v, other.v + other.z * (2**self.vlen - 1),
+        #                        self.vlen, self.kappa)
+        # b = v.less_than(two_power(self.vlen-1), self.vlen + 1, self.kappa)
+        # overflow = v.greater_equal(two_power(self.vlen), self.vlen + 1, self.kappa)
+        # underflow = v.less_than(two_power(self.vlen-2), self.vlen + 1, self.kappa)
+        # v = (v + b * v) * (1 - overflow) * (1 - underflow) + \
+        #     overflow * (2**self.vlen - 1) + \
+        #     underflow * (2**(self.vlen-1)) * (1 - self.z)
+        # p = (1 - self.z) * (self.p - other.p - self.vlen - b + 1)
+        # z = self.z
+        # s = self.s + other.s - 2 * self.s * other.s
+        # sfloat.set_error(other.z)
+        # return sfloat(v, p, z, s)
+        # original(end)
 
     @vectorize
     def __neg__(self):
         return sfloat(self.v, self.p,  self.z, (1 - self.s) * (1 - self.z))
-    
+
     @vectorize
     def __lt__(self, other):
         if isinstance(other, sfloat):
-            z1 = self.z
-            z2 = other.z
-            s1 = self.s
-            s2 = other.s
-            a = self.p.less_than(other.p, self.plen, self.kappa)
-            c = floatingpoint.EQZ(self.p - other.p, self.plen, self.kappa)
-            d = ((1 - 2*self.s)*self.v).less_than((1 - 2*other.s)*other.v, self.vlen + 1, self.kappa)
-            cd = c*d
-            ca = c*a
-            b1 = cd + a - ca
-            b2 = cd + 1 + ca - c - a
-            s12 = self.s*other.s
-            z12 = self.z*other.z
-            b = (z1 - z12)*(1 - s2) + (z2 - z12)*s1 + (1 + z12 - z1 - z2)*(s1 - s12 + (1 + s12 - s1 - s2)*b1 + s12*b2)
+
+            # z1 = self.z
+            # z2 = other.z
+            # s1 = self.s
+            # s2 = other.s
+            # a = self.p.less_than(other.p, self.plen, self.kappa)
+            # c = floatingpoint.EQZ(self.p - other.p, self.plen, self.kappa)
+            # d = ((1 - 2*self.s)*self.v).less_than((1 - 2*other.s)*other.v, self.vlen + 1, self.kappa)
+            # cd = c*d
+            # ca = c*a
+            # b1 = cd + a - ca
+            # b2 = cd + 1 + ca - c - a
+            # s12 = self.s*other.s
+            # z12 = self.z*other.z
+            # b = (z1 - z12)*(1 - s2) + (z2 - z12)*s1 + (1 + z12 - z1 - z2)*(s1 - s12 + (1 + s12 - s1 - s2)*b1 + s12*b2)
+
+            dtmp1 = sint()
+            dtmp2 = sint()
+            dtmp3 = sint()
+            dtmp4 = sint()
+            dtmp5 = sint()
+            dtmp6 = sint()
+            tmp = cint(1)
+            bp1 = sgf2n()
+            bp3 = sgf2n()
+            bp4 = sgf2n()
+            bp = sgf2n()
+            bm1 = sgf2n()
+            bm3 = sgf2n()
+            bm4 = sgf2n()
+            bm5 = sgf2n()
+            bm = sgf2n()
+            b = sint()
+            bby = sgf2n()
+            b1 = sgf2n()
+            b3 = sgf2n()
+            b5 = sgf2n()
+            b6 = sgf2n()
+            b7 = sgf2n()
+            b8 = sgf2n()
+            b9 = sgf2n()
+            b10 = sgf2n()
+            resb1 = sgf2n()
+            resb2 = sgf2n()
+            resb3 = sgf2n()
+            z1 = sgf2n()
+            z2 = sgf2n()
+            s1 = sgf2n()
+            s2 = sgf2n()
+
+            bpm = sgf2n()
+            bpm_b6 = sgf2n()
+            resb2_3 = sgf2n()
+
+            # line 1,2
+            a = sgf2n()
+            c_int = self.p == other.p
+            c = sgf2n()
+            e_lessthan(self.p, other.p, self.plen, *a)
+            e_bitdec(c_int, 1, *c)
+
+            # line 3
+            mulsi(dtmp1, self.s, 2)
+            submr(dtmp2, tmp, dtmp1)
+            muls(dtmp3, dtmp2, self.v)
+
+            mulsi(dtmp4, other.s, 2)
+            submr(dtmp5, tmp, dtmp4)
+            muls(dtmp6, dtmp5, other.v)
+
+            d = sgf2n()
+            e_lessthan(dtmp3, dtmp6, 64, *d)
+
+            # line 4 cd + (1-c)a
+            gmuls(bp1, c, d)
+
+            gaddsi(bp3, c, 1)
+            gmuls(bp4, bp3, a)
+
+            gadds(bp, bp1, bp4)
+
+            # line 5 cd + (1-c)(1-a)
+            gmuls(bm1, c, d)
+
+            gaddsi(bm3, c, 1)
+            gaddsi(bm4, a, 1)
+            gmuls(bm5, bm3, bm4)
+
+            gadds(bm, bm1, bm5)
+
+            # line 6 ~ 9
+            e_bitdec(self.z, 1, *z1)
+            e_bitdec(other.z, 1, *z2)
+            e_bitdec(self.s, 1, *s1)
+            e_bitdec(other.s, 1, *s2)
+
+            z1_var = sgf2n()
+            z2_var = sgf2n()
+            s1_var = sgf2n()
+            s2_var = sgf2n()
+
+            gaddsi(z1_var, z1, 1)
+            gaddsi(z2_var, z2, 1)
+            gaddsi(s1_var, s1, 1)
+            gaddsi(s2_var, s2, 1)
+
+            # line 10
+            gmuls(b1, z2_var, s2_var)
+            gmuls(resb1, z1, b1)
+
+            gmuls(b3, z1_var, z2)
+            gmuls(resb2, b3, s1)
+
+            gmuls(b5, z1_var, z2_var)
+
+            gmuls(b6, s1, s2_var)
+
+            gmuls(b7, s1_var, s2_var)
+            gmuls(b8, b7, bp)
+
+            gmuls(b9, s1, s2)
+            gmuls(b10, b9, bm)
+
+            gadds(bpm, b8, b10)
+            gadds(bpm_b6, bpm, b6)
+            gmuls(resb3, b5, bpm_b6)
+
+            gadds(resb2_3, resb2, resb3)
+            gadds(bby, resb1, resb2_3)
+
+            e_bitinj(bby, b)
+
             return b
         else:
             return NotImplemented
@@ -2226,12 +5648,72 @@ class sfloat(_number):
 
     @vectorize
     def __eq__(self, other):
-        # the sign can be both ways for zeroes
-        both_zero = self.z * other.z
-        return floatingpoint.EQZ(self.v - other.v, self.vlen, self.kappa) * \
-            floatingpoint.EQZ(self.p - other.p, self.plen, self.kappa) * \
-            (1 - self.s - other.s + 2 * self.s * other.s) * \
-            (1 - both_zero) + both_zero
+        step = 64
+
+        z1 = [sgf2n() for _ in range(1)]
+        z2 = [sgf2n() for _ in range(1)]
+        e_bitdec(self.z, 1, *z1)
+        e_bitdec(other.z, 1, *z2)
+        both_zero = z1[0] * z2[0]
+
+        # self.v ?= other.v
+        tmp_v = sint()
+        subs(tmp_v, self.v, other.v)
+
+        v_bit_array = [sgf2n() for _ in range(step)]
+        op_v_bit_array = [sgf2n() for _ in range(step)]
+        e_bitdec(tmp_v, step, *v_bit_array)
+
+        for i in range(step):
+            gaddsi(op_v_bit_array[i], v_bit_array[i], 1)
+
+        # minimize communication rounds
+        tmp_v_bit_array = [sgf2n() for _ in range(step)]
+        gmuls(tmp_v_bit_array[1], op_v_bit_array[0], op_v_bit_array[1])
+
+        for i in range(2, step):
+            gmuls(tmp_v_bit_array[i], op_v_bit_array[i], tmp_v_bit_array[i - 1])
+
+        v_eq_res = tmp_v_bit_array[step - 1]
+
+        # self.p ?= other.p
+        tmp_p = sint()
+        subs(tmp_p, self.p, other.p)
+
+        p_bit_array = [sgf2n() for _ in range(step)]
+        op_p_bit_array = [sgf2n() for _ in range(step)]
+        e_bitdec(tmp_p, step, *p_bit_array)
+
+        for i in range(step):
+            gaddsi(op_p_bit_array[i], p_bit_array[i], 1)
+
+        # minimize communication rounds
+        tmp_p_bit_array = [sgf2n() for _ in range(step)]
+        gmuls(tmp_p_bit_array[1], op_p_bit_array[0], op_p_bit_array[1])
+
+        for i in range(2, step):
+            gmuls(tmp_p_bit_array[i], op_p_bit_array[i], tmp_p_bit_array[i - 1])
+
+        p_eq_res = tmp_p_bit_array[step - 1]
+
+        s1 = [sgf2n() for _ in range(1)]
+        s2 = [sgf2n() for _ in range(1)]
+        e_bitdec(self.s, 1, *s1)
+        e_bitdec(other.s, 1, *s2)
+
+        both_s = s1[0] * s2[0]
+
+        res_bit = (both_zero + 1) * v_eq_res * p_eq_res * (1 + s1[0] + s2[0] + both_s) + both_zero
+        res = [sint()]
+        e_bitinj(res_bit, *res)
+        return res[0]
+
+        # # the sign can be both ways for zeroes
+        # both_zero = self.z * other.z
+        # return floatingpoint.EQZ(self.v - other.v, self.vlen, self.kappa) * \
+        #     floatingpoint.EQZ(self.p - other.p, self.plen, self.kappa) * \
+        #     (1 - self.s - other.s + 2 * self.s * other.s) * \
+        #     (1 - both_zero) + both_zero
 
     def __ne__(self, other):
         return 1 - (self == other)
@@ -2242,6 +5724,266 @@ class sfloat(_number):
 
     def reveal(self):
         return cfloat(self.v.reveal(), self.p.reveal(), self.z.reveal(), self.s.reveal())
+
+    def e_flexp2(self):
+        k = self.plen
+        l = self.vlen
+
+        
+        # cfloat * sfloat not implemented yet
+        # when inplemented change to cfloat
+        carray = []
+        for i in range(l,0,-1):
+            carray.append(sfloat(2.0**(2.0**(-i))))
+
+        #initialization
+        a_inv = sint(); b_inv = sint(); c_inv = sint(); d_inv = sint(); z_inv = sint()
+
+        p2 = sint(); p2_pow2 = sint(); p3 = sint()
+        x = sint(0); x2 = sint()
+        y = sint(); y2 = sint()
+        w = sint()
+        u = sint()
+        res_v = sint()
+        res_p = sint()
+
+        trunc_res = [sint() for _ in range(l)]
+        u_bit_array = [sgf2n() for _ in range(l)]
+        a_array = [sint() for _ in range(l)]
+        b_array = [sint() for _ in range(l)]
+
+        btmp5_1 = sint(); btmp5_2 = sint()
+        ptmp5_1 = sint(); ptmp5_2 = sint(); ptmp5_3 = sint(); ptmp5_4 = sint()
+
+        xtmp7_1 = sint()
+
+        stmp9_1 = sint(); stmp9_2 = sint(); stmp9_3 = sint()
+        xtmp9_1 = sint(); xtmp9_2 = sint()
+        dtmp9_1 = sint(); dtmp9_2 = sint(); dtmp9_3 = sint()
+
+        ytmp10_1 = sint(); ytmp10_2 = sint()
+        stmp10_1 = sint(); stmp10_2 = sint()
+
+        xtmp11_1 = sint(); xtmp11_2 = sint()
+        stmp11_1 = sint(); stmp11_2 = sint()
+        ctmp11_1 = sint()
+        wtmp11_1 = sint(); wtmp11_2 = sint(); wtmp11_3 = sint()
+
+        ltmp12_1 = sint()
+        xtmp12_1 = sint()
+        ptmp12_1 = sint(); ptmp12_2 = sint(); ptmp12_3 = sint(); ptmp12_4 = sint()
+        ctmp12_1 = sint()
+        utmp12_1 = sint()
+
+        utmp15_1 = [sint() for _ in range(l)]
+        utmp15_2 = [sint() for _ in range(l)]
+        utmp15_3 = [sint() for _ in range(l)]
+
+        utmp16_1 = [sint() for _ in range(l)]
+        utmp16_2 = [sint() for _ in range(l)]
+
+        stmp18_1 = sint(); stmp18_2 = sint()
+        wtmp18_1 = sint(); wtmp18_2 = sint()
+
+        ztmp19_1 = sint(); ztmp19_2 = sint()
+
+        ztmp20_1 = sint(); ztmp20_2 = sint()
+
+
+        #line 1 to 4
+        maximum = int(np.ceil(np.log(2**(k-1)-1+l)-l+1))
+        a = (self.p < maximum)
+        b = (self.p < (-l+1))
+        c = (self.p < (-2*l+1))
+        
+        #line 5
+        submr(b_inv, cint(1), b)
+        submr(c_inv, cint(1), c)
+
+        addsi(ptmp5_1, self.p, l)        # p+l
+        muls(ptmp5_2, b, ptmp5_1)        # b*(p+l)
+        muls(btmp5_1, b_inv, self.p)     # (1-b)*p
+        adds(btmp5_2, ptmp5_2, btmp5_1)  # b*(p+l) + (1-b)*p
+        muls(ptmp5_3, c_inv, btmp5_2)    # (1-c)*(b*(p+l) + (1-b)*p)
+        muls(ptmp5_4, ptmp5_3, a)        # a*(1-c)*(b*(p+l) + (1-b)*p)
+        submr(p2, cint(0), ptmp5_4)      # -a*(1-c)*(b*(p+l) + (1-b)*p)
+        
+        #line 6
+        for i in range(l):
+            e_trunc(self.v, i, *trunc_res[i])
+            flag = (p2 == i)
+            x += flag.if_else(trunc_res[i], sint(0))
+
+        e_pow2(p2, l, *p2_pow2)
+
+        #line 7
+        muls(xtmp7_1, x, p2_pow2)
+        subs(y, self.v, xtmp7_1)
+        
+        #line 8
+        d = (y == 0)
+        
+        #line 9
+        submr(d_inv, cint(1), d)
+
+        muls(stmp9_1, b, self.s)         # b*s
+        submr(stmp9_2, cint(1), stmp9_1) # 1-b*s
+        muls(stmp9_3, d_inv, self.s)     # (1-d)*s
+        adds(xtmp9_1, x, stmp9_3)        # x+(1-d)*s -> in the paper: x-(1-d)*s
+        muls(xtmp9_2, stmp9_2, xtmp9_1)  # (1-b*s)*(x+(1-d)*s)
+
+        submr(dtmp9_1, cint(2**l), d_inv) # 2^l-1+d
+        subs(dtmp9_2, dtmp9_1, x)         # 2^l-1+d-x
+        muls(dtmp9_3, stmp9_1, dtmp9_2)   # b*s*(2^l-1+d-x)
+        adds(x2, xtmp9_2, dtmp9_3)        # (1-b*s)*(x+(1-d)*s) + b*s*(2^l-1+d-x)
+
+        #line 10
+        subs(ytmp10_1, p2_pow2, y)        # 2^p2 - y
+        muls(ytmp10_2, stmp9_3, ytmp10_1) # (1-d)*s*(2^p2 - y)
+        submr(stmp10_1, cint(1), self.s)  # 1-s
+        muls(stmp10_2, stmp10_1, y)       # (1-s)*y
+        adds(y2, ytmp10_2, stmp10_2)      # (1-d)*s*(2^p2 - y) + (1-s)*y
+
+        #line 11
+        muls(xtmp11_1, b_inv, x2)          # (1-b)*x
+        adds(xtmp11_2, xtmp11_1, stmp9_1)  # (1-b)*x + b*s
+
+        mulsi(stmp11_1, self.s, 2)         # 2*s
+        submr(stmp11_2, cint(1), stmp11_1) # 1-2*s
+        muls(ctmp11_1, c, self.s)          # c*s
+        
+        muls(wtmp11_1, a, c_inv)           # a*(1-c)
+        muls(wtmp11_2, wtmp11_1, xtmp11_2) # a*(1-c)*((1-b)*x + b*s)
+        muls(wtmp11_3, wtmp11_2, stmp11_2) # a*(1-c)*((1-b)*x + b*s)*(1-2*s)
+        subs(w, wtmp11_3, ctmp11_1)        # a*(1-c)*((1-b)*x + b*s)*(1-2*s) - c*s
+        
+
+        #line 12 
+        muls(xtmp12_1, x2, b)              # b*x
+        submr(ltmp12_1, cint(l), p2)       # l-p2
+        e_pow2(ltmp12_1, l, *ptmp12_1)     # 2^(l-p2) = 2^l * inv(2^p)
+        muls(ptmp12_2, b_inv, ptmp12_1)    # (1-b)*(2^l * inv(2^p))
+        muls(ptmp12_3, ptmp12_2, y2)       # (1-b)*(2^l * inv(2^p))*y
+        adds(ptmp12_4, ptmp12_3, xtmp12_1) # b*x + (1-b)*(2^l * inv(2^p))*y
+        muls(utmp12_1, wtmp11_1, ptmp12_4) # a*(1-c)*(b*x + (1-b)*(2^l * inv(2^p))*y)
+        
+        mulsi(ctmp12_1, ctmp11_1, 2**l-1) # (2^l-1)*c*s
+        adds(u, utmp12_1, ctmp12_1)       # a*(1-c)*(b*x + (1-b)*(2^l * inv(2^p))*y) + (2^l-1)*c*s
+        
+
+        #line 13
+        e_bitdec(u, l, *u_bit_array)
+
+        #line 14 to 16
+        for i in range(l):
+            ui = u_bit_array[i].e_bit_inject()
+            submr(utmp15_1[i], cint(1), ui)             # 1-u[i]
+            mulsi(utmp15_2[i], utmp15_1[i], 2**(l-1))   # 2^(l-1) * (1-u[i])
+            muls(utmp15_3[i], ui, carray[i].v)          # cv[i] * u[i]
+            adds(a_array[i], utmp15_2[i], utmp15_3[i])  # 2^(l-1)*(1-u[i]) + cv[i]*u[i]
+
+            mulsi(utmp16_1[i], utmp15_1[i], 1-l)        # -(l-1)*(1-u[i])
+            muls(utmp16_2[i], ui, carray[i].p)          # cp[i]*u[i]
+            adds(b_array[i], utmp16_1[i], utmp16_2[i])  # -(l-1)*(1-u[i]) + cp[i]*u[i]
+
+        #line 17
+        prod = sfloat(1)
+        for i in range(l):
+            tmp = sfloat(a_array[i], b_array[i], sint(0), sint(0))
+            prod *= tmp
+        vu = prod.v
+        pu = prod.p
+
+        #line 18
+        submr(a_inv, cint(1), a)
+        adds(wtmp18_1, w, pu)               # w+pu
+        muls(wtmp18_2, wtmp18_1, a)         # a*(w+pu)
+        muls(stmp18_1, a_inv, stmp11_2)     # (1-a)*(1-2*s)
+        mulsi(stmp18_2, stmp18_1, 2**(k-1)) # 2^(k-1)*(1-a)*(1-2*s)
+        adds(p3, wtmp18_2, stmp18_2)        # a*(w+pu) + 2^(k-1)*(1-a)*(1-2*s)
+
+
+        #line 19
+        mulsi(ztmp19_1, self.z, 2**(l-1))   # 2^(l-1) * z
+        submr(z_inv, cint(1), self.z)       # 1-z
+        muls(ztmp19_2, z_inv, vu)           # (1-z)*vu
+        adds(res_v, ztmp19_1, ztmp19_2)     # 2^(l-1) * z + (1-z)*vu
+
+        #line 20
+        mulsi(ztmp20_1, self.z, 1-l)    # -(l-1)*z
+        muls(ztmp20_2, z_inv, p3)       # (1-z)*p
+        adds(res_p, ztmp20_1, ztmp20_2) # -(l-1)*z+(1-z)*p
+        return sfloat(res_v, res_p, sint(0), sint(0))
+
+    def e_fllog2(self):
+        k = self.plen
+        l = self.vlen
+
+        M = int(np.ceil(l/(2*np.log2(3)) - 0.5))
+
+        # cfloat * sfloat not implemented yet
+        # when inplemented change to cfloat
+        carray = []
+        for i in range(M+1):
+            carray.append(sfloat(2*np.log2(np.e)/(2*i+1))) 
+
+        #initialization
+        res_z = sint(); z_inv = sint()
+        res_v = sint()
+        res_p = sint()
+        z1_inv = sint(); s1_inv = sint()
+        tmp16_1 = sint()
+        error = sint()
+
+        #line 1 & 2
+        tmp1_1 = sfloat(sint(2**(l-1)), sint(1-l), sint(0), sint(0))
+        tmp1_2 = sfloat(self.v, sint(-l), sint(0), sint(0))
+        res2 = tmp1_1 - tmp1_2
+        res3 = tmp1_1 + tmp1_2
+
+        #line 3
+        resy = res2 / res3
+
+        #line 4
+        resy_sq = resy * resy
+
+        #line 5
+        res = resy * carray[0] 
+
+        #line 6 to 9
+        for i in range(1, M+1):
+            resy = resy * resy_sq
+            res2 = resy * carray[i]
+            res = res + res2
+        
+        #line 10
+        res2 = (l+self.p).e_int2fl() # in the paper : l-p
+
+        #line 11
+        res = res2 - res
+
+        #line 12 to 13
+        a = (self.p == 1-l)
+        b = (self.v == 2**(l-1))
+
+        #line 14
+        muls(res_z, a, b)
+
+        #line 15
+        submr(z_inv, cint(1), res_z)
+        muls(res_v, res.v, z_inv)
+
+        #line 16
+        submr(z1_inv, cint(1), self.z) # 1-z1
+        submr(s1_inv, cint(1), self.s) # 1-s1
+        muls(tmp16_1, z1_inv, s1_inv) # (1-z1)(1-s1)
+        submr(error, cint(1), tmp16_1) # 1-(1-z1)(1-s1) = OR(z1, s1)
+        sfloat.set_error(error)
+
+        #line 17
+        muls(res_p, res.p, z_inv)
+
+        return sfloat(res_v, res_p, res_z, res.s)
 
 class cfloat(object):
     # Helper class used for printing sfloats
@@ -2261,7 +6003,7 @@ _types = {
     'ci': regint,
 }
 
-
+# patched-master (start)
 class Array(object):
     def __init__(self, length, value_type, address=None):
         if value_type in _types:
@@ -2271,6 +6013,7 @@ class Array(object):
         self.value_type = value_type
         if address is None:
             self.address = self._malloc()
+        self.address_cache = {}
 
     def _malloc(self):
         return program.malloc(self.length, self.value_type)
@@ -2285,7 +6028,9 @@ class Array(object):
             if index >= self.length or index < 0:
                 raise IndexError('index %s, length %s' % \
                                      (str(index), str(self.length)))
-        return self.address + index
+        if (program.curr_block, index) not in self.address_cache:
+            self.address_cache[program.curr_block, index] = self.address + index
+        return self.address_cache[program.curr_block, index]
 
     def get_slice(self, index):
         if index.stop is None and self.length is None:
@@ -2312,13 +6057,13 @@ class Array(object):
                 self[i] = value[source_index]
                 source_index.iadd(1)
             return
-        self._store(value, self.get_address(index))
+        self._store(self.value_type.conv(value), self.get_address(index))
 
     def _load(self, address):
         return self.value_type.load_mem(address)
 
     def _store(self, value, address):
-        self.value_type.conv(value).store_in_mem(address)
+        value.store_in_mem(address)
 
     def __len__(self):
         return self.length
@@ -2342,69 +6087,311 @@ class Array(object):
                 self[i] = j
         return self
 
-    def assign_all(self, value, use_threads=True):
-        mem_value = MemValue(value)
-        n_threads = 8 if use_threads and len(self) > 2**20 else 1
-        @library.for_range_multithread(n_threads, 1024, len(self))
+    def assign_all(self, value):
+        mem_value = self.value_type.MemValue(value)
+        n_loops = 8 if len(self) > 2**20 else 1
+        @library.for_range_multithread(n_loops, 1024, len(self))
         def f(i):
             self[i] = mem_value
         return self
 
+    def e_ring_compose(self):
+        res = sint()
+        a = [self._load(self.get_address(index)) for index in range(self.length)]
+
+        e_bitrec(res, self.length, *a)
+        return res
+
+    def e_mp_ring_compose(self):
+        res = sint()
+        a = [self._load(self.get_address(index)) for index in range(self.length)]
+
+        e_mp_bitrec(res, self.length, *a)
+        return res
+
 sint.dynamic_array = Array
 sgf2n.dynamic_array = Array
-
-class Matrix(object):
-    def __init__(self, rows, columns, value_type, address=None):
-        self.rows = rows
-        self.columns = columns
-        if value_type in _types:
-            value_type = _types[value_type]
-        self.value_type = value_type
-        self.address = Array(rows * columns, value_type, address).address
-
-    def __getitem__(self, index):
-        return Array(self.columns, self.value_type, \
-                         self.address + index * self.columns)
-
-    def __len__(self):
-        return self.rows
-
-    def assign_all(self, value):
-        @library.for_range(len(self))
-        def f(i):
-            self[i].assign_all(value)
-        return self
-
-    def get_address(self):
-        return self.address
-
 
 class SubMultiArray(object):
     def __init__(self, sizes, value_type, address, index):
         self.sizes = sizes
         self.value_type = value_type
         self.address = address + index * reduce(operator.mul, self.sizes)
+        self.sub_cache = {}
 
     def __getitem__(self, index):
-        if len(self.sizes) == 2:
-            return Array(self.sizes[1], self.value_type, \
-                             self.address + index *  self.sizes[0])
-        else:
-            return SubMultiArray(self.sizes[1:], self.value_type, \
-                                     self.address, index)
+        if index not in self.sub_cache:
+            if len(self.sizes) == 2:
+                self.sub_cache[index] = \
+                        Array(self.sizes[1], self.value_type, \
+                              self.address + index * self.sizes[1])
+            else:
+                self.sub_cache[index] = \
+                        SubMultiArray(self.sizes[1:], self.value_type, \
+                                      self.address, index)
+        return self.sub_cache[index]
 
-class MultiArray(object):
+    def assign_all(self, value):
+        @library.for_range(self.sizes[0])
+        def f(i):
+            self[i].assign_all(value)
+        return self
+
+class MultiArray(SubMultiArray):
     def __init__(self, sizes, value_type):
-        self.sizes = sizes
-        self.value_type = value_type
         self.array = Array(reduce(operator.mul, sizes), \
                                  value_type)
+        SubMultiArray.__init__(self, sizes, value_type, self.array.address, 0)
         if len(sizes) < 2:
             raise CompilerError('Use Array')
 
-    def __getitem__(self, index):
-        return SubMultiArray(self.sizes[1:], self.value_type, \
-                                 self.array.address, index)
+class Matrix(MultiArray):
+    def __init__(self, rows, columns, value_type):
+        MultiArray.__init__(self, [rows, columns], value_type)
+# patched-master (end)
+
+# class Array(object):
+#     def __init__(self, length, value_type, address=None):
+#         if value_type in _types:
+#             value_type = _types[value_type]
+#         self.address = address
+#         self.length = length
+#         self.value_type = value_type
+#         if address is None:
+#             self.address = self._malloc()
+#         # Marcel_patch (start)
+#         #self.address_cache = {}
+#         # Marcel_patch (end)
+#
+#     def _malloc(self):
+#         return program.malloc(self.length, self.value_type)
+#
+#     def delete(self):
+#         if program:
+#             program.free(self.address, self.value_type.reg_type)
+#
+#     def get_address(self, index):
+#         if isinstance(index, int) and self.length is not None:
+#             index += self.length * (index < 0)
+#             if index >= self.length or index < 0:
+#                 raise IndexError('index %s, length %s' % \
+#                                      (str(index), str(self.length)))
+#         # Marcel_patch (start)
+#
+#         # original (start)
+#         return self.address + index
+#         # original (end)
+#
+#         # if (program.curr_block, index) not in self.address_cache:
+#         #     self.address_cache[program.curr_block, index] = self.address + index
+#         # return self.address_cache[program.curr_block, index]
+#         # Marcel_patch (end)
+#
+#     def get_slice(self, index):
+#         if index.stop is None and self.length is None:
+#             raise CompilerError('Cannot slice array of unknown length')
+#         return index.start or 0, index.stop or self.length, index.step or 1
+#
+#     def __getitem__(self, index):
+#         if isinstance(index, slice):
+#             start, stop, step = self.get_slice(index)
+#             res_length = (stop - start - 1) / step + 1
+#             res = self.value_type.Array(res_length)
+#             @library.for_range(res_length)
+#             def f(i):
+#                 res[i] = self[start+i*step]
+#             return res
+#         return self._load(self.get_address(index))
+#
+#     def __setitem__(self, index, value):
+#         if isinstance(index, slice):
+#             start, stop, step = self.get_slice(index)
+#             source_index = MemValue(0)
+#             @library.for_range(start, stop, step)
+#             def f(i):
+#                 self[i] = value[source_index]
+#                 source_index.iadd(1)
+#             return
+#         self._store(self.value_type.conv(value), self.get_address(index))
+#
+#     def _load(self, address):
+#         return self.value_type.load_mem(address)
+#
+#     def _store(self, value, address):
+#         value.store_in_mem(address)
+#
+#     def __len__(self):
+#         return self.length
+#
+#     def __iter__(self):
+#         for i in range(self.length):
+#             yield self[i]
+#
+#     def assign(self, other):
+#         if isinstance(other, Array):
+#             def loop(i):
+#                 self[i] = other[i]
+#             library.range_loop(loop, len(self))
+#         elif isinstance(other, Tape.Register):
+#             if len(other) == self.length:
+#                 self[0] = other
+#             else:
+#                 raise CompilerError('Length mismatch between array and vector')
+#         else:
+#             for i,j in enumerate(other):
+#                 self[i] = j
+#         return self
+#
+#     def assign_all(self, value):
+#         mem_value = self.value_type.MemValue(value)
+#         n_loops = 8 if len(self) > 2**20 else 1
+#         @library.for_range_multithread(n_loops, 1024, len(self))
+#         def f(i):
+#             self[i] = mem_value
+#         return self
+#
+#     # ADDED_start
+#     def e_ring_compose(self):
+#         res = sint()
+#         a = [self._load(self.get_address(index)) for index in range(self.length)]
+#
+#         """
+#         #DEBUG (start)
+#         clear = [cgf2n() for _ in range(self.length)]
+#         for j in range(self.length):
+#             print("input_check;")
+#             print(str(a[j]));
+#             print('\n')
+#             gstartopen(a[j])
+#             gstopopen(clear[j])
+#             gprint_reg_plain(clear[j])
+#         #DEBUG (end)
+#         """
+#
+#         e_bitrec(res, self.length, *a)
+#         return res
+#
+#         # res = [sint() for _ in range(self.length)]
+#         # a = [self._load(self.get_address(index)) for index in range(self.length)]
+#         # injected_a = [sint() for _ in range(self.length)]
+#         # two_power_a = [sint() for _ in range(self.length)]
+#         #
+#         # if self.length > 1:
+#         #     for i in range(self.length):
+#         #         e_bitinj(a[i], injected_a[i])
+#         #         power = cint(2 ** i)
+#         #         mulm(two_power_a[i], injected_a[i], power)
+#         #     for i in range(1, self.length):
+#         #         if i == 1:
+#         #             adds(res[i], two_power_a[i], two_power_a[i - 1])
+#         #         else:
+#         #             adds(res[i], two_power_a[i], res[i - 1])
+#         # else:
+#         #     e_bitinj(a[0], res[self.length - 1])
+#         #
+#         # return res[self.length - 1]
+#
+#     def e_batch_decompose(self,step):
+#         a = [self._load(self.get_address(index)) for index in range(self.length)]
+#         res = [[sgf2n() for _ in range(step)] for j in range(self.length)]
+#         for i in range (self.length):
+#             e_bitdec(a[i], step, *res[i])
+#         return res
+#     # ADDED_end
+#
+# sint.dynamic_array = Array
+# sgf2n.dynamic_array = Array
+#
+# # Marcel_patch (start)
+#
+# #original(start)
+# class Matrix(object):
+#     def __init__(self, rows, columns, value_type, address=None):
+#         self.rows = rows
+#         self.columns = columns
+#         if value_type in _types:
+#             value_type = _types[value_type]
+#         self.value_type = value_type
+#         self.address = Array(rows * columns, value_type, address).address
+#
+#     def __getitem__(self, index):
+#         return Array(self.columns, self.value_type, \
+#                          self.address + index * self.columns)
+#
+#     def __len__(self):
+#         return self.rows
+#
+#     def assign_all(self, value):
+#         @library.for_range(len(self))
+#         def f(i):
+#             self[i].assign_all(value)
+#         return self
+#
+#     def get_address(self):
+#         return self.address
+#
+#
+# class SubMultiArray(object):
+#     def __init__(self, sizes, value_type, address, index):
+#         self.sizes = sizes
+#         self.value_type = value_type
+#         self.address = address + index * reduce(operator.mul, self.sizes)
+#
+#     def __getitem__(self, index):
+#         if len(self.sizes) == 2:
+#             return Array(self.sizes[1], self.value_type, \
+#                              self.address + index *  self.sizes[0])
+#         else:
+#             return SubMultiArray(self.sizes[1:], self.value_type, \
+#                                      self.address, index)
+#
+# class MultiArray(object):
+#     def __init__(self, sizes, value_type):
+#         self.sizes = sizes
+#         self.value_type = value_type
+#         self.array = Array(reduce(operator.mul, sizes), \
+#                                  value_type)
+#         if len(sizes) < 2:
+#             raise CompilerError('Use Array')
+#
+#     def __getitem__(self, index):
+#         return SubMultiArray(self.sizes[1:], self.value_type, \
+#                                  self.array.address, index)
+# #original(end)
+#
+# # class SubMultiArray(object):
+# #     def __init__(self, sizes, value_type, address, index):
+# #         self.sizes = sizes
+# #         self.value_type = value_type
+# #         self.address = address + index * reduce(operator.mul, self.sizes)
+# #         self.sub_cache = {}
+# #
+# #     def __getitem__(self, index):
+# #         if index not in self.sub_cache:
+# #             if len(self.sizes) == 2:
+# #                 self.sub_cache[index] = Array(self.sizes[1], self.value_type, self.address + index * self.sizes[1])
+# #             else:
+# #                 self.sub_cache[index] = SubMultiArray(self.sizes[1:], self.value_type, self.address, index)
+# #             return self.sub_cache[index]
+# #
+# #     def assign_all(self, value):
+# #         @library.for_range(self.sizes[0])
+# #         def f(i):
+# #             self[i].assign_all(value)
+# #         return self
+# #
+# # class MultiArray(SubMultiArray):
+# #     def __init__(self, sizes, value_type):
+# #         self.array = Array(reduce(operator.mul, sizes), value_type)
+# #         SubMultiArray.__init__(self, sizes, value_type, self.array.address, 0)
+# #         if len(sizes) < 2:
+# #             raise CompilerError('Use Array')
+# #
+# # class Matrix(MultiArray):
+# #     def __init__(self, rows, columns, value_type):
+# #         MultiArray.__init__(self, [rows, columns], value_type)
+#
+# # Marcel_patch (end)
 
 class VectorArray(object):
     def __init__(self, length, value_type, vector_size, address=None):
@@ -2604,6 +6591,7 @@ class MemValue(_mem):
     right_shift = lambda self,*args,**kwargs: self.read().right_shift(*args, **kwargs)
 
     bit_decompose = lambda self,*args,**kwargs: self.read().bit_decompose(*args, **kwargs)
+    e_bit_decompose = lambda self, *args, **kwargs: self.read().e_bit_decompose(*args, **kwargs)
 
     if_else = lambda self,*args,**kwargs: self.read().if_else(*args, **kwargs)
 

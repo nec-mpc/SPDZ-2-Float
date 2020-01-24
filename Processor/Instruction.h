@@ -9,7 +9,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/format.hpp>
 using namespace std;
+namespace mp = boost::multiprecision;
 
 #include "Processor/Data_Files.h"
 #include "Networking/Player.h"
@@ -220,6 +223,9 @@ enum
     // Open
     GSTARTOPEN = 0x1A0,
     GSTOPOPEN = 0x1A1,
+#if defined(EXTENDED_SPDZ_GF2N)
+    GE_MULT = 0x1A4,
+#endif
     GOPEN = 0x1A5,
     // Data access
     GTRIPLE = 0x150,
@@ -261,7 +267,31 @@ enum
     GSTOPPRIVATEOUTPUT = 0x1B9,
     // Commsec ops
     INITSECURESOCKET = 0x1BA,
-    RESPSECURESOCKET = 0x1BB
+    RESPSECURESOCKET = 0x1BB,
+#if defined(EXTENDED_SPDZ_Z2N)
+	E_PRINTFIXEDPLAIN = 0x1BC,
+	E_SKEW_BIT_DEC = 0x1D0,
+	E_SKEW_BIT_REC = 0x1D1,
+	E_SKEW_RING_REC = 0x1D2,
+	E_SKEW_BIT_INJ = 0x1D3,
+	E_MP_LDSI = 0x20D,
+	E_MP_LDI = 0x20E,
+	E_MP_ADDS = 0x300,
+	E_MP_ADDM = 0x301,
+	E_MP_ADDSI = 0x302,
+	E_MP_SUBS=0x303,
+	E_MP_SUBML = 0x304,
+	E_MP_SUBMR = 0x305,
+	E_MP_SUBSIL=0x306,
+	E_MP_SUBSIR=0x307,
+	E_MP_MULM=0x308,
+	E_MP_MULSI=0x309,
+	E_MP_OPEN=0x30A,
+	E_MP_MULT=0x30B,
+	E_MP_SKEW_BIT_DEC = 0x30C,
+	E_MP_SKEW_RING_REC = 0x30D,
+	E_MP_SKEW_BIT_INJ = 0x30E
+#endif
 };
 
 
@@ -283,7 +313,6 @@ enum SecrecyType {
 struct TempVars {
   gf2n ans2; Share<gf2n> Sans2;
   gfp ansp;  Share<gfp>  Sansp;
-  bigint aa,aa2;
   // INPUT and LDSI
   gfp rrp,tp,tmpp;
   gfp xip;
@@ -300,6 +329,7 @@ protected:
   int size;           // Vector size
   int r[4];           // Fixed parameter registers
   unsigned int n;     // Possible immediate value
+  mp::uint256_t mp_n; // Possible immediate multiprecision value
   vector<int>  start; // Values for a start/stop open
 
 public:

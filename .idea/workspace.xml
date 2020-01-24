@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="1678752a-bf4d-494d-a8ff-4e774fb6d2ac" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/Auth/MAC_Check.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Auth/MAC_Check.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Auth/MAC_Check.h" beforeDir="false" afterPath="$PROJECT_DIR$/Auth/MAC_Check.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Auth/Summer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Auth/Summer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Auth/fake-stuff.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Auth/fake-stuff.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONFIG" beforeDir="false" afterPath="$PROJECT_DIR$/CONFIG" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Check-Offline.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/GC/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/GC/instructions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/GC/program.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/GC/types.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/allocator.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/allocator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/circuit_oram.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/comparison.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/comparison.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/compilerLib.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/compilerLib.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/dijkstra.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/dijkstra.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/exceptions.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/exceptions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/floatingpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/floatingpoint.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/gs.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/gs.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/instructions.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/instructions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/instructions_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/instructions_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/library.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/library.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/oram.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/oram.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/path_oram.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/path_oram.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/permutation.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/permutation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/program.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/program.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/types.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/types.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Compiler/util.py" beforeDir="false" afterPath="$PROJECT_DIR$/Compiler/util.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExternalIO/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExternalIO/bankers-bonus-client.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExternalIO/bankers-bonus-commsec-client.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/AddableVector.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Ciphertext.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Ciphertext.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/DiscreteGauss.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/DiscreteGauss.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FFT.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FFT.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FFT_Data.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FFT_Data.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FHE_Keys.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FHE_Keys.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FHE_Params.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/FHE_Params.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Generator.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Matrix.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Matrix.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/NTL-Subs.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/NTL-Subs.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/NoiseBounds.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/NoiseBounds.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/P2Data.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/P2Data.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/PPData.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/PPData.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Plaintext.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Plaintext.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/QGroup.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/QGroup.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Random_Coins.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Random_Coins.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Ring.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Ring.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Ring_Element.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Ring_Element.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Rq_Element.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/Rq_Element.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHE/tools.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/CutAndChooseMachine.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/CutAndChooseMachine.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/DataSetup.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/DataSetup.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/DistDecrypt.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/DistDecrypt.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/DistKeyGen.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/DistKeyGen.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/EncCommit.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/EncCommit.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/FHE-Subroutines.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/FullSetup.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/FullSetup.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Multiplier.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Multiplier.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/PairwiseGenerator.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/PairwiseGenerator.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/PairwiseMachine.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/PairwiseMachine.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/PairwiseSetup.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/PairwiseSetup.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Player-Offline.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Producer.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Producer.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Proof.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Proof.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Prover.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Prover.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Reshare.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Reshare.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Sacrificing.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Sacrificing.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleDistDecrypt.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleDistDecrypt.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleEncCommit.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleEncCommit.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleGenerator.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleGenerator.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleMachine.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/SimpleMachine.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Verifier.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FHEOffline/Verifier.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Fake-Offline.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Setup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Math/Setup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Setup.h" beforeDir="false" afterPath="$PROJECT_DIR$/Math/Setup.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Share.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Math/Share.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Subroutines.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Subroutines.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Zp_Data.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/Zp_Data.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/bigint.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/bigint.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/gf2n.h" beforeDir="false" afterPath="$PROJECT_DIR$/Math/gf2n.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/gf2nlong.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Math/gf2nlong.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/gf2nlong.h" beforeDir="false" afterPath="$PROJECT_DIR$/Math/gf2nlong.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/gfp.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Math/gfp.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/gfp.h" beforeDir="false" afterPath="$PROJECT_DIR$/Math/gfp.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/modp.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Math/modp.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Networking/Player.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Networking/Player.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Networking/Player.h" beforeDir="false" afterPath="$PROJECT_DIR$/Networking/Player.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Networking/STS.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Networking/STS.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Player-Online.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Player-Online.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Data_Files.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Data_Files.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/ExternalClients.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/ExternalClients.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/ExternalClients.h" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/ExternalClients.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Instruction.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Instruction.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Instruction.h" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Instruction.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Machine.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Machine.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Online-Thread.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Online-Thread.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Processor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Processor.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Processor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Processor.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Processor/Program.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Processor/Program.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Programs/Source/demo.mpc" beforeDir="false" afterPath="$PROJECT_DIR$/Programs/Source/demo.mpc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Programs/Source/sql_query_3.mpc" beforeDir="false" afterPath="$PROJECT_DIR$/Programs/Source/sql_query_3.mpc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Programs/Source/sql_query_3_int.mpc" beforeDir="false" afterPath="$PROJECT_DIR$/Programs/Source/sql_query_3_int.mpc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/bmr-program-run-remote.sh" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/bmr-program-run-remote.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/bmr-program-run.sh" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/bmr-program-run.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/gen_input_fp.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/gen_input_fp.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/run-online.sh" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/run-online.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/setup-online.sh" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/setup-online.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/Config.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/Config.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/Config.h" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/Config.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/MMO.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/MMO.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/octetStream.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/octetStream.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/octetStream.h" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/octetStream.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/parse.h" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/parse.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/random.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/random.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tools/random.h" beforeDir="false" afterPath="$PROJECT_DIR$/Tools/random.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client-setup.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/compile.py" beforeDir="false" afterPath="$PROJECT_DIR$/compile.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spdz2-offline.cpp" beforeDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf>
+      <file leaf-file-name="compile.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/compile.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="478">
+              <caret line="43" column="57" lean-forward="true" selection-start-line="43" selection-start-column="57" selection-end-line="43" selection-end-column="57" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectFrameBounds">
+    <option name="x" value="1366" />
+    <option name="y" value="23" />
+    <option name="width" value="2194" />
+    <option name="height" value="1171" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="SPDZ-2" type="b2602c69:ProjectViewProjectNode" />
+              <item name="SPDZ-2" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1678752a-bf4d-494d-a8ff-4e774fb6d2ac" name="Default" comment="" />
+      <created>1565162220013</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1565162220013</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="1366" y="23" width="2194" height="1171" extended-state="0" />
+    <editor active="true" />
+    <layout>
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.15815862" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Event Log" side_tool="true" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Version Control" />
+      <window_info anchor="bottom" id="Python Console" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Terminal" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info id="Favorites" side_tool="true" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Message" order="0" />
+    </layout>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/compile.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="478">
+          <caret line="43" column="57" lean-forward="true" selection-start-line="43" selection-start-column="57" selection-end-line="43" selection-end-column="57" />
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

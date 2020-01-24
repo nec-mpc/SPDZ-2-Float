@@ -241,10 +241,6 @@ class Processor : public ProcessorBase
   void read_socket_ints(int client_id, const vector<int>& registers);
   // Setup client public key
   void read_client_public_key(int client_id, const vector<int>& registers);
-  void init_secure_socket(int client_id, const vector<int>& registers);
-  void init_secure_socket_internal(int client_id, const vector<int>& registers);
-  void resp_secure_socket(int client_id, const vector<int>& registers);
-  void resp_secure_socket_internal(int client_id, const vector<int>& registers);
   
   void write_socket(const RegType reg_type, const SecrecyType secrecy_type, const bool send_macs,
                              int socket_id, int message_type, const vector<int>& registers);
@@ -280,26 +276,33 @@ class Processor : public ProcessorBase
   friend ostream& operator<<(ostream& s,const Processor& P);
 
   private:
-    void maybe_decrypt_sequence(int client_id);
-    void maybe_encrypt_sequence(int client_id);
 
 #if defined(EXTENDED_SPDZ_GFP)
   public:
 
   void POpen_Ext(const vector<int>& reg,int size);
+  void MPOpen_Ext(const vector<int>& reg,int size);
   void PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c);
   void PInput_Ext(Share<gfp>& input_value, const int input_party_id);
   void PMult_Ext(const vector<int>& reg, int size);
+  void MPMult_Ext(const vector<int>& reg, int size);
   void PMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gfp> > & products);
   void PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void MPAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
+  void MPSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c);
   void PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c);
+  void MPSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c);
   void PLdsi_Ext(gfp& value, Share<gfp>& share);
+  void MPLdsi_Ext(gfp& value, Share<gfp>& share);
   void PBit_Ext(Share<gfp>& share);
   void PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse);
   void PMulm_Ext(Share<gfp>& sec_product, const Share<gfp> & sec_factor, const gfp & clr_factor);
+  void MPMulm_Ext(Share<gfp>& sec_product, const Share<gfp> & sec_factor, const gfp & clr_factor);
   void PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b);
+  void MPAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b);
   void PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b);
+  void MPSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b);
   void PMovs_Ext(Share<gfp>& dest, const Share<gfp>& source);
 
   void * spdz_gfp_ext_handle;
@@ -329,6 +332,17 @@ class Processor : public ProcessorBase
   void * spdz_gf2n_ext_handle;
 
 #endif
+
+#if defined(EXTENDED_SPDZ_Z2N)
+  void Skew_Bit_Decomp_Ext(const vector<int>& dest_reg, const Share<gfp>& src_ring, int size);
+  void MP_Skew_Bit_Decomp_Ext(const vector<int>& dest_reg, const Share<gfp>& src_ring, int size);
+  void Skew_Bit_Recomp_Ext(const vector<int>& dest_reg, const Share<gf2n>& src_bit, int size);
+  void Skew_Bit_Inject_Ext(const vector<int>& dest_reg, const Share<gf2n>& src_bit, int size);
+  void Skew_Ring_Recomp_Ext(Share<gfp>& dest_ring, const vector<int>& src_reg, int size);
+  void MP_Skew_Ring_Recomp_Ext(Share<gfp>& dest_ring, const vector<int>& src_reg, int size);
+  void MP_Skew_Bit_Inject_Ext(const vector<int>& dest_reg, const Share<gf2n>& src_bit, int size);
+#endif
+
 };
 
 #if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
@@ -346,33 +360,64 @@ public:
 
     int (*x_offline)(void * handle, const int offline_size);
 
-    int (*x_opens)(void * handle, const size_t share_count, const mp_limb_t * shares, mp_limb_t * opens, int verify);
+    int (*x_opens)(void * handle, const size_t share_count, const uint64_t * shares, uint64_t * opens, int verify);
 
-    int (*x_closes)(void * handle, const int party_id, const size_t value_count, const mp_limb_t * values, mp_limb_t * shares);
+    int (*x_closes)(void * handle, const int party_id, const size_t value_count, const uint64_t * values, uint64_t * shares);
 
-    int (*x_triple)(void * handle, mp_limb_t * a, mp_limb_t * b, mp_limb_t * c);
+    int (*x_triple)(void * handle, uint64_t * a, uint64_t * b, uint64_t * c);
 
 	int (*x_verify)(void * handle, int * error);
 
-	int (*x_input)(void * handle, const int input_of_pid, const size_t num_of_inputs, mp_limb_t * inputs);
+	int (*x_input)(void * handle, const int input_of_pid, const size_t num_of_inputs, uint64_t * inputs);
 
-	int (*x_mult)(void * handle, const size_t share_count, const mp_limb_t * xshares, const mp_limb_t * yshares, mp_limb_t * products, int verify);
+	int (*x_mult)(void * handle, const size_t share_count, const uint64_t * xshares, const uint64_t * yshares, uint64_t * products, int verify);
 
-    int (*x_mix_add)(void * handle, const mp_limb_t * share, const mp_limb_t * scalar, mp_limb_t * sum);
+    int (*x_mix_add)(void * handle, const uint64_t * share, const uint64_t * scalar, uint64_t * sum);
 
-    int (*x_mix_sub_scalar)(void * handle, const mp_limb_t * share, const mp_limb_t * scalar, mp_limb_t * diff);
+    int (*x_mix_sub_scalar)(void * handle, const uint64_t * share, const uint64_t * scalar, uint64_t * diff);
 
-    int (*x_mix_sub_share)(void * handle, const mp_limb_t * scalar, const mp_limb_t * share, mp_limb_t * diff);
+    int (*x_mix_sub_share)(void * handle, const uint64_t * scalar, const uint64_t * share, uint64_t * diff);
 
-    int (*x_mix_mul)(void * handle, const mp_limb_t * share, const mp_limb_t * scalar, mp_limb_t * product);
+    int (*x_mix_mul)(void * handle, const uint64_t * share, const uint64_t * scalar, uint64_t * product);
 
-    int (*x_adds)(void * handle, const mp_limb_t * share1, const mp_limb_t * share2, mp_limb_t * sum);
+    int (*x_adds)(void * handle, const uint64_t * share1, const uint64_t * share2, uint64_t * sum);
 
-    int (*x_subs)(void * handle, const mp_limb_t * share1, const mp_limb_t * share2, mp_limb_t * diff);
+    int (*x_subs)(void * handle, const uint64_t * share1, const uint64_t * share2, uint64_t * diff);
 
-    int (*x_bit)(void * handle, mp_limb_t * share);
+    int (*x_bit)(void * handle, uint64_t * share);
 
-    int (*x_inverse)(void * handle, mp_limb_t * share_value, mp_limb_t * share_inverse);
+    int (*x_inverse)(void * handle, uint64_t * share_value, uint64_t * share_inverse);
+#if defined(EXTENDED_SPDZ_Z2N)
+    int (*x_skew_decomp)(void * handle, const size_t bits_count, const uint64_t * ring_shares, uint64_t * bit_shares);
+
+    int (*x_skew_recomp)(void * handle, const size_t bits_count, const uint64_t * bits_shares, uint64_t * ring_shares);
+
+	int (*x_skew_inject)(void * handle, const uint64_t * bit_shares, uint64_t * ring_shares);
+
+	int (*x_mp_closes)(void * handle, const int party_id, const size_t value_count, const uint64_t * values, uint64_t * shares);
+
+	int (*x_mp_opens)(void * handle, const size_t share_count, const uint64_t * shares, uint64_t * opens, int verify);
+
+	int (*x_mp_adds)(void * handle, const uint64_t * share1, const uint64_t * share2, uint64_t * sum);
+
+	int (*x_mp_mix_add)(void * handle, const uint64_t * share, const uint64_t * scalar, uint64_t * sum);
+
+	int (*x_mp_subs)(void * handle, const uint64_t * share1, const uint64_t * share2, uint64_t * diff);
+
+	int (*x_mp_mix_sub_share)(void * handle, const uint64_t * scalar, const uint64_t * share, uint64_t * diff);
+
+	int (*x_mp_mix_sub_scalar)(void * handle, const uint64_t * share, const uint64_t * scalar, uint64_t * diff);
+
+	int (*x_mp_mix_mul)(void * handle, const uint64_t * share, const uint64_t * scalar, uint64_t * product);
+
+	int (*x_mp_mult)(void * handle, const size_t share_count, const uint64_t * xshares, const uint64_t * yshares, uint64_t * products, int verify);
+
+	int (*x_mp_skew_decomp)(void * handle, const size_t bits_count, const uint64_t * ring_shares, uint64_t * bit_shares);
+
+	int (*x_mp_skew_recomp)(void * handle, const size_t bits_count, const uint64_t * bits_shares, uint64_t * ring_shares);
+
+	int (*x_mp_skew_inject)(void * handle, const uint64_t * bit_shares, uint64_t * ring_shares);
+#endif
 
     static int load_extension_method(const char * method_name, void ** proc_addr, void * libhandle);
 };

@@ -68,7 +68,11 @@ class Program(object):
         self.types = {}
         self.to_merge = [Compiler.instructions.asm_open_class, \
                          Compiler.instructions.gasm_open_class, \
-                         Compiler.instructions.e_mult_class]
+                         Compiler.instructions.e_mult_class, \
+                         Compiler.instructions.ge_mult_class, \
+                         Compiler.instructions.e_asm_mp_open_class, \
+                         Compiler.instructions.e_mp_mult_class]
+
         Program.prog = self
         
         self.reset_values()
@@ -540,6 +544,12 @@ class Tape:
                 # the next call is necessary for allocation later even without merging
                 merger = al.Merger(block, options, \
                                    tuple(self.program.to_merge))
+
+                ### Hikaru add (start)
+                # print("target_merge:")
+                # print(tuple(self.program.to_merge))
+                ### Hikaru add (start)
+
                 if options.dead_code_elimination:
                     if len(block.instructions) > 10000:
                         print 'Eliminate dead code...'

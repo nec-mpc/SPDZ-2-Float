@@ -1,15 +1,15 @@
-# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
+# Confidential:
+# (C) 2017 University of Bristol. See License.txt
 
 import itertools
 from random import randint
 import time
 import inspect
 import functools
-import copy
 from Compiler.exceptions import *
 from Compiler.config import *
 from Compiler import util
-from Compiler import tools
+import copy
 
 
 ###
@@ -56,8 +56,6 @@ opcodes = dict(
     JOIN_TAPE = 0x1A,
     CRASH = 0x1B,
     USE_PREP = 0x1C,
-    STARTGRIND = 0x1D,
-    STOPGRIND = 0x1E,
     # Addition
     ADDC = 0x20,
     ADDS = 0x21,
@@ -83,15 +81,19 @@ opcodes = dict(
     MODCI = 0x37,
     LEGENDREC = 0x38,
     DIGESTC = 0x39,
+    E_STARTMULT = 0x40,
+    E_STOPMULT = 0x41,
+    E_MULTI_STARTMULT = 0x42,
+    E_MULTI_STOPMULT = 0x43,
     GMULBITC = 0x136,
     GMULBITM = 0x137,
     # Open
     STARTOPEN = 0xA0,
     STOPOPEN = 0xA1,
-    OPEN = 0xA5,
-    E_STARTMULT = 0xA2,
-    E_STOPMULT = 0xA3,
+    E_STARTOPEN = 0xA2,
+    E_STOPOPEN = 0xA3,
     E_MULT = 0xA4,
+    OPEN = 0xA5,
     # Data access
     TRIPLE = 0x50,
     BIT = 0x51,
@@ -140,7 +142,6 @@ opcodes = dict(
     EQC = 0x97,
     JMPI = 0x98,
     # Integers
-    BITDECINT = 0x99,
     LDINT = 0x9A,
     ADDINT = 0x9B,
     SUBINT = 0x9C,
@@ -165,13 +166,59 @@ opcodes = dict(
     PRINTCHRINT = 0xBA,
     PRINTSTRINT = 0xBB,
     PRINTFLOATPLAIN = 0xBC,
+    E_PRINTFIXEDPLAIN = 0x1BC,
     WRITEFILESHARE = 0xBD,    
-    READFILESHARE = 0xBE,     
+    READFILESHARE = 0xBE,
+    E_READ_FROM_FILE = 0xBF,
+    GE_READ_FROM_FILE = 0x1BF,
     GBITDEC = 0x184,
     GBITCOM = 0x185,
+    # bit de-compostion (BIU-NEC)
+    E_BITDEC = 0x186,
+    E_SKEW_DEC = 0x187,
+    # bit injection (BIU-NEC)
+    E_BITINJ = 0x188,
+    E_SKEW_INJ = 0x189,
+    # bit re-composition (BIU-NEC)
+    E_BITREC = 0x190,
+    E_SKEW_REC = 0x191,
+    E_POST_REC = 0x192,
     # Secure socket
     INITSECURESOCKET = 0x1BA,
-    RESPSECURESOCKET = 0x1BB
+    RESPSECURESOCKET = 0x1BB,
+    # added-extensions
+    E_SKEW_BIT_DEC = 0x1D0,
+    E_SKEW_BIT_REC = 0x1D1,
+    E_SKEW_RING_REC = 0x1D2,
+    E_SKEW_BIT_INJ = 0x1D3,
+    E_INPUT_SHARE_INT = 0x203,
+    GE_INPUT_SHARE_INT = 0x303,
+    E_INPUT_SHARE_FIX = 0x204,
+    E_INPUT_CLEAR_INT = 0x205,
+    E_INPUT_CLEAR_FIX = 0x206,
+    E_VERIFY_OPTIONAL_SUGGEST = 0x207,
+    E_VERIFY_FINAL = 0x208,
+    #E_START_MULT = 0x209,
+    #E_STOP_MULT = 0x20A,
+    E_START_OPEN = 0x20B,
+    E_STOP_OPEN = 0x20C,
+    E_MP_LDSI = 0x20D,
+    E_MP_LDI = 0x20E,
+    E_MP_ADDS = 0x300,
+    E_MP_ADDM = 0x301,
+    E_MP_ADDSI = 0x302,
+    E_MP_SUBS=0x303,
+    E_MP_SUBML = 0x304,
+    E_MP_SUBMR = 0x305,
+    E_MP_SUBSIL=0x306,
+    E_MP_SUBSIR=0x307,
+    E_MP_MULM=0x308,
+    E_MP_MULSI=0x309,
+    E_MP_OPEN=0x30A,
+    E_MP_MULT=0x30B,
+    E_MP_SKEW_BIT_DEC = 0x30C,
+    E_MP_SKEW_RING_REC = 0x30D,
+    E_MP_SKEW_BIT_INJ = 0x30E
 )
 
 
@@ -281,6 +328,7 @@ def gf2n(instruction):
         except KeyError:
             raise CompilerError('Cannot decorate instruction %s' % instruction)
 
+    ### added to merge NEC and BIU (start)
     def reformat(arg_format):
         if isinstance(arg_format, list):
             __format = []
@@ -293,6 +341,7 @@ def gf2n(instruction):
         else:
             for __f in arg_format.args:
                 reformat(__f)
+    ### added to merge NEC and BIU (end)
 
     class GF2N_Instruction(instruction_cls):
         __doc__ = instruction_cls.__doc__.replace('c_', 'c^g_').replace('s_', 's^g_')
@@ -311,6 +360,13 @@ def gf2n(instruction):
         else:
             arg_format = copy.deepcopy(instruction_cls.arg_format)
             reformat(arg_format)
+            # __format = []
+            # for __f in instruction_cls.arg_format:
+            #     if __f in ('int', 'p', 'ci', 'str'):
+            #         __format.append(__f)
+            #     else:
+            #         __format.append(__f[0] + 'g' + __f[1:])
+            # arg_format = __format
 
         def is_gf2n(self):
             return True
@@ -536,7 +592,7 @@ class Instruction(object):
                 raise CompilerError('Invalid argument "%s" to instruction: %s'
                     % (e.arg, self) + '\n' + e.msg)
             except KeyError as e:
-                raise CompilerError('Unknown argument %s for instruction %s' % (f, self))
+                raise CompilerError('Incorrect number of arguments for instruction %s' % (self))
     
     def get_used(self):
         """ Return the set of registers that are read in this instruction. """
@@ -552,11 +608,7 @@ class Instruction(object):
         return ""
 
     def has_var_args(self):
-        try:
-            len(self.arg_format)
-            return False
-        except:
-            return True
+        return False
 
     def is_vec(self):
         return False

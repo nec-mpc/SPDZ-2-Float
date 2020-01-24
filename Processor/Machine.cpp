@@ -16,7 +16,7 @@
 using namespace std;
 
 Machine::Machine(int my_number, Names& playerNames,
-    string progname_str, string memtype, int lgp, int lg2, bool direct,
+    string progname_str, string memtype, int /*lgp*/, int /*lg2*/, bool direct,
     int opening_sum, bool parallel, bool receive_threads, int max_broadcast)
   : my_number(my_number), N(playerNames), nthreads(0), tn(0), numt(0), usage_unknown(false),
     progname(progname_str), direct(direct), opening_sum(opening_sum), parallel(parallel),
@@ -28,31 +28,31 @@ Machine::Machine(int my_number, Names& playerNames,
     this->max_broadcast = N.num_players();
 
   // Set up the fields
-  prep_dir_prefix = get_prep_dir(N.num_players(), lgp, lg2);
-  read_setup(prep_dir_prefix);
+  // prep_dir_prefix = get_prep_dir(N.num_players(), lgp, lg2);
+  // read_setup(prep_dir_prefix);
 
   char filename[1024];
-  int nn;
-
-  sprintf(filename, (prep_dir_prefix + "Player-MAC-Keys-P%d").c_str(), my_number);
-  inpf.open(filename);
-  if (inpf.fail())
-  {
-    cerr << "Could not open MAC key file. Perhaps it needs to be generated?\n";
-    throw file_error(filename);
-  }
-  inpf >> nn;
-  if (nn!=N.num_players())
-    { cerr << "KeyGen was last run with " << nn << " players." << endl;
-      cerr << "  - You are running Online with " << N.num_players() << " players." << endl;
-      exit(1);
-    }
-
-  alphapi.input(inpf,true);
-  alpha2i.input(inpf,true);
-  cerr << "MAC Key p = " << alphapi << endl;
-  cerr << "MAC Key 2 = " << alpha2i << endl;
-  inpf.close();
+//  int nn;
+//
+//  sprintf(filename, (prep_dir_prefix + "Player-MAC-Keys-P%d").c_str(), my_number);
+//  inpf.open(filename);
+//  if (inpf.fail())
+//  {
+//    cerr << "Could not open MAC key file. Perhaps it needs to be generated?\n";
+//    throw file_error(filename);
+//  }
+//  inpf >> nn;
+//  if (nn!=N.num_players())
+//    { cerr << "KeyGen was last run with " << nn << " players." << endl;
+//      cerr << "  - You are running Online with " << N.num_players() << " players." << endl;
+//      exit(1);
+//    }
+//
+//  alphapi.input(inpf,true);
+//  alpha2i.input(inpf,true);
+//  cerr << "MAC Key p = " << alphapi << endl;
+//  cerr << "MAC Key 2 = " << alpha2i << endl;
+//  inpf.close();
 
 
   // Initialize the global memory
@@ -244,8 +244,10 @@ void Machine::run()
   char compiler[1000];
   inpf.get();
   inpf.getline(compiler, 1000);
-  if (compiler[0] != 0)
-    cerr << "Compiler: " << compiler << endl;
+  // statistics comment out (start)
+//  if (compiler[0] != 0)
+//    cerr << "Compiler: " << compiler << endl;
+  // statistics comment out (end)
   inpf.close();
 
   finish_timer.start();
@@ -258,8 +260,9 @@ void Machine::run()
         pthread_cond_signal(&server_ready[i]);
       pthread_mutex_unlock(&t_mutex[i]);
     }
-
-  cerr << "Waiting for all clients to finish" << endl;
+  // statistics comment out (start)
+//  cerr << "Waiting for all clients to finish" << endl;
+  // statistics comment out (end)
   // Wait until all clients have signed out
   for (int i=0; i<nthreads; i++)
     {
@@ -280,53 +283,57 @@ void Machine::run()
   cerr << "Process timer: " << proc_timer.elapsed() << endl;
   print_timers();
 
-  if (opening_sum < N.num_players() && !direct)
-    cerr << "Summed at most " << opening_sum << " shares at once with indirect communication" << endl;
-  else
-    cerr << "Summed all shares at once" << endl;
+  // statistics comment out (start)
+//  if (opening_sum < N.num_players() && !direct)
+//    cerr << "Summed at most " << opening_sum << " shares at once with indirect communication" << endl;
+//  else
+//    cerr << "Summed all shares at once" << endl;
+//
+//  if (max_broadcast < N.num_players() && !direct)
+//    cerr << "Send to at most " << max_broadcast << " parties at once" << endl;
+//  else
+//    cerr << "Full broadcast" << endl;
+//
+//  // Reduce memory size to speed up
+//  int max_size = 1 << 20;
+//  if (M2.size_s() > max_size)
+//    M2.resize_s(max_size);
+//  if (Mp.size_s() > max_size)
+//    Mp.resize_s(max_size);
+//
+//  // Write out the memory to use next time
+//  char filename[1024];
+//  sprintf(filename,PREP_DIR "Memory-P%d",my_number);
+//  ofstream outf(filename,ios::out | ios::binary);
+//  outf << M2 << Mp << Mi;
+//  outf.close();
+//
+//  extern unsigned long long sent_amount, sent_counter;
+//  cerr << "Data sent = " << sent_amount << " bytes in "
+//      << sent_counter << " calls,";
+//  cerr << sent_amount / sent_counter / N.num_players()
+//      << " bytes per call" << endl;
+//
+//  for (int dtype = 0; dtype < N_DTYPE; dtype++)
+//    {
+//      cerr << "Num " << Data_Files::dtype_names[dtype] << "\t=";
+//      for (int field_type = 0; field_type < N_DATA_FIELD_TYPE; field_type++)
+//        cerr << " " << pos.files[field_type][dtype];
+//      cerr << endl;
+//   }
+//  for (int field_type = 0; field_type < N_DATA_FIELD_TYPE; field_type++)
+//    {
+//      cerr << "Num " << Data_Files::long_field_names[field_type] << " Inputs\t=";
+//      for (int i = 0; i < N.num_players(); i++)
+//        cerr << " " << pos.inputs[i][field_type];
+//      cerr << endl;
+//    }
+  // statistics comment out (end)
 
-  if (max_broadcast < N.num_players() && !direct)
-    cerr << "Send to at most " << max_broadcast << " parties at once" << endl;
-  else
-    cerr << "Full broadcast" << endl;
-
-  // Reduce memory size to speed up
-  int max_size = 1 << 20;
-  if (M2.size_s() > max_size)
-    M2.resize_s(max_size);
-  if (Mp.size_s() > max_size)
-    Mp.resize_s(max_size);
-
-  // Write out the memory to use next time
-  char filename[1024];
-  sprintf(filename,PREP_DIR "Memory-P%d",my_number);
-  ofstream outf(filename,ios::out | ios::binary);
-  outf << M2 << Mp << Mi;
-  outf.close();
-
-  extern unsigned long long sent_amount, sent_counter;
-  cerr << "Data sent = " << sent_amount << " bytes in "
-      << sent_counter << " calls,";
-  cerr << sent_amount / sent_counter / N.num_players()
-      << " bytes per call" << endl;
-
-  for (int dtype = 0; dtype < N_DTYPE; dtype++)
-    {
-      cerr << "Num " << Data_Files::dtype_names[dtype] << "\t=";
-      for (int field_type = 0; field_type < N_DATA_FIELD_TYPE; field_type++)
-        cerr << " " << pos.files[field_type][dtype];
-      cerr << endl;
-   }
-  for (int field_type = 0; field_type < N_DATA_FIELD_TYPE; field_type++)
-    {
-      cerr << "Num " << Data_Files::long_field_names[field_type] << " Inputs\t=";
-      for (int i = 0; i < N.num_players(); i++)
-        cerr << " " << pos.inputs[i][field_type];
-      cerr << endl;
-    }
-
-  cerr << "Total cost of program:" << endl;
-  pos.print_cost();
+  // statistics comment out (start)
+//  cerr << "Total cost of program:" << endl;
+//  pos.print_cost();
+  // statistics comment out (end)
 
 #ifndef INSECURE
   Data_Files df(N.my_num(), N.num_players(), prep_dir_prefix);

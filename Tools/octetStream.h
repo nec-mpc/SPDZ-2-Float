@@ -27,12 +27,8 @@
 #include <vector>
 #include <stdio.h>
 #include <iostream>
-
-#include <sodium.h>
  
 using namespace std;
-
-class bigint;
 
 class octetStream
 {
@@ -69,8 +65,6 @@ class octetStream
   octetStream hash()   const;
   // output must have length at least HASH_SIZE
   void hash(octetStream& output)   const;
-  // The following produces a check sum for debugging purposes
-  bigint check_sum(int req_bytes=crypto_hash_BYTES)       const;
 
   void concat(const octetStream& os);
 
@@ -111,9 +105,6 @@ class octetStream
   void store_int(size_t a, int n_bytes);
   size_t get_int(int n_bytes);
 
-  void store(const bigint& x);
-  void get(bigint& ans);
-
   // works for all statically allocated types
   template <class T>
   void serialize(const T& x) { append((octet*)&x, sizeof(x)); }
@@ -132,19 +123,6 @@ class octetStream
   void Send(int socket_num) const;
   void Receive(int socket_num);
   void ReceiveExpected(int socket_num, size_t expected);
-
-  // In-place authenticated encryption using sodium; key of length crypto_generichash_BYTES
-  // ciphertext = Enc(message) | MAC | counter
-  //
-  // This is much like 'encrypt' but uses a deterministic counter for the nonce,
-  // allowing enforcement of message order.
-  void encrypt_sequence(const octet* key, uint64_t counter);
-  void decrypt_sequence(const octet* key, uint64_t counter);
-
-  // In-place authenticated encryption using sodium; key of length crypto_secretbox_KEYBYTES
-  // ciphertext = Enc(message) | MAC | nonce
-  void encrypt(const octet* key);
-  void decrypt(const octet* key);
 
   void input(istream& s);
   void output(ostream& s);

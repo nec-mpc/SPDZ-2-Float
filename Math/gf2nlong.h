@@ -18,7 +18,7 @@ using namespace std;
 
 #include "Tools/random.h"
 #include "Math/field_types.h"
-#include "Math/bigint.h"
+//#include "Math/bigint.h"
 
 
 class int128
@@ -55,6 +55,7 @@ public:
     int128& operator&=(const int128& other)     { a &= other.a; return *this; }
 
     friend ostream& operator<<(ostream& s, const int128& a);
+    friend istream& operator>>(istream& s,int128& a);
 
     static int128 ones(int n);
     bool get_bit(int i) const;
@@ -222,10 +223,8 @@ class gf2n_long
       return s;
     }
   friend istream& operator>>(istream& s,gf2n_long& x)
-    { bigint tmp;
-      s >> hex >> tmp >> dec;
-      x.a = 0;
-      mpn_copyi((word*)&x.a.a, tmp.get_mpz_t()->_mp_d, tmp.get_mpz_t()->_mp_size);
+    {
+      s >> hex >> x.a >> dec;
       return s;
     }
 

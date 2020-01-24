@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
     opt.get("-N")->getInt(nparties);
     opt.get("-lgp")->getInt(lgp);
     opt.get("-lg2")->getInt(lg2);
-    read_setup(nparties, lgp, lg2);
+//    read_setup(nparties, lgp, lg2);
 
 	std::string input_name, output_name;
 	bool use_stdin = false;
@@ -91,10 +91,10 @@ int main(int argc, const char** argv) {
 
 	int n; *in >> n;
 	for (int i = 0; i < n; ++i) {
-		bigint a;
+		uint64_t a;
 		*in >> a;
 		gfp b;
-		to_gfp(b, a);
+		b.assign(a);
 		b.output(*out, false);
 	}
 	if (in->fail())

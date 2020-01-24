@@ -2,11 +2,8 @@
 
 
 #include "Processor/Processor.h"
-#include "Networking/STS.h"
 #include "Auth/MAC_Check.h"
 
-#include "Auth/fake-stuff.h"
-#include <sodium.h>
 #include <string>
 
 #if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
@@ -35,7 +32,8 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ_GFP)
     spdz_gfp_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GFP extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 100, 100, 100))
+//	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "gfp127", 100, 100, 100))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gfp_ext_handle, P.my_num(), P.num_players(), thread_num, "Z2n_Ring", 100, 100, 100))
 	{
 		cerr << "SPDZ GFP extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -47,7 +45,8 @@ Processor::Processor(int thread_num,Data_Files& DataF,Player& P,
 #if defined(EXTENDED_SPDZ_GF2N)
 	spdz_gf2n_ext_handle = NULL;
 	cout << "Processor " << thread_num << " SPDZ GF2N extension library initializing." << endl;
-	if(0 != (*the_ext_lib.x_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), thread_num, "gf2n64", 0, 0, 100))
+//	if(0 != (*the_ext_lib.x_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), thread_num, "gf2n64", 0, 0, 100))
+	if(0 != (*the_ext_lib.x_init)(&spdz_gf2n_ext_handle, P.my_num(), P.num_players(), thread_num, "Z2_Bool", 0, 0, 100))
 	{
 		cerr << "SPDZ GF2N extension library initialization failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -116,7 +115,6 @@ void Processor::reset(const Program& program,int arg)
 // RegType and SecrecyType determines how registers are read and the socket stream is packed.
 // If message_type is > 0, send message_type in bytes 0 - 3, to allow an external client to
 //  determine the data structure being sent in a message.
-// Encryption is enabled if key material (for DH Auth Encryption and/or STS protocol) has been already setup.
 void Processor::write_socket(const RegType reg_type, const SecrecyType secrecy_type, const bool send_macs,
                              int socket_id, int message_type, const vector<int>& registers)
 {
@@ -157,15 +155,7 @@ void Processor::write_socket(const RegType reg_type, const SecrecyType secrecy_t
     }
   }
 
-  // Apply DH Auth encryption if session keys have been created.
-  map<int,octet*>::iterator it = external_clients.symmetric_client_keys.find(socket_id);
-  if (it != external_clients.symmetric_client_keys.end()) {
-    socket_stream.encrypt(it->second);
-  }
-
-  // Apply STS commsec encryption if session keys have been created.
   try {
-    maybe_encrypt_sequence(socket_id);
     socket_stream.Send(external_clients.external_client_sockets[socket_id]);
   }
     catch (bad_value& e) {
@@ -187,7 +177,6 @@ void Processor::read_socket_ints(int client_id, const vector<int>& registers)
   int m = registers.size();
   socket_stream.reset_write_head();
   socket_stream.Receive(external_clients.external_client_sockets[client_id]);
-  maybe_decrypt_sequence(client_id);
   for (int i = 0; i < m; i++)
   {
     int val;
@@ -209,7 +198,6 @@ void Processor::read_socket_vector(int client_id, const vector<int>& registers)
   int m = registers.size();
   socket_stream.reset_write_head();
   socket_stream.Receive(external_clients.external_client_sockets[client_id]);
-  maybe_decrypt_sequence(client_id);
   for (int i = 0; i < m; i++)
   {
     get_C_ref<T>(registers[i]).unpack(socket_stream);
@@ -228,13 +216,7 @@ void Processor::read_socket_private(int client_id, const vector<int>& registers,
   int m = registers.size();
   socket_stream.reset_write_head();
   socket_stream.Receive(external_clients.external_client_sockets[client_id]);
-  maybe_decrypt_sequence(client_id);
 
-  map<int,octet*>::iterator it = external_clients.symmetric_client_keys.find(client_id);
-  if (it != external_clients.symmetric_client_keys.end())
-  {
-    socket_stream.decrypt(it->second);
-  }
   for (int i = 0; i < m; i++)
   {
     temp.ansp.unpack(socket_stream);
@@ -257,128 +239,8 @@ void Processor::read_client_public_key(int client_id, const vector<int>& registe
   for(unsigned int i = 0; i < registers.size(); i++) {
     client_public_key[i] = (int&)get_Ci_ref(registers[i]);
   }
-
-  external_clients.generate_session_key_for_client(client_id, client_public_key);  
 }
 
-void Processor::init_secure_socket_internal(int client_id, const vector<int>& registers) {
-  external_clients.symmetric_client_commsec_send_keys.erase(client_id);
-  external_clients.symmetric_client_commsec_recv_keys.erase(client_id);
-  unsigned char client_public_bytes[crypto_sign_PUBLICKEYBYTES];
-  sts_msg1_t m1;
-  sts_msg2_t m2;
-  sts_msg3_t m3;
-
-  external_clients.load_server_keys_once();
-  external_clients.require_ed25519_keys();
-
-  // Validate inputs and state
-  if(registers.size() != 8) {
-      throw "Invalid call to init_secure_socket.";
-  }
-  if (client_id >= (int)external_clients.external_client_sockets.size())
-  {
-    cerr << "No socket connection exists for client id " << client_id << endl;
-    throw "No socket connection exists for client";
-  }
-
-  // Extract client long term public key into bytes
-  vector<int> client_public_key (registers.size(), 0);
-  for(unsigned int i = 0; i < registers.size(); i++) {
-    client_public_key[i] = (int&)get_Ci_ref(registers[i]);
-  }
-  external_clients.curve25519_ints_to_bytes(client_public_bytes,  client_public_key);
-
-  // Start Station to Station Protocol
-  STS ke(client_public_bytes, external_clients.server_publickey_ed25519, external_clients.server_secretkey_ed25519);
-  m1 = ke.send_msg1();
-  socket_stream.reset_write_head();
-  socket_stream.append(m1.bytes, sizeof m1.bytes);
-  socket_stream.Send(external_clients.external_client_sockets[client_id]);
-  socket_stream.ReceiveExpected(external_clients.external_client_sockets[client_id],
-                                96);
-  socket_stream.consume(m2.pubkey, sizeof m2.pubkey);
-  socket_stream.consume(m2.sig, sizeof m2.sig);
-  m3 = ke.recv_msg2(m2);
-  socket_stream.reset_write_head();
-  socket_stream.append(m3.bytes, sizeof m3.bytes);
-  socket_stream.Send(external_clients.external_client_sockets[client_id]);
-
-  // Use results of STS to generate send and receive keys.
-  vector<unsigned char> sendKey = ke.derive_secret(crypto_secretbox_KEYBYTES);
-  vector<unsigned char> recvKey = ke.derive_secret(crypto_secretbox_KEYBYTES);
-  external_clients.symmetric_client_commsec_send_keys[client_id] = make_pair(sendKey,0);
-  external_clients.symmetric_client_commsec_recv_keys[client_id] = make_pair(recvKey,0);
-}
-
-void Processor::init_secure_socket(int client_id, const vector<int>& registers) {
-
-  try {
-      init_secure_socket_internal(client_id, registers);
-  } catch (char const *e) {
-      cerr << "STS initiator role failed with: " << e << endl;
-      throw Processor_Error("STS initiator failed");
-  }
-}
-
-void Processor::resp_secure_socket(int client_id, const vector<int>& registers) {
-  try {
-      resp_secure_socket_internal(client_id, registers);
-  } catch (char const *e) {
-      cerr << "STS responder role failed with: " << e << endl;
-      throw Processor_Error("STS responder failed");
-  }
-}
-
-void Processor::resp_secure_socket_internal(int client_id, const vector<int>& registers) {
-  external_clients.symmetric_client_commsec_send_keys.erase(client_id);
-  external_clients.symmetric_client_commsec_recv_keys.erase(client_id);
-  unsigned char client_public_bytes[crypto_sign_PUBLICKEYBYTES];
-  sts_msg1_t m1;
-  sts_msg2_t m2;
-  sts_msg3_t m3;
-
-  external_clients.load_server_keys_once();
-  external_clients.require_ed25519_keys();
-
-  // Validate inputs and state
-  if(registers.size() != 8) {
-      throw "Invalid call to init_secure_socket.";
-  }
-  if (client_id >= (int)external_clients.external_client_sockets.size())
-  {
-    cerr << "No socket connection exists for client id " << client_id << endl;
-    throw "No socket connection exists for client";
-  }
-  vector<int> client_public_key (registers.size(), 0);
-  for(unsigned int i = 0; i < registers.size(); i++) {
-    client_public_key[i] = (int&)get_Ci_ref(registers[i]);
-  }
-  external_clients.curve25519_ints_to_bytes(client_public_bytes,  client_public_key);
-
-  // Start Station to Station Protocol for the responder
-  STS ke(client_public_bytes, external_clients.server_publickey_ed25519, external_clients.server_secretkey_ed25519);
-  socket_stream.reset_read_head();
-  socket_stream.ReceiveExpected(external_clients.external_client_sockets[client_id],
-                                32);
-  socket_stream.consume(m1.bytes, sizeof m1.bytes);
-  m2 = ke.recv_msg1(m1);
-  socket_stream.reset_write_head();
-  socket_stream.append(m2.pubkey, sizeof m2.pubkey);
-  socket_stream.append(m2.sig, sizeof m2.sig);
-  socket_stream.Send(external_clients.external_client_sockets[client_id]);
-
-  socket_stream.ReceiveExpected(external_clients.external_client_sockets[client_id],
-                                64);
-  socket_stream.consume(m3.bytes, sizeof m3.bytes);
-  ke.recv_msg3(m3);
-
-  // Use results of STS to generate send and receive keys.
-  vector<unsigned char> recvKey = ke.derive_secret(crypto_secretbox_KEYBYTES);
-  vector<unsigned char> sendKey = ke.derive_secret(crypto_secretbox_KEYBYTES);
-  external_clients.symmetric_client_commsec_recv_keys[client_id] = make_pair(recvKey,0);
-  external_clients.symmetric_client_commsec_send_keys[client_id] = make_pair(sendKey,0);
-}
 
 // Read share data from a file starting at file_pos until registers filled.
 // file_pos_register is written with new file position (-1 is eof).
@@ -555,25 +417,6 @@ ostream& operator<<(ostream& s,const Processor& P)
   return s;
 }
 
-void Processor::maybe_decrypt_sequence(int client_id)
-{
-  map<int, pair<vector<octet>,uint64_t> >::iterator it_cs = external_clients.symmetric_client_commsec_recv_keys.find(client_id);
-  if (it_cs != external_clients.symmetric_client_commsec_recv_keys.end())
-  {
-    socket_stream.decrypt_sequence(&it_cs->second.first[0], it_cs->second.second);
-    it_cs->second.second++;
-  }
-}
-
-void Processor::maybe_encrypt_sequence(int client_id)
-{
-  map<int, pair<vector<octet>,uint64_t> >::iterator it_cs = external_clients.symmetric_client_commsec_send_keys.find(client_id);
-  if (it_cs != external_clients.symmetric_client_commsec_send_keys.end())
-  {
-    socket_stream.encrypt_sequence(&it_cs->second.first[0], it_cs->second.second);
-    it_cs->second.second++;
-  }
-}
 
 #if defined(EXTENDED_SPDZ_GFP)
 
@@ -593,7 +436,7 @@ void Processor::POpen_Ext(const vector<int>& reg, int size)
 	prep_shares(source, Sh_PO, size);
 
 	//the extension library is given the shares' values and returns opens' values
-	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)PO.data(), 1))
+	if(0 != (*the_ext_lib.x_opens)(spdz_gfp_ext_handle, Sh_PO.size(), (const uint64_t*)Sh_PO.data(), (uint64_t*)PO.data(), 1))
 	{
 		cerr << "Processor::POpen_Ext extension library open failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -606,9 +449,39 @@ void Processor::POpen_Ext(const vector<int>& reg, int size)
 	rounds++;
 }
 
+void Processor::MPOpen_Ext(const vector<int>& reg, int size)
+{
+	vector<int> dest, source;
+	unzip_open(dest, source, reg);
+
+	int sz=source.size();
+	vector<gfp>& PO = get_PO<gfp>();
+	PO.resize(sz*size);
+	vector<gfp>& C = get_C<gfp>();
+	vector< Share<gfp> >& Sh_PO = get_Sh_PO<gfp>();
+	Sh_PO.clear();
+	Sh_PO.reserve(sz*size);
+
+	prep_shares(source, Sh_PO, size);
+
+	//the extension library is given the shares' values and returns opens' values
+	if(0 != (*the_ext_lib.x_mp_opens)(spdz_gfp_ext_handle, Sh_PO.size(), (const uint64_t*)Sh_PO.data(), (uint64_t*)PO.data(), 1))
+	{
+		cerr << "Processor::MPOpen_Ext extension library open failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	POpen_Stop_prep_opens(dest, PO, C, size);
+
+	sent += dest.size() * size;
+	rounds++;
+}
+
+
 void Processor::PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 {
-	if(0 != (*the_ext_lib.x_triple)(spdz_gfp_ext_handle, (mp_limb_t*)&a, (mp_limb_t*)&b, (mp_limb_t*)&c))
+	if(0 != (*the_ext_lib.x_triple)(spdz_gfp_ext_handle, (uint64_t*)&a, (uint64_t*)&b, (uint64_t*)&c))
 	{
 		cerr << "Processor::PTriple_Ext extension library triple failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -618,7 +491,7 @@ void Processor::PTriple_Ext(Share<gfp>& a, Share<gfp>& b, Share<gfp>& c)
 
 void Processor::PInput_Ext(Share<gfp>& input_value, const int input_party_id)
 {
-	if(0 != (*the_ext_lib.x_input)(spdz_gfp_ext_handle, input_party_id, 1, (mp_limb_t*)&input_value))
+	if(0 != (*the_ext_lib.x_input)(spdz_gfp_ext_handle, input_party_id, 1, (uint64_t*)&input_value))
 	{
 		cerr << "Processor::PInput_Ext extension library input failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -648,7 +521,7 @@ void Processor::PMult_Ext(const vector<int>& reg, int size)
 	prep_shares(xsources, xsh, size);
 	prep_shares(ysources, ysh, size);
 
-	if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, n*size, (const mp_limb_t*)xsh.data(), (const mp_limb_t*)ysh.data(), (mp_limb_t*)products.data(), 1))
+	if(0 != (*the_ext_lib.x_mult)(spdz_gfp_ext_handle, n*size, (const uint64_t*)xsh.data(), (const uint64_t*)ysh.data(), (uint64_t*)products.data(), 1))
 	{
 		cerr << "Processor::PMult_Ext extension library mult failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -660,6 +533,40 @@ void Processor::PMult_Ext(const vector<int>& reg, int size)
 	sent += dest.size() * size;
 	rounds++;
 }
+
+void Processor::MPMult_Ext(const vector<int>& reg, int size)
+{
+	vector<int> xsources, ysources, dest;
+	int n = reg.size() / 3;
+	xsources.reserve(n);
+	ysources.reserve(n);
+	dest.reserve(n);
+
+	for (int i = 0; i < n; i++)
+	{
+		dest.push_back(reg[3 * i]);
+		xsources.push_back(reg[3 * i + 1]);
+		ysources.push_back(reg[3 * i + 2]);
+	}
+
+	// size = 1
+	std::vector< Share<gfp> > xsh, ysh, products(n*size);
+	xsh.reserve(n*size);
+	ysh.reserve(n*size);
+
+	prep_shares(xsources, xsh, size);
+	prep_shares(ysources, ysh, size);
+	if(0 != (*the_ext_lib.x_mp_mult)(spdz_gfp_ext_handle, n*size, (const uint64_t*)xsh.data(), (const uint64_t*)ysh.data(), (uint64_t*)products.data(), 1))
+	{
+		cerr << "Processor::MPMult_Ext extension library mp_mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+	PMult_Stop_prep_products(dest, size, products);
+	sent += dest.size() * size;
+	rounds++;
+}
+
 
 void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gfp> > & products)
 {
@@ -681,13 +588,14 @@ void Processor::PMult_Stop_prep_products(const vector<int>& reg, int size, const
 		for(int i = 0; i < sz; ++i)
 		{
 			get_S_ref<gfp>(reg[i]) = *sitr++;
+//			get_S_ref<gfp>(reg[i]) = *(sitr + i);
 		}
 	}
 }
 
 void Processor::PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	if(0 != (*the_ext_lib.x_mix_add)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	if(0 != (*the_ext_lib.x_mix_add)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
 	{
 		cerr << "Processor::PAddm_Ext extension library mix_add failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -695,9 +603,19 @@ void Processor::PAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	}
 }
 
+void Processor::MPAddm_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
+{
+	if(0 != (*the_ext_lib.x_mp_mix_add)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
+	{
+		cerr << "Processor::MPAddm_Ext extension library mix_add failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 {
-	if(0 != (*the_ext_lib.x_mix_sub_scalar)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	if(0 != (*the_ext_lib.x_mix_sub_scalar)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
 	{
 		cerr << "Processor::PSubml_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -705,9 +623,19 @@ void Processor::PSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
 	}
 }
 
+void Processor::MPSubml_Ext(Share<gfp>& a, gfp& b, Share<gfp>& c)
+{
+	if(0 != (*the_ext_lib.x_mp_mix_sub_scalar)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
+	{
+		cerr << "Processor::MPSubml_Ext extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c)
 {
-	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
 	{
 		cerr << "Processor::PSubmr_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -715,9 +643,29 @@ void Processor::PSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c)
 	}
 }
 
+void Processor::MPSubmr_Ext(gfp& a, Share<gfp>& b, Share<gfp>& c)
+{
+	if(0 != (*the_ext_lib.x_mp_mix_sub_share)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
+	{
+		cerr << "Processor::MPSubmr_Ext extension library mix_sub_scalar failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PLdsi_Ext(gfp& value, Share<gfp>& share)
 {
-	if(0 != (*the_ext_lib.x_closes)(spdz_gfp_ext_handle, 0, 1, (const mp_limb_t *)&value, (mp_limb_t *)&share))
+	if(0 != (*the_ext_lib.x_closes)(spdz_gfp_ext_handle, 0, 1, (const uint64_t *)&value, (uint64_t *)&share))
+	{
+		cerr << "Processor::PLdsi_Ext extension library closes failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::MPLdsi_Ext(gfp& value, Share<gfp>& share)
+{
+	if(0 != (*the_ext_lib.x_mp_closes)(spdz_gfp_ext_handle, 0, 1, (const uint64_t *)&value, (uint64_t *)&share))
 	{
 		cerr << "Processor::PLdsi_Ext extension library closes failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -727,7 +675,7 @@ void Processor::PLdsi_Ext(gfp& value, Share<gfp>& share)
 
 void Processor::PBit_Ext(Share<gfp>& share)
 {
-	if(0 != (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, (mp_limb_t *)&share))
+	if(0 != (*the_ext_lib.x_bit)(spdz_gfp_ext_handle, (uint64_t *)&share))
 	{
 		cerr << "Processor::PBit_Ext extension library bit failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -737,7 +685,7 @@ void Processor::PBit_Ext(Share<gfp>& share)
 
 void Processor::PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse)
 {
-	if(0 != (*the_ext_lib.x_inverse)(spdz_gfp_ext_handle, (mp_limb_t *)&share_value, (mp_limb_t *)&share_inverse))
+	if(0 != (*the_ext_lib.x_inverse)(spdz_gfp_ext_handle, (uint64_t *)&share_value, (uint64_t *)&share_inverse))
 	{
 		cerr << "Processor::PInverse_Ext extension library inverse failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -748,7 +696,7 @@ void Processor::PInverse_Ext(Share<gfp>& share_value, Share<gfp>& share_inverse)
 void Processor::PMulm_Ext(Share<gfp>& product, const Share<gfp>& share, const gfp & scalar)
 {
 
-	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gfp_ext_handle, (const mp_limb_t *)&share, (const mp_limb_t *)&scalar, (mp_limb_t *)&product))
+	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gfp_ext_handle, (const uint64_t *)&share, (const uint64_t *)&scalar, (uint64_t *)&product))
 	{
 		cerr << "Processor::PMulm_Ext extension library mix_mul failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -756,9 +704,20 @@ void Processor::PMulm_Ext(Share<gfp>& product, const Share<gfp>& share, const gf
 	}
 }
 
+void Processor::MPMulm_Ext(Share<gfp>& product, const Share<gfp>& share, const gfp & scalar)
+{
+
+	if(0 != (*the_ext_lib.x_mp_mix_mul)(spdz_gfp_ext_handle, (const uint64_t *)&share, (const uint64_t *)&scalar, (uint64_t *)&product))
+	{
+		cerr << "Processor::MPMulm_Ext extension library mp_mix_mul failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b)
 {
-	if(0 != (*the_ext_lib.x_adds)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&sum))
+	if(0 != (*the_ext_lib.x_adds)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&sum))
 	{
 		cerr << "Processor::PAdds_Ext extension library x_adds failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -766,9 +725,19 @@ void Processor::PAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>
 	}
 }
 
+void Processor::MPAdds_Ext(Share<gfp>& sum, const Share<gfp>& a, const Share<gfp>& b)
+{
+	if(0 != (*the_ext_lib.x_mp_adds)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&sum))
+	{
+		cerr << "Processor::MPAdds_Ext extension library x_mp_adds failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b)
 {
-	if(0 != (*the_ext_lib.x_subs)(spdz_gfp_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&diff))
+	if(0 != (*the_ext_lib.x_subs)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&diff))
 	{
 		cerr << "Processor::PSubs_Ext extension library x_subs failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -776,9 +745,19 @@ void Processor::PSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp
 	}
 }
 
+void Processor::MPSubs_Ext(Share<gfp>& diff, const Share<gfp>& a, const Share<gfp>& b)
+{
+	if(0 != (*the_ext_lib.x_mp_subs)(spdz_gfp_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&diff))
+	{
+		cerr << "Processor::MPSubs_Ext extension library x_mp_subs failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
 void Processor::PMovs_Ext(Share<gfp>& dest, const Share<gfp>& source)
 {
-	memcpy(&dest, &source, 4 * sizeof(mp_limb_t));
+	memcpy(&dest, &source, 4 * sizeof(uint64_t));
 }
 
 #endif
@@ -801,7 +780,7 @@ void Processor::GOpen_Ext(const vector<int>& reg,int size)
 	prep_shares(source, Sh_PO, size);
 
 	//the extension library is given the shares' values and returns opens' values
-	if(0 != (*the_ext_lib.x_opens)(spdz_gf2n_ext_handle, Sh_PO.size(), (const mp_limb_t*)Sh_PO.data(), (mp_limb_t*)PO.data(), 1))
+	if(0 != (*the_ext_lib.x_opens)(spdz_gf2n_ext_handle, Sh_PO.size(), (const uint64_t*)Sh_PO.data(), (uint64_t*)PO.data(), 1))
 	{
 		cerr << "Processor::GOpen_Ext extension library open failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -816,7 +795,7 @@ void Processor::GOpen_Ext(const vector<int>& reg,int size)
 
 void Processor::GTriple_Ext(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c)
 {
-	if(0 != (*the_ext_lib.x_triple)(spdz_gf2n_ext_handle, (mp_limb_t*)&a, (mp_limb_t*)&b, (mp_limb_t*)&c))
+	if(0 != (*the_ext_lib.x_triple)(spdz_gf2n_ext_handle, (uint64_t*)&a, (uint64_t*)&b, (uint64_t*)&c))
 	{
 		cerr << "Processor::GTriple_Ext extension library triple failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -826,7 +805,7 @@ void Processor::GTriple_Ext(Share<gf2n>& a, Share<gf2n>& b, Share<gf2n>& c)
 
 void Processor::GInput_Ext(Share<gf2n>& input_value, const int input_party_id)
 {
-	if(0 != (*the_ext_lib.x_input)(spdz_gf2n_ext_handle, input_party_id, 1, (mp_limb_t*)&input_value))
+	if(0 != (*the_ext_lib.x_input)(spdz_gf2n_ext_handle, input_party_id, 1, (uint64_t*)&input_value))
 	{
 		cerr << "Processor::GInput_Ext extension library input failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -856,7 +835,7 @@ void Processor::GMult_Ext(const vector<int>& reg, int size)
 	prep_shares(xsources, xsh, size);
 	prep_shares(ysources, ysh, size);
 
-	if(0 != (*the_ext_lib.x_mult)(spdz_gf2n_ext_handle, n*size, (const mp_limb_t*)xsh.data(), (const mp_limb_t*)ysh.data(), (mp_limb_t*)products.data(), 1))
+	if(0 != (*the_ext_lib.x_mult)(spdz_gf2n_ext_handle, n*size, (const uint64_t*)xsh.data(), (const uint64_t*)ysh.data(), (uint64_t*)products.data(), 1))
 	{
 		cerr << "Processor::GMult_Ext extension library mult failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -867,6 +846,7 @@ void Processor::GMult_Ext(const vector<int>& reg, int size)
 
 	sent += dest.size() * size;
 	rounds++;
+
 }
 
 void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size, const std::vector< Share<gf2n> > & products)
@@ -895,7 +875,7 @@ void Processor::GMult_Stop_prep_products(const vector<int>& reg, int size, const
 
 void Processor::GAddm_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	if(0 != (*the_ext_lib.x_mix_add)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	if(0 != (*the_ext_lib.x_mix_add)(spdz_gf2n_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
 	{
 		cerr << "Processor::GAddm_Ext extension library mix_add failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -905,7 +885,7 @@ void Processor::GAddm_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 
 void Processor::GSubml_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 {
-	if(0 != (*the_ext_lib.x_mix_sub_scalar)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	if(0 != (*the_ext_lib.x_mix_sub_scalar)(spdz_gf2n_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
 	{
 		cerr << "Processor::GSubml_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -915,7 +895,7 @@ void Processor::GSubml_Ext(Share<gf2n>& a, gf2n& b, Share<gf2n>& c)
 
 void Processor::GSubmr_Ext(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 {
-	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&c))
+	if(0 != (*the_ext_lib.x_mix_sub_share)(spdz_gf2n_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&c))
 	{
 		cerr << "Processor::GSubmr_Ext extension library mix_sub_scalar failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -925,7 +905,7 @@ void Processor::GSubmr_Ext(gf2n& a, Share<gf2n>& b, Share<gf2n>& c)
 
 void Processor::GLdsi_Ext(gf2n& value, Share<gf2n>& share)
 {
-	if(0 != (*the_ext_lib.x_closes)(spdz_gf2n_ext_handle, 0, 1, (const mp_limb_t *)&value, (mp_limb_t *)&share))
+	if(0 != (*the_ext_lib.x_closes)(spdz_gf2n_ext_handle, 0, 1, (const uint64_t *)&value, (uint64_t *)&share))
 	{
 		cerr << "Processor::GLdsi_Ext extension library closes failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -935,7 +915,7 @@ void Processor::GLdsi_Ext(gf2n& value, Share<gf2n>& share)
 
 void Processor::GBit_Ext(Share<gf2n>& share)
 {
-	if(0 != (*the_ext_lib.x_bit)(spdz_gf2n_ext_handle, (mp_limb_t *)&share))
+	if(0 != (*the_ext_lib.x_bit)(spdz_gf2n_ext_handle, (uint64_t *)&share))
 	{
 		cerr << "Processor::GBit_Ext extension library bit failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -945,7 +925,7 @@ void Processor::GBit_Ext(Share<gf2n>& share)
 
 void Processor::GInverse_Ext(Share<gf2n>& share_value, Share<gf2n>& share_inverse)
 {
-	if(0 != (*the_ext_lib.x_inverse)(spdz_gf2n_ext_handle, (mp_limb_t *)&share_value, (mp_limb_t *)&share_inverse))
+	if(0 != (*the_ext_lib.x_inverse)(spdz_gf2n_ext_handle, (uint64_t *)&share_value, (uint64_t *)&share_inverse))
 	{
 		cerr << "Processor::GInverse_Ext extension library inverse failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -955,7 +935,7 @@ void Processor::GInverse_Ext(Share<gf2n>& share_value, Share<gf2n>& share_invers
 
 void Processor::GMulm_Ext(Share<gf2n>& sec_product, const Share<gf2n> & sec_factor, const gf2n & clr_factor)
 {
-	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gf2n_ext_handle, (const mp_limb_t *)&sec_factor, (const mp_limb_t *)&clr_factor, (mp_limb_t *)&sec_product))
+	if(0 != (*the_ext_lib.x_mix_mul)(spdz_gf2n_ext_handle, (const uint64_t *)&sec_factor, (const uint64_t *)&clr_factor, (uint64_t *)&sec_product))
 	{
 		cerr << "Processor::PMulm_Ext extension library mix_mul failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -965,7 +945,7 @@ void Processor::GMulm_Ext(Share<gf2n>& sec_product, const Share<gf2n> & sec_fact
 
 void Processor::GAdds_Ext(Share<gf2n>& sum, const Share<gf2n>& a, const Share<gf2n>& b)
 {
-	if(0 != (*the_ext_lib.x_adds)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&sum))
+	if(0 != (*the_ext_lib.x_adds)(spdz_gf2n_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&sum))
 	{
 		cerr << "Processor::GAdds_Ext extension library x_adds failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -975,7 +955,7 @@ void Processor::GAdds_Ext(Share<gf2n>& sum, const Share<gf2n>& a, const Share<gf
 
 void Processor::GSubs_Ext(Share<gf2n>& diff, const Share<gf2n>& a, const Share<gf2n>& b)
 {
-	if(0 != (*the_ext_lib.x_subs)(spdz_gf2n_ext_handle, (const mp_limb_t *)&a, (const mp_limb_t *)&b, (mp_limb_t *)&diff))
+	if(0 != (*the_ext_lib.x_subs)(spdz_gf2n_ext_handle, (const uint64_t *)&a, (const uint64_t *)&b, (uint64_t *)&diff))
 	{
 		cerr << "Processor::GSubs_Ext extension library x_subs failed." << endl;
 		dlclose(the_ext_lib.x_lib_handle);
@@ -986,12 +966,125 @@ void Processor::GSubs_Ext(Share<gf2n>& diff, const Share<gf2n>& a, const Share<g
 void Processor::GMovs_Ext(Share<gf2n>& dest, const Share<gf2n>& source)
 {
 #ifdef USE_GF2N_LONG
-	memcpy(&dest, &source, 2 * sizeof(mp_limb_t));
+	memcpy(&dest, &source, 2 * sizeof(uint64_t));
 #else
-	memcpy(&dest, &source, sizeof(mp_limb_t));
+	memcpy(&dest, &source, sizeof(uint64_t));
 #endif
 }
 
+#endif
+
+#if defined(EXTENDED_SPDZ_Z2N)
+void Processor::Skew_Bit_Decomp_Ext(const vector<int>& dest_reg, const Share<gfp>& src_ring, int size)
+{
+	size_t n = dest_reg.size() / 3;
+
+	std::vector< Share<gf2n> > dest_bits(dest_reg.size());
+
+	if(0 != (*the_ext_lib.x_skew_decomp)(spdz_gfp_ext_handle, n, (const uint64_t *)&src_ring, (uint64_t *)dest_bits.data()))
+	{
+		cerr << "Processor::Skew_Bit_Decomp_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	GMult_Stop_prep_products(dest_reg, size, dest_bits);
+}
+
+void Processor::MP_Skew_Bit_Decomp_Ext(const vector<int>& dest_reg, const Share<gfp>& src_ring, int size)
+{
+	size_t n = dest_reg.size() / 3;
+
+	std::vector< Share<gf2n> > dest_bits(dest_reg.size());
+
+	if(0 != (*the_ext_lib.x_mp_skew_decomp)(spdz_gfp_ext_handle, n, (const uint64_t *)&src_ring, (uint64_t *)dest_bits.data()))
+	{
+		cerr << "Processor::MP_Skew_Bit_Decomp_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	GMult_Stop_prep_products(dest_reg, size, dest_bits);
+}
+
+
+void Processor::Skew_Bit_Recomp_Ext(const vector<int>& dest_reg, const Share<gf2n>& src_bit, int size)
+{
+	size_t n = dest_reg.size() / 3;
+
+	std::vector< Share<gf2n> > dest_bits(dest_reg.size());
+
+	if(0 != (*the_ext_lib.x_skew_decomp)(spdz_gf2n_ext_handle, n, (const uint64_t*)&src_bit, (uint64_t *)dest_bits.data()))
+	{
+		cerr << "Processor::Skew_Bit_Recomp_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	GMult_Stop_prep_products(dest_reg, size, dest_bits);
+}
+
+void Processor::Skew_Bit_Inject_Ext(const vector<int>& dest, const Share<gf2n>& src_bit, int size)
+{
+	std::vector< Share<gfp> > dest_ring(dest.size());
+
+	if(0 != (*the_ext_lib.x_skew_inject)(spdz_gf2n_ext_handle, (const uint64_t*)&src_bit, (uint64_t *)dest_ring.data()))
+	{
+		cerr << "Processor::Skew_Bit_Inject_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	PMult_Stop_prep_products(dest, size, dest_ring);
+}
+
+void Processor::MP_Skew_Bit_Inject_Ext(const vector<int>& dest, const Share<gf2n>& src_bit, int size)
+{
+	std::vector< Share<gfp> > dest_ring(dest.size());
+
+	if(0 != (*the_ext_lib.x_mp_skew_inject)(spdz_gf2n_ext_handle, (const uint64_t*)&src_bit, (uint64_t *)dest_ring.data()))
+	{
+		cerr << "Processor::MP_Skew_Bit_Inject_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+
+	PMult_Stop_prep_products(dest, size, dest_ring);
+}
+
+void Processor::Skew_Ring_Recomp_Ext(Share<gfp>& dest_ring, const vector<int>& src_reg, int size)
+{
+	size_t n = src_reg.size();
+
+	std::vector< Share<gf2n> > src_bits;
+	src_bits.reserve(src_reg.size());
+
+	prep_shares(src_reg, src_bits, size);
+
+	if(0 != (*the_ext_lib.x_skew_recomp)(spdz_gf2n_ext_handle, n, (const uint64_t*)src_bits.data(), (uint64_t *)&dest_ring))
+	{
+		cerr << "Processor::Skew_Bit_Recomp_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
+
+void Processor::MP_Skew_Ring_Recomp_Ext(Share<gfp>& dest_ring, const vector<int>& src_reg, int size)
+{
+	size_t n = src_reg.size();
+
+	std::vector< Share<gf2n> > src_bits;
+	src_bits.reserve(src_reg.size());
+
+	prep_shares(src_reg, src_bits, size);
+
+	if(0 != (*the_ext_lib.x_mp_skew_recomp)(spdz_gf2n_ext_handle, n, (const uint64_t*)src_bits.data(), (uint64_t *)&dest_ring))
+	{
+		cerr << "Processor::MP_Skew_Bit_Recomp_Ext extension library mult failed." << endl;
+		dlclose(the_ext_lib.x_lib_handle);
+		abort();
+	}
+}
 #endif
 
 #if defined(EXTENDED_SPDZ_GFP) || defined(EXTENDED_SPDZ_GF2N)
@@ -1016,7 +1109,20 @@ spdz_ext_ifc::spdz_ext_ifc()
 	*(void**)(&x_closes) = NULL;
 	*(void**)(&x_bit) = NULL;
 	*(void**)(&x_inverse) = NULL;
-
+#if defined(EXTENDED_SPDZ_Z2N)
+	*(void**)(&x_skew_decomp) = NULL;
+	*(void**)(&x_skew_recomp) = NULL;
+	*(void**)(&x_skew_inject) = NULL;
+	*(void**)(&x_mp_closes) = NULL;
+	*(void**)(&x_mp_opens) = NULL;
+	*(void**)(&x_mp_mix_add) = NULL;
+	*(void**)(&x_mp_mix_sub_share) = NULL;
+	*(void**)(&x_mp_mix_sub_scalar) = NULL;
+	*(void**)(&x_mp_mult) = NULL;
+	*(void**)(&x_mp_skew_decomp) = NULL;
+	*(void**)(&x_mp_skew_recomp) = NULL;
+	*(void**)(&x_mp_skew_inject) = NULL;
+#endif
 
 	//get the SPDZ-2 extension library for env-var
 	const char * spdz_ext_lib = getenv("SPDZ_EXT_LIB");
@@ -1063,7 +1169,23 @@ spdz_ext_ifc::spdz_ext_ifc()
 	LOAD_LIB_METHOD("closes", x_closes)
 	LOAD_LIB_METHOD("bit", x_bit)
 	LOAD_LIB_METHOD("inverse", x_inverse)
-
+#if defined(EXTENDED_SPDZ_Z2N)
+	LOAD_LIB_METHOD("skew_decomp", x_skew_decomp)
+	LOAD_LIB_METHOD("skew_recomp", x_skew_recomp)
+	LOAD_LIB_METHOD("skew_inject", x_skew_inject)
+	LOAD_LIB_METHOD("mp_closes", x_mp_closes)
+	LOAD_LIB_METHOD("mp_opens", x_mp_opens)
+	LOAD_LIB_METHOD("mp_adds", x_mp_adds)
+	LOAD_LIB_METHOD("mp_mix_add", x_mp_mix_add)
+	LOAD_LIB_METHOD("mp_subs", x_mp_subs)
+	LOAD_LIB_METHOD("mp_mix_sub_share", x_mp_mix_sub_share)
+	LOAD_LIB_METHOD("mp_mix_sub_scalar", x_mp_mix_sub_scalar)
+	LOAD_LIB_METHOD("mp_mix_mul", x_mp_mix_mul)
+	LOAD_LIB_METHOD("mp_mult", x_mp_mult)
+	LOAD_LIB_METHOD("mp_skew_decomp", x_mp_skew_decomp)
+	LOAD_LIB_METHOD("mp_skew_recomp", x_mp_skew_recomp)
+	LOAD_LIB_METHOD("mp_skew_inject", x_mp_skew_inject)
+#endif
 }
 
 spdz_ext_ifc::~spdz_ext_ifc()

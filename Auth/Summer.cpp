@@ -5,9 +5,9 @@
  *
  */
 
+#include "Tools/int.h"
 #include "Auth/Summer.h"
 #include "Auth/MAC_Check.h"
-#include "Tools/int.h"
 
 template<class T>
 Summer<T>::Summer(int sum_players, int last_sum_players, int next_sum_players,

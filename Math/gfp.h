@@ -7,10 +7,12 @@
 using namespace std;
 
 #include "Math/gf2n.h"
-#include "Math/modp.h"
-#include "Math/Zp_Data.h"
 #include "Math/field_types.h"
 #include "Tools/random.h"
+#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/format.hpp>
+
+namespace mp = boost::multiprecision;
 
 /* This is a wrapper class for the modp data type
  * It is used to be interface compatible with the gfp
@@ -22,110 +24,123 @@ using namespace std;
  * for the FHE scheme
  */
 
+#define GFP_SIZE 4
 
 class gfp
 {
-  modp a;
-  static Zp_Data ZpD;
+	uint64_t x[GFP_SIZE];
 
   public:
 
   typedef gfp value_type;
 
-  static void init_field(const bigint& p,bool mont=false)
-    { ZpD.init(p,mont); }
-  static bigint pr()   
-    { return ZpD.pr; }
   static int t()
-    { return ZpD.get_t();  }
-  static Zp_Data& get_ZpD()
-    { return ZpD; }
+    { return 0; }
 
   static DataFieldType field_type() { return DATA_MODP; }
   static char type_char() { return 'p'; }
   static string type_string() { return "gfp"; }
 
-  static int size() { return t() * sizeof(mp_limb_t); }
+  static int size() { return GFP_SIZE*sizeof(uint64_t); }
 
-  void assign(const gfp& g) { a=g.a; } 
-  void assign_zero()        { assignZero(a,ZpD); }
-  void assign_one()         { assignOne(a,ZpD); } 
-  void assign(word aa)      { bigint b=aa; to_gfp(*this,b); }
-  void assign(long aa)      { bigint b=aa; to_gfp(*this,b); }
-  void assign(int aa)       { bigint b=aa; to_gfp(*this,b); }
-  void assign(const char* buffer) { a.assign(buffer, ZpD.get_t()); }
+  void assign(const gfp& g)     { }
+  void assign_zero()            {  memset(x, 0, GFP_SIZE*sizeof(uint64_t));}
+  void assign_one()             {  memset(x, 1, GFP_SIZE*sizeof(uint64_t));}
+  void assign(word aa)          { x[0] = aa; for(int i=1; i<GFP_SIZE; ++i) x[i]=0;}
+  void assign(long aa)          { x[0] = aa; for(int i=1; i<GFP_SIZE; ++i) x[i]=0;}
+  void assign(int aa)           { x[0] = aa; for(int i=1; i<GFP_SIZE; ++i) x[i]=0;}
+  void assign(mp::uint256_t aa) { uint64_t bit_mask = 0xFFFFFFFFFFFFFFFF;
+	                               x[0] = (uint64_t) (aa & bit_mask);
+                                  x[1] = (uint64_t) ((aa >> 64) & bit_mask);
+                                  x[2] = (uint64_t) ((aa >> 128) & bit_mask);
+                                  x[3] = (uint64_t) ((aa >> 192) & bit_mask);
+  	  	  	  	  	  	  	  	  	 }
+  void assign(const char*) {}
 
-  modp get() const          { return a; }
-
-  // Assumes prD behind x is equal to ZpD
-  void assign(modp& x) { a=x; }
-  
-  gfp()              { assignZero(a,ZpD); }
-  gfp(const gfp& g)  { a=g.a; }
-  gfp(const modp& g) { a=g; }
+  gfp()              { }
+  gfp(const gfp& g)  { memcpy(&x[0], &g.x[0], GFP_SIZE*sizeof(uint64_t)); }
   gfp(const __m128i& x) { *this=x; }
   gfp(const int128& x) { *this=x.a; }
-  gfp(const bigint& x) { to_modp(a, x, ZpD); }
   gfp(int x)         { assign(x); }
   ~gfp()             { ; }
 
+  uint64_t get() const {return x[0];}
+
   gfp& operator=(const gfp& g)
-    { if (&g!=this) { a=g.a; }
+    { if (&g!=this) {
+    	for (int i=0; i<GFP_SIZE; ++i) x[i] = g.x[i];
+    }
       return *this;
     }
 
-  gfp& operator=(const __m128i other)
+  gfp& operator=(const __m128i /*other*/)
     {
-      memcpy(a.x, &other, sizeof(other));
       return *this;
     }
 
-  void to_m128i(__m128i& ans)
+  void to_m128i(__m128i& /*ans*/)
     {
-      memcpy(&ans, a.x, sizeof(ans));
+//      memcpy(&ans, a.x, sizeof(ans));
     }
 
   __m128i to_m128i()
     {
-      return _mm_loadu_si128((__m128i*)a.x);
+      __m128i nil;
+      return nil;
     }
 
 
-  bool is_zero() const            { return isZero(a,ZpD); }
-  bool is_one()  const            { return isOne(a,ZpD); }
+  bool is_zero() const            { return true;  }
+  bool is_one()  const            { return false; }
   bool is_bit()  const            { return is_zero() or is_one(); }
-  bool equal(const gfp& y) const  { return areEqual(a,y.a,ZpD); }
+  bool equal(const gfp& /*y*/) const  { return true; }
   bool operator==(const gfp& y) const { return equal(y); }
   bool operator!=(const gfp& y) const { return !equal(y); }
 
   // x+y
   template <int T>
   void add(const gfp& x,const gfp& y)
-    { Add<T>(a,x.a,y.a,ZpD); }  
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] = x.x[i]+y.x[i];
+    }
   template <int T>
   void add(const gfp& x)
-    { Add<T>(a,a,x.a,ZpD); }
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] += x.x[i];
+	}
   template <int T>
-  void add(void* x)
-    { ZpD.Add<T>(a.x,a.x,(mp_limb_t*)x); }
+  void add(void* /*x*/)
+    { /*ZpD.Add<T>(a.x,a.x,(mp_limb_t*)x); */}
   template <int T>
   void add(octetStream& os)
     { add<T>(os.consume(size())); }
   void add(const gfp& x,const gfp& y)
-    { Add(a,x.a,y.a,ZpD); }  
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] = x.x[i]+y.x[i];
+	}
   void add(const gfp& x)
-    { Add(a,a,x.a,ZpD); }
-  void add(void* x)
-    { ZpD.Add(a.x,a.x,(mp_limb_t*)x); }
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] += x.x[i];
+    }
+  void add(void* /*x*/)
+    { /*ZpD.Add(a.x,a.x,(mp_limb_t*)x);*/ }
   void sub(const gfp& x,const gfp& y)
-    { Sub(a,x.a,y.a,ZpD); }
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] = x.x[i]-y.x[i];
+    }
   void sub(const gfp& x)
-    { Sub(a,a,x.a,ZpD); }
-  // = x * y
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] -= x.x[i];
+    }
+
   void mul(const gfp& x,const gfp& y)
-    { Mul(a,x.a,y.a,ZpD); }
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] = x.x[i]*y.x[i];
+    }
   void mul(const gfp& x) 
-    { Mul(a,a,x.a,ZpD); }
+    {
+	  for(int i=0; i<GFP_SIZE; ++i) this->x[i] *= x.x[i];
+    }
 
   gfp operator+(const gfp& x) { gfp res; res.add(*this, x); return res; }
   gfp operator-(const gfp& x) { gfp res; res.sub(*this, x); return res; }
@@ -136,31 +151,44 @@ class gfp
 
   gfp operator-() { gfp res = *this; res.negate(); return res; }
 
-  void square(const gfp& aa)
-    { Sqr(a,aa.a,ZpD); }
+  void square(const gfp& /*aa*/)
+    { /*Sqr(a,aa.a,ZpD);*/ }
   void square()
-    { Sqr(a,a,ZpD); }
+    { /*Sqr(a,a,ZpD);*/ }
   void invert()
-    { Inv(a,a,ZpD); }
-  void invert(const gfp& aa)
-    { Inv(a,aa.a,ZpD); }
+    { /*Inv(a,a,ZpD);*/ }
+  void invert(const gfp& /*aa*/)
+    { /*Inv(a,aa.a,ZpD);*/ }
   void negate() 
-    { Negate(a,a,ZpD); }
+    { /*Negate(a,a,ZpD);*/ }
   void power(long i)
-    { Power(a,a,i,ZpD); }
+    { /*Power(a,a,i,ZpD);*/ }
 
-  // deterministic square root
-  gfp sqrRoot();
 
-  void randomize(PRNG& G)
-    { a.randomize(G,ZpD); }
+  void randomize(PRNG& /*G*/)
+    { /*a.randomize(G,ZpD);*/ }
   // faster randomization, see implementation for explanation
   void almost_randomize(PRNG& G);
 
-  void output(ostream& s,bool human) const
-    { a.output(s,ZpD,human); }
+  void output(ostream& s,bool /*human*/) const
+    {
+#ifndef MP_PRINT
+	  s << x[0];
+#else
+	  mp::uint256_t res;
+	  res = 0;
+	  for(size_t i=0; i<4; ++i)
+	  {
+		  mp::uint256_t tmp = (mp::uint256_t) (x[i]);
+		  res += (tmp << (64 * i));
+	  }
+	  s << res;
+#endif
+    }
   void input(istream& s,bool human)
-    { a.input(s,ZpD,human); }
+    {
+	  s >> x[0];
+    }
 
   friend ostream& operator<<(ostream& s,const gfp& x)
     { x.output(s,true);
@@ -177,13 +205,8 @@ class gfp
   void AND(const gfp& x,const gfp& y);
   void XOR(const gfp& x,const gfp& y);
   void OR(const gfp& x,const gfp& y);
-  void AND(const gfp& x,const bigint& y);
-  void XOR(const gfp& x,const bigint& y);
-  void OR(const gfp& x,const bigint& y);
   void SHL(const gfp& x,int n);
   void SHR(const gfp& x,int n);
-  void SHL(const gfp& x,const bigint& n);
-  void SHR(const gfp& x,const bigint& n);
 
   gfp operator&(const gfp& x) { gfp res; res.AND(*this, x); return res; }
   gfp operator^(const gfp& x) { gfp res; res.XOR(*this, x); return res; }
@@ -191,19 +214,8 @@ class gfp
   gfp operator<<(int i) { gfp res; res.SHL(*this, i); return res; }
   gfp operator>>(int i) { gfp res; res.SHR(*this, i); return res; }
 
-  // Pack and unpack in native format
-  //   i.e. Dont care about conversion to human readable form
-  void pack(octetStream& o) const
-    { a.pack(o,ZpD); }
-  void unpack(octetStream& o)
-    { a.unpack(o,ZpD); }
-
-
-  // Convert representation to and from a bigint number
-  friend void to_bigint(bigint& ans,const gfp& x,bool reduce=true)
-    { to_bigint(ans,x.a,x.ZpD,reduce); }
-  friend void to_gfp(gfp& ans,const bigint& x)
-    { to_modp(ans.a,x,ans.ZpD); }
+  void pack(octetStream& os) const {  os.append((octet*) &x[0], GFP_SIZE*sizeof(uint64_t)); }
+  void unpack(octetStream& os) { os.consume((octet*) &x[0], GFP_SIZE*sizeof(uint64_t)); }
 };
 
 

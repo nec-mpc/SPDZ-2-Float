@@ -35,8 +35,6 @@ void Share<T>::add(const Share<T>& S,const T& aa,bool playerone,const T& alphai)
   mac.add(S.mac,tmp);
 }
 
-
-
 template<class T>
 void Share<T>::sub(const Share<T>& S,const T& aa,bool playerone,const T& alphai)
 {

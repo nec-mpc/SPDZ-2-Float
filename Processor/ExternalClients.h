@@ -10,7 +10,6 @@
 #include <map>
 #include <iostream>
 #include <fstream>
-#include <sodium.h>
 #include <assert.h>
 
 /*
@@ -25,15 +24,11 @@ class ExternalClients
   int party_num;
   const string prep_data_dir;
   int server_connection_count;  
-  unsigned char server_publickey[crypto_box_PUBLICKEYBYTES];
-  unsigned char server_secretkey[crypto_box_SECRETKEYBYTES];
+
   bool server_keys_loaded = false;
   bool ed25519_keys_loaded = false;
 
   public:
-
-  unsigned char server_publickey_ed25519[crypto_sign_ed25519_PUBLICKEYBYTES];
-  unsigned char server_secretkey_ed25519[crypto_sign_ed25519_SECRETKEYBYTES];
 
   // Maps holding per client values (indexed by unique 32-bit id)
   std::map<int,int> external_client_sockets;
@@ -52,11 +47,6 @@ class ExternalClients
 
   // return the socket for a given client or server identifier
   int get_socket(int socket_id);
-
-  void curve25519_ints_to_bytes(unsigned char bytes[crypto_box_PUBLICKEYBYTES],  const vector<int>& key_ints);
-  void generate_session_key_for_client(int client_id, const vector<int>& public_key);  
-
-  void load_server_keys_once();
 
   int get_party_num();
   void require_ed25519_keys();

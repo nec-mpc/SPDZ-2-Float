@@ -353,8 +353,12 @@ class Merger:
         """
         G = self.G
         instructions = self.instructions
+        #print(instructions)
         merge_nodes = self.open_nodes
+        #print(merge_nodes)
         depths = self.depths
+        #print(depths)
+
         if not merge_nodes and not self.input_nodes:
             return 0
 
@@ -368,6 +372,11 @@ class Merger:
         last_nodes = [None, None]
         for i in sorted(merges):
             merge = merges[i]
+
+            ### added for debug (start) ###
+            # print("merge"+str(i)+":"+str(merge))
+            ### added for debug (ended) ###
+
             if len(merge) > 1000:
                 print 'Merging %d opens in round %d/%d' % (len(merge), i, len(merges))
             nodes = defaultdict(lambda: None)

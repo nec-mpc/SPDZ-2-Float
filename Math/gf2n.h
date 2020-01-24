@@ -80,9 +80,9 @@ class gf2n_short
   void assign_zero()             { a=0; }
   void assign_one()              { a=1; } 
   void assign_x()                { a=2; }
-  void assign(word aa)           { a=aa&mask; }
+  void assign(word aa)           { a=aa; }
   void assign(long aa)           { assign(word(aa)); }
-  void assign(int aa)            { a=static_cast<unsigned int>(aa)&mask; }
+  void assign(int aa)            { a=static_cast<unsigned int>(aa); }
   void assign(const char* buffer) { a = *(word*)buffer; }
 
   int get_bit(int i) const
@@ -154,8 +154,8 @@ class gf2n_short
   void AND(const gf2n_short& x,const gf2n_short& y) { a=x.a&y.a; }
   void XOR(const gf2n_short& x,const gf2n_short& y) { a=x.a^y.a; }
   void OR(const gf2n_short& x,const gf2n_short& y)  { a=x.a|y.a; }
-  void NOT(const gf2n_short& x)               { a=(~x.a)&mask; }
-  void SHL(const gf2n_short& x,int n)         { a=(x.a<<n)&mask; }
+  void NOT(const gf2n_short& x)               { a=(~x.a); }
+  void SHL(const gf2n_short& x,int n)         { a=(x.a<<n); }
   void SHR(const gf2n_short& x,int n)         { a=x.a>>n; }
 
   gf2n_short operator&(const gf2n_short& x) { gf2n_short res; res.AND(*this, x); return res; }

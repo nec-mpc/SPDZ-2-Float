@@ -1,4 +1,4 @@
-# (C) 2018 University of Bristol, Bar-Ilan University. See License.txt
+# (C) 2016 University of Bristol. See License.txt
 
 import random
 import math
@@ -14,6 +14,8 @@ from Compiler.program import Program
 from Compiler import floatingpoint,comparison,permutation
 
 from Compiler.util import *
+
+sys.setrecursionlimit(1000000)
 
 print_access = False
 sint_bit_length = 6
@@ -38,6 +40,12 @@ def maybe_stop_timer(n):
     if detailed_timing:
         stop_timer(n)
 
+def reveal(a):
+    try:
+        return a.reveal()
+    except AttributeError:
+        return a
+
 class Block(object):
     def __init__(self, value, lengths):
         self.value = self.value_type.hard_conv(value)
@@ -45,7 +53,8 @@ class Block(object):
     def get_slice(self):
         res = []
         for length,start in  zip(self.lengths, series(self.lengths)):
-            res.append(util.bit_compose((self.bits[start:start+length])))
+            res.append(sum(b << i for i,b in \
+                        enumerate(self.bits[start:start+length])))
         return res
     def __repr__(self):
         return '<' + str(self.value) + '>'
@@ -141,17 +150,11 @@ class gf2nBlock(Block):
         self.value = self.lower + value * self.adjust + upper
         return self
 
-block_types = { sint: intBlock,
-                sgf2n: gf2nBlock,
-}
-
 def get_block(x, y, *args):
-    for t in block_types:
-        if isinstance(x, t):
-            return block_types[t](x, y, *args)
-        elif isinstance(y, t):
-            return block_types[t](x, y, *args)
-    raise CompilerError('appropiate block type not found')
+    if isinstance(x, sgf2n) or isinstance(y, sgf2n):
+        return gf2nBlock(x, y, *args)
+    else:
+        return intBlock(x, y, *args)
 
 def get_bit(x, index, bit_length):
     if isinstance(x, sgf2n):
@@ -187,10 +190,9 @@ def demux_list(x):
     res = map(operator.mul, a, b)
     return res
 
-def demux_array(x, res=None):
+def demux_array(x):
     n = len(x)
-    if res is None:
-        res = Array(2**n, type(x[0]))
+    res = Array(2**n, type(x[0]))
     if n == 1:
         res[0] = 1 - x[0]
         res[1] = x[0]
@@ -240,14 +242,14 @@ class Value(object):
             return (1 - self.empty) * (other == self.value)
         return (1 - self.empty) * self.value.equal(other, length)
     def reveal(self):
-        return Value(reveal(self.value), reveal(self.empty))
+        return Value(self.value.reveal(), self.empty.reveal())
     def output(self):
-        # @if_e(self.empty)
-        # def f():
-        #     print_str('<>')
-        # @else_
-        # def f():
-        print_str('<%s:%s>', self.empty, self.value)
+        @if_e(self.empty)
+        def f():
+            print_str('<>')
+        @else_
+        def f():
+            print_str('<%s>', self.value)
     def __index__(self):
         return int(self.value)
     def __repr__(self):
@@ -283,18 +285,10 @@ class ValueTuple(tuple):
 class Entry(object):
     """ An (O)RAM entry with empty bit, index, and value. """
     @staticmethod
-    def get_empty(value_type, entry_size, apply_type=True, index_size=None):
-        res = {}
-        for i,tt in enumerate((value_type, value_type.default_type)):
-            if apply_type:
-                apply = lambda length, x: value_type.get_type(length)(x)
-            else:
-                apply = lambda length, x: x
-            res[i] = Entry(apply(index_size, 0), \
-                           tuple(apply(l, 0) for l in entry_size), \
-                           apply(1, True), value_type)
-        res[0].defaults = res[1]
-        return res[0]
+    def get_empty(value_type, value_length, apply_type=True):
+        t = value_type if apply_type else lambda x: x
+        bt = value_type if apply_type else lambda x: x
+        return Entry(t(0), tuple(t(0) for i in range(value_length)), bt(True), t)
     def __init__(self, v, x=None, empty=None, value_type=None):
         self.created_non_empty = False
         if x is None:
@@ -305,7 +299,7 @@ class Entry(object):
         else:
             if empty is None:
                 self.created_non_empty = True
-                empty = value_type.bit_type(False)
+                empty = value_type(False)
             self.is_empty = empty
             self.v = v
             if not isinstance(x, (tuple, list)):
@@ -350,13 +344,12 @@ class Entry(object):
     def reveal(self):
         return Entry(x.reveal() for x in self)
     def output(self):
-        # @if_e(self.is_empty)
-        # def f():
-        #     print_str('{empty=%s}', self.is_empty)
-        # @else_
-        # def f():
-        #     print_str('{%s: %s}', self.v, self.x)\
-        print_str('{%s: %s,empty=%s}', self.v, self.x, self.is_empty)
+        @if_e(self.is_empty)
+        def f():
+            print_str('{empty=%s}', self.is_empty)
+        @else_
+        def f():
+            print_str('{%s: %s}', self.v, self.x)
 
 class RefRAM(object):
     """ RAM reference. """
@@ -369,15 +362,14 @@ class RefRAM(object):
                 crash()
         self.size = oram.bucket_size
         self.entry_type = oram.entry_type
-        self.l = [oram.get_array(self.size, t, array.address + \
-                                 index * oram.bucket_size) \
-                  for t,array in zip(self.entry_type,oram.ram.l)]
+        self.l = [Array(self.size, t, array.address + \
+                            index * oram.bucket_size) \
+                      for t,array in zip(self.entry_type,oram.ram.l)]
         self.index = index
     def init_mem(self, empty_entry):
         print 'init ram'
-        for a,value in zip(self.l, empty_entry.defaults.values()):
-            # don't use threads if n_threads explicitly set to 1
-            a.assign_all(value, n_threads != 1)
+        for a,value in zip(self.l, empty_entry.values()):
+            a.assign_all(value)
     def get_empty_bits(self):
         return self.l[0]
     def get_indices(self):
@@ -411,15 +403,14 @@ class RefRAM(object):
         return tree_reduce(operator.mul, list(self.get_empty_bits()))
     def reveal(self):
         Program.prog.curr_tape.start_new_basicblock()
-        res = RAM(self.size, [t.clear_type for t in self.entry_type], \
-                  lambda *args: Array(*args), self.index)
+        res = RAM(self.size, [t.clear_type for t in self.entry_type], self.index)
         for i,a in enumerate(self.l):
             for j,x in enumerate(a):
                 res.l[i][j] = x.reveal()
         Program.prog.curr_tape.start_new_basicblock()
         return res
     def output(self):
-        print_ln('%s', [x.reveal() for x in self])
+        self.reveal().print_reg()
     def print_reg(self):
         print_ln('listing of RAM at index %s', self.index)
         Program.prog.curr_tape.start_new_basicblock()
@@ -433,40 +424,33 @@ class RefRAM(object):
 
 class RAM(RefRAM):
     """ List of entries in memory. """
-    def __init__(self, size, entry_type, get_array, index=0):
+    def __init__(self, size, entry_type, index=0):
         #print_reg(cint(0), 'r in')
         self.size = size
         self.entry_type = entry_type
-        self.l = [get_array(self.size, t) for t in entry_type]
+        self.l = [Array(self.size, t) for t in entry_type]
         self.index = index
 
 class AbstractORAM(object):
     """ Implements reading and writing using read_and_remove and add. """
-    @staticmethod
-    def get_array(size, t, *args, **kwargs):
-        return t.dynamic_array(size, t, *args, **kwargs)
     def read(self, index):
         return self._read(self.value_type.hard_conv(index))
     def write(self, index, value):
-        new_value = [self.value_type.get_type(length).hard_conv(v) \
-                         for length,v in zip(self.entry_size, value \
-                                             if isinstance(value, (tuple, list)) \
+        new_value = [self.value_type.hard_conv(v) \
+                         for v in (value if isinstance(value, (tuple, list)) \
                                        else (value,))]
-        return self._write(self.index_type.hard_conv(index), *new_value)
+        return self._write(self.value_type.hard_conv(index), *new_value)
     def access(self, index, new_value, write, new_empty=False):
-        return self._access(self.index_type.hard_conv(index),
-            self.value_type.bit_type.hard_conv(write),
-            self.value_type.bit_type.hard_conv(new_empty),
-                            *[self.value_type.get_type(length).hard_conv(v) \
-                              for length,v in zip(self.entry_size, \
-                                                  tuplify(new_value))])
+        return self._access(self.value_type.hard_conv(index),
+            self.value_type.hard_conv(write),
+            self.value_type.hard_conv(new_empty),
+            *[self.value_type.hard_conv(v) for v in tuplify(new_value)])
     def read_and_maybe_remove(self, index):
-        return self.read_and_remove(self.index_type.hard_conv(index)), \
+        return self.read_and_remove(self.value_type.hard_conv(index)), \
             self.state.read()
     @method_block
     def _read(self, index):
-        return self.access(index, tuple(self.value_type.get_type(l)(0) \
-                                        for l in self.entry_size), \
+        return self.access(index, (self.value_type(0),) * self.value_length, \
                                False)
     @method_block
     def _write(self, index, *value):
@@ -475,7 +459,7 @@ class AbstractORAM(object):
     def _access(self, index, write, new_empty, *new_value):
         Program.prog.curr_tape.\
             start_new_basicblock(name='abstract-access-remove-%d' % self.size)
-        index = MemValue(self.index_type.hard_conv(index))
+        index = MemValue(self.value_type.hard_conv(index))
         read_value, read_empty = self.read_and_remove(index)
         if len(read_value) != self.value_length:
             raise Exception('read_and_remove() of %s returns wrong length of ' \
@@ -490,10 +474,9 @@ class AbstractORAM(object):
         if len(new_value) != self.value_length:
             raise Exception('wrong length of new value')
         value = tuple(MemValue(i) for i in if_else(write, new_value, read_value))
-        empty = self.value_type.bit_type.hard_conv(new_empty)
+        empty = self.value_type.hard_conv(new_empty)
         self.add(Entry(index, value, if_else(write, empty, read_empty), \
-                           value_type=self.value_type), evict=False)
-        self.recursive_evict()
+                           value_type=self.value_type))
         return read_value, read_empty
     @method_block
     def delete(self, index, for_real=True):
@@ -509,25 +492,19 @@ class AbstractORAM(object):
 class EmptyException(Exception):
     pass
 
-class EndRecursiveEviction(object):
-    recursive_evict = lambda self: None
-    recursive_evict_rounds = lambda self: itertools.repeat([None])
-
-class RefTrivialORAM(EndRecursiveEviction):
+class RefTrivialORAM(object):
     """ Trivial ORAM reference. """
     contiguous = False
     def empty_entry(self, apply_type=True):
-        return Entry.get_empty(self.value_type, self.entry_size, \
-                               apply_type, self.index_size)
+        return Entry.get_empty(self.value_type, self.value_length, apply_type)
     def __init__(self, index, oram):
         self.ram = RefRAM(index, oram)
         self.index_size = oram.index_size
         self.value_type, self.value_length = oram.internal_value_type()
-        self.value_type, self.entry_size = oram.internal_entry_size()
         self.size = oram.bucket_size
     def init_mem(self):
         print 'init trivial oram'
-        self.ram.init_mem(self.empty_entry(apply_type=False))
+        self.ram.init_mem(self.empty_entry())
     def search(self, read_index):
         if use_binary_search and self.value_type == sgf2n:
             return self.binary_search(read_index)
@@ -720,7 +697,7 @@ class RefTrivialORAM(EndRecursiveEviction):
                                                      Program.prog.security)
         return [prefix_empty[i+1] - prefix_empty[i] \
                     for i in range(len(self.ram))]
-    def add(self, new_entry, state=None, evict=None):
+    def add(self, new_entry, state=None):
         # if self.last_index != new_entry.v:
         #     raise Exception('index mismatch: %s / %s' %
         #                     (str(self.last_index), str(new_entry.v)))
@@ -786,17 +763,14 @@ class TrivialORAM(RefTrivialORAM, AbstractORAM):
                      entry_size=None, contiguous=True, init_rounds=-1):
         self.index_size = index_size or log2(size)
         self.value_type = value_type
-        self.index_type = value_type.get_type(self.index_size)
         if entry_size is None:
             self.value_length = value_length
-            self.entry_size = [None] * value_length
         else:
             self.value_length = len(tuplify(entry_size))
-            self.entry_size = tuplify(entry_size)
         self.contiguous = contiguous
         entry_type = self.empty_entry().types()
         self.size = size
-        self.ram = RAM(size, entry_type, self.get_array)
+        self.ram = RAM(size, entry_type)
         if init_rounds != -1:
             # put memory initialization in different timer
             stop_timer()
@@ -817,16 +791,9 @@ def get_n_threads(n_loops):
 
 class LinearORAM(TrivialORAM):
     """ Contiguous ORAM that stores entries in order. """
-    @staticmethod
-    def get_array(size, t, *args, **kwargs):
-        return Array(size, t, *args, **kwargs)
-    def __init__(self, *args, **kwargs):
-        TrivialORAM.__init__(self, *args, **kwargs)
-        self.index_vector = self.get_array(2 ** self.index_size, \
-                                           self.index_type.bit_type)
     def read_and_maybe_remove(self, index):
         return self.read(index), 0
-    def add(self, entry, state=None, evict=None):
+    def add(self, entry, state=None):
         if entry.created_non_empty is True:
             self.write(entry.v, entry.x)
         else:
@@ -837,14 +804,14 @@ class LinearORAM(TrivialORAM):
     def _read(self, index):
         maybe_start_timer(6)
         empty_entry = self.empty_entry(False)
-        demux_array(bit_decompose(index, self.index_size), \
-                    self.index_vector)
+        index_vector = \
+            demux_array(bit_decompose(index, self.index_size))
         @map_sum(get_n_threads(self.size), n_parallel, self.size, \
-                     self.value_length + 1, [self.value_type.bit_type] + \
-                        [self.value_type.get_type(l) for l in self.entry_size])
+                     self.value_length + 1, [self.value_type] + \
+                        [self.value_type] * self.value_length)
         def f(i):
             entry = self.ram[i]
-            access_here = self.index_vector[i]
+            access_here = index_vector[i]
             return access_here * ValueTuple((entry.empty(),) + entry.x)
         not_found = f()[0]
         read_value = ValueTuple(f()[1:]) + not_found * empty_entry.x
@@ -854,13 +821,13 @@ class LinearORAM(TrivialORAM):
     def _write(self, index, *new_value):
         maybe_start_timer(7)
         empty_entry = self.empty_entry(False)
-        demux_array(bit_decompose(index, self.index_size), \
-                    self.index_vector)
+        index_vector = \
+            demux_array(bit_decompose(index, self.index_size))
         new_value = make_array(new_value)
         @for_range_multithread(get_n_threads(self.size), n_parallel, self.size)
         def f(i):
             entry = self.ram[i]
-            access_here = self.index_vector[i]
+            access_here = index_vector[i]
             nv = ValueTuple(new_value)
             delta_entry = \
                 Entry(0, access_here * (nv - entry.x), \
@@ -876,7 +843,7 @@ class LinearORAM(TrivialORAM):
         new_empty = MemValue(new_empty)
         write = MemValue(write)
         @map_sum(get_n_threads(self.size), n_parallel, self.size, \
-                     self.value_length + 1, [self.value_type.bit_type] + \
+                     self.value_length + 1, [self.value_type] + \
                         [self.value_type] * self.value_length)
         def f(i):
             entry = self.ram[i]
@@ -927,24 +894,16 @@ class RefBucket(object):
                 child.output()
 
 def random_block(length, value_type):
-    return sum(value_type.bit_type.get_random_bit() << i for i in range(length))
+    return sum(value_type.get_random_bit() << i for i in range(length))
 
-class List(EndRecursiveEviction):
+class List(object):
     """ Debugging only. List which accepts secret values as indices
     and *reveals* them. """
-    def __init__(self, size, value_type, value_length=1, \
-                 init_rounds=None, entry_size=None):
+    def __init__(self, size, value_type, value_length=1, init_rounds=None):
         self.value_type = value_type
-        self.index_type = value_type.get_type(log2(size))
         self.value_length = value_length
-        if entry_size is None:
-            self.l = [value_type.dynamic_array(size, value_type) \
+        self.l = [Array(size, value_type) \
                       for i in range(value_length)]
-        else:
-            self.l = [value_type.dynamic_array(size, \
-                                               value_type.get_type(length)) \
-                      for length in entry_size]
-            self.value_length = len(entry_size)
         for l in self.l:
             l.assign_all(0)
     __getitem__ = lambda self,index: [self.l[i][regint(reveal(index))] \
@@ -959,9 +918,8 @@ class List(EndRecursiveEviction):
     read_and_remove = lambda self,i: (self[i], None)
     def read_and_maybe_remove(self, *args, **kwargs):
         return self.read_and_remove(*args, **kwargs), 0
-    add = lambda self,entry,**kwargs: self.__setitem__(entry.v.read(), \
-                                                       [v.read() for v in entry.x])
-    recursive_evict = lambda *args,**kwargs: None
+    add = lambda self,entry: self.__setitem__(entry.v.read(), \
+                                                  [v.read() for v in entry.x])
     def batch_init(self, values):
         for i,value in enumerate(values):
             index = self.value_type.hard_conv(i)
@@ -983,7 +941,7 @@ class LocalIndexStructure(List):
             def f(i):
                 self.l[0][i] = random_block(entry_size, value_type)
         print 'index size:', size
-    def update(self, index, value, evict=None):
+    def update(self, index, value):
         read_value = self[index]
         #print 'read', index, read_value
         #print self.l
@@ -1021,18 +979,13 @@ class TreeORAM(AbstractORAM):
         self.value_type = value_type
         if entry_size is not None:
             self.value_length = len(tuplify(entry_size))
-            self.entry_size = tuplify(entry_size)
         else:
             self.value_length = value_length
-            self.entry_size = [None] * value_length
         self.index_size = log2(size)
-        self.index_type = value_type.get_type(self.index_size)
         self.size = size
-        empty_entry = Entry.get_empty(*self.internal_entry_size(), \
-                                      index_size=self.D)
+        empty_entry = Entry.get_empty(*self.internal_value_type())
         self.entry_type = empty_entry.types()
-        self.ram = RAM(self.n_buckets() * self.bucket_size, self.entry_type, \
-                       self.get_array)
+        self.ram = RAM(self.n_buckets() * self.bucket_size, self.entry_type)
         if init_rounds != -1:
             # put memory initialization in different timer
             stop_timer()
@@ -1045,7 +998,7 @@ class TreeORAM(AbstractORAM):
         self.index = self.index_structure(size, self.D, value_type, init_rounds, True)
 
         self.read_value = Array(self.value_length, value_type)
-        self.read_non_empty = MemValue(self.value_type.bit_type(0))
+        self.read_non_empty = MemValue(self.value_type(0))
         self.state = MemValue(self.value_type(0))
     @method_block
     def add_to_root(self, state, is_empty, v, *x):
@@ -1060,7 +1013,7 @@ class TreeORAM(AbstractORAM):
         entry = bucket.bucket.pop()
         #print 'evict', entry
         #print 'from', bucket
-        b = if_else(entry.empty(), self.value_type.bit_type.get_random_bit(), \
+        b = if_else(entry.empty(), self.value_type.get_random_bit(), \
                         get_bit(entry.x[0], self.D - 1 - d, self.D))
         block = cond_swap(b, entry, self.root.bucket.empty_entry())
         #print 'empty', entry.empty()
@@ -1091,7 +1044,7 @@ class TreeORAM(AbstractORAM):
             new_path = regint.get_random(self.D)
             l_star = self.value_type(new_path)
         self.state.write(l_star)
-        return self.index.update(u, l_star, evict=False).reveal()
+        return self.index.update(u, l_star).reveal()
     @method_block
     def read_and_remove_levels(self, u, read_path):
         u = MemValue(u)
@@ -1099,7 +1052,7 @@ class TreeORAM(AbstractORAM):
         levels = self.D + 1
         parallel = get_parallel(self.index_size, *self.internal_value_type())
         @map_sum(get_n_threads_for_tree(self.size), parallel, levels, \
-                     self.value_length + 1, [self.value_type.bit_type] + \
+                     self.value_length + 1, [self.value_type] + \
                         [self.value_type] * self.value_length)
         def process(level):
             b_index = regint(cint(2**(self.D) + read_path) >> cint(self.D - level))
@@ -1123,8 +1076,6 @@ class TreeORAM(AbstractORAM):
                 crash()
     def internal_value_type(self):
         return self.value_type, self.value_length + 1
-    def internal_entry_size(self):
-        return self.value_type, [self.D] + list(self.entry_size)
     def n_buckets(self):
         return 2**(self.D+1)
     @method_block
@@ -1148,7 +1099,7 @@ class TreeORAM(AbstractORAM):
         Program.prog.curr_tape.\
             start_new_basicblock(name='read_and_remove-%d-end' % self.size)
         return [MemValue(v) for v in read_value], MemValue(read_empty)
-    def add(self, entry, state=None, evict=None):
+    def add(self, entry, state=None):
         if state is None:
             state = self.state.read()
         #print_reg(cint(0), 'add')
@@ -1192,9 +1143,6 @@ class TreeORAM(AbstractORAM):
                 #print 'd, 2^d', d, 1 << d
                 self.evict2(s1 + (1 << d), s2 + (1 << d), d)
                 self.check()
-    def recursive_evict(self):
-        self.evict()
-        self.index.recursive_evict()
 
     def batch_init(self, values):
         """ Batch initalization. Obliviously shuffles and adds N entries to
@@ -1374,10 +1322,8 @@ def get_value_size(value_type):
     """ Return element size. """
     if value_type == sgf2n:
         return Program.prog.galois_length
-    elif value_type == sint:
-        return 127 - Program.prog.security
     else:
-        return value_type.max_length
+        return 127 - Program.prog.security
 
 def get_parallel(index_size, value_type, value_length):
     """ Returning the number of parallel readings feasible, based on
@@ -1403,11 +1349,11 @@ class PackedIndexStructure(object):
             self.entry_size = tuplify(entry_size)
         self.value_type = value_type
         for demux_bits in range(max_demux_bits + 1):
-            self.log_entries_per_element = min(log2(size), \
+            self.log_entries_per_element = min(size, \
                 int(math.floor(math.log(float(get_value_size(value_type)) / \
                     sum(self.entry_size), 2))))
             self.log_elements_per_block = \
-                max(0, min(demux_bits, log2(size) - \
+                max(0, min(demux_bits, log2(size * sum(self.entry_size)) - \
                                self.log_entries_per_element))
             if self.log_entries_per_element < 0:
                 self.entries_per_block = 1
@@ -1442,17 +1388,14 @@ class PackedIndexStructure(object):
         print 'log(elements per block):', self.log_elements_per_block
         print 'elements per block:', self.elements_per_block
         print 'used bits:', self.used_bits
-        entry_size = [self.used_bits] * self.elements_per_block
         if real_size > 1:
             # no need to init underlying ORAM, will be initialized implicitely
-            self.l = self.storage(real_size, value_type, \
-                                  entry_size=entry_size, init_rounds=0)
+            self.l = self.storage(real_size, value_type, self.elements_per_block, \
+                                      init_rounds=0)
             self.small = False
         else:
-            self.l = List(1, value_type, self.elements_per_block, \
-                          entry_size=entry_size)
+            self.l = List(1, value_type, self.elements_per_block)
             self.small = True
-        self.index_type = self.l.index_type
         if init_rounds:
             if init_rounds > 0:
                 real_init_rounds = init_rounds * real_size / size
@@ -1467,7 +1410,7 @@ class PackedIndexStructure(object):
                 else:
                     self.l[i] = [0] * self.elements_per_block
                 time()
-                print_ln('packed ORAM init %s/%s', i, real_init_rounds)
+                print_ln('packed ORAM init %s/%s', cint(i), real_init_rounds)
         print 'index initialized, size', size
     def translate_index(self, index):
         """ Bit slicing *index* according parameters. Output is tuple
@@ -1482,17 +1425,18 @@ class PackedIndexStructure(object):
                 return 0, b, c
             else:
                 return (index - rem) / self.entries_per_block, b, c
-        else:
+        elif self.value_type == sgf2n:
             index_bits = bit_decompose(index, log2(self.size))
             l1 = self.log_entries_per_element
             l2 = self.log_entries_per_block
-            c = bit_compose(index_bits[:l1])
-            b = bit_compose(index_bits[l1:l2])
+            c = sum(bit << i for i,bit in enumerate(index_bits[:l1]))
+            b = sum(bit << i for i,bit in enumerate(index_bits[l1:l2]))
             if self.small:
                 return 0, b, c
             else:
-                a = bit_compose(index_bits[l2:])
+                a = sum(bit << i for i,bit in enumerate(index_bits[l2:]))
                 return a, b, c
+        else:
             raise CompilerError('Cannot process indices of type', self.value_type)
     class Slicer(object):
         def __init__(self, pack, index):
@@ -1541,20 +1485,20 @@ class PackedIndexStructure(object):
             return self.MultiSlicer(self, index)
         else:
             return self.Slicer(self, index)
-    def update(self, index, value, evict=True):
+    def update(self, index, value):
         """ Updating index return current value. Has to be done in one
         step to avoid exponential blow-up in ORAM recursion. """
-        return self.access(index, value, True, evict=evict)
-    def access(self, index, value, write, evict=True):
+        return self.access(index, value, True)
+    def access(self, index, value, write):
         slicer = self.get_slicer(index)
         block = self.l.read_and_maybe_remove(slicer.a)[0][0]
         read_value = slicer.read(block)
         value = if_else(write, ValueTuple(tuplify(value)), \
                             ValueTuple(read_value))
-        self.l.add(Entry(MemValue(self.l.index_type(slicer.a)), \
+        self.l.add(Entry(MemValue(self.value_type(slicer.a)), \
                              ValueTuple(MemValue(v) \
                                             for v in slicer.write(value)), \
-                             value_type=self.value_type), evict=evict)
+                             value_type=self.value_type))
         return untuplify(read_value)
     def __getitem__(self, index):
         slicer = self.get_slicer(index)
@@ -1564,9 +1508,7 @@ class PackedIndexStructure(object):
             # no need for reading first
             self.l[index] = self.get_slicer(index).write(value)
         else:
-            self.access(index, value, True, False)
-            self.l.recursive_evict()
-    recursive_evict = lambda self: self.l.recursive_evict()
+            self.access(index, value, True)
 
     def batch_init(self, values):
         """ Initialize m values with indices 0, ..., m-1 """
@@ -1610,8 +1552,8 @@ class PackedORAMWithEmpty(AbstractORAM, PackedIndexStructure):
         return res[1:], 1 - res[0]
     def read_and_maybe_remove(self, index):
         return self.read(index), 0
-    def add(self, entry, state=None, evict=True):
-        self.access(entry.v, entry.x, True, entry.empty(), evict=evict)
+    def add(self, entry, state=None):
+        self.access(entry.v, entry.x, True, entry.empty())
 
 class LocalPackedIndexStructure(PackedIndexStructure):
     """ Debugging only. Packed tree ORAM index revealing the access
@@ -1680,39 +1622,30 @@ class OptimalPackedORAMWithEmpty(PackedORAMWithEmpty):
     storage = OptimalORAM
 
 def test_oram(oram_type, N, value_type=sint, iterations=100):
-    stop_grind()
     oram = oram_type(N, value_type=value_type, entry_size=32, init_rounds=0)
-    value_type = value_type.get_type(32)
-    index_type = value_type.get_type(log2(N))
-    start_grind()
     print 'initialized'
-    print_ln('initialized')
+    print_reg(cint(0), 'init')
     stop_timer()
     # synchronize
-    start_timer(2)
     Program.prog.curr_tape.start_new_basicblock(name='sync')
-    value_type(0).reveal()
+    sint(0).reveal()
     Program.prog.curr_tape.start_new_basicblock(name='sync')
-    stop_timer(2)
     start_timer()
     #oram[value_type(0)] = -1
     #iterations = N
     @for_range(iterations)
     def f(i):
-        time()
-        oram[index_type(i % N)] = value_type(i % N)
+        oram[value_type(i % N)] = value_type(i % N)
         #value, empty = oram.read_and_remove(value_type(i))
         #print 'first write'
         time()
-        oram[index_type(i % N)].reveal().print_reg('writ')
+        oram[value_type(i % N)].reveal().print_reg('writ')
         #print 'first read'
     @for_range(iterations)
     def f(i):
-        time()
-        x = oram[index_type(i % N)]
+        x = oram[value_type(i % N)]
         x.reveal().print_reg('read')
     #    print 'second read'
-    print_ln('%s accesses', 3 * iterations)
     return oram
 
 def test_oram_access(oram_type, N, value_type=sint, index_size=None, iterations=100):
