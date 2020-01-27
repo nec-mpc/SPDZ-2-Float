@@ -1,6 +1,11 @@
 # Confidential:
 # (C) 2017 University of Bristol. See License.txt
 
+#####
+# Part of the implementations (e_exp, e_log and so on) were done by Yusaku Maeda, an intern student of NEC.
+# The implementation of the floating point operations were done by Takuma Amada, a researcher of NEC.
+#####
+
 from Compiler.program import Tape
 from Compiler.exceptions import *
 from Compiler.instructions import *

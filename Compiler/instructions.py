@@ -13,6 +13,13 @@ Note: every instruction should have a suitable docstring for auto-generation of
 documentation
 """
 
+####
+# The implementations of instrcutions, e_u_divs and e_s_divs, were referred to the following paper [OMH18].
+# Thanks for Satsuya Ohata's advice.
+# [OMH18] Ohata, Satsuya, Hiraku Morita, and Goichiro Hanaoka. "Accuracy/Efficiency Trade-Off for Privacy-Preserving Division Protocol." 2018 International Symposium on Information Theory and Its Applications (ISITA). IEEE, 2018.
+###
+
+
 import itertools
 import tools
 from random import randint
