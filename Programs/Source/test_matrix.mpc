@@ -1,0 +1,36 @@
+# assume that mat_a and mat_b are n * n matrices. 
+def matrix_add(mat_a, mat_b):
+	n = len(mat_a)
+	mat_c = [[sint() for i in range(n)] for j in range(n)]
+	for i in range(n):
+		for j in range(n):
+			mat_c[i][j] = mat_a[i][j] + mat_b[i][j]
+	return mat_c
+
+def matrix_mul(mat_a, mat_b):
+	n = len(mat_a)
+        mat_c = [[sint() for i in range(n)] for j in range(n)]
+        for i in range(n):
+		tmp_sum = sint(0)
+		for j in range(n):
+                	for k in range(n):
+                        	tmp_sum += mat_a[i][k] * mat_b[k][j]
+		mat_c[i][j] = tmp_sum
+        return mat_c
+
+# mat_A = mat_B = [[0, 1], [0, 1]]
+mat_A = [[sint(i) for i in range(2)] for j in range(2)]
+mat_B = [[sint(i) for i in range(2)] for j in range(2)]
+
+res_add = matrix_add(mat_A, mat_B)
+res_mul = matrix_mul(mat_A, mat_B)
+
+print_ln("res_add[0][0]=%s", res_add[0][0].reveal())
+print_ln("res_add[0][1]=%s", res_add[0][1].reveal())
+print_ln("res_add[1][0]=%s", res_add[1][0].reveal())
+print_ln("res_add[1][1]=%s", res_add[1][1].reveal())
+
+print_ln("res_mul[0][0]=%s", res_mul[0][0].reveal())
+print_ln("res_mul[0][1]=%s", res_mul[0][1].reveal())
+print_ln("res_mul[1][0]=%s", res_mul[1][0].reveal())
+print_ln("res_mul[1][1]=%s", res_mul[1][1].reveal())

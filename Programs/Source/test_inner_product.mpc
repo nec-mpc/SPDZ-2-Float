@@ -1,0 +1,17 @@
+# assume that vec_a and vec_b have the same dimensions
+def inner_product(vec_a, vec_b):
+	dim = len(vec_a)
+	ip_val = sint(0)
+	for i in range(dim):
+		ip_val += vec_a[i] * vec_b[i]
+	return ip_val
+
+dim = 10
+vec_A = [sint(i) for i in range(dim)]
+vec_B = [sint(i) for i in range(dim)]
+res_ip = inner_product(vec_A, vec_B)
+for i in range(dim):
+	tmp = cint(i)
+	print_ln("vec_A[%s]=%s", tmp, vec_A[i].reveal())
+	print_ln("vec_B[%s]=%s", tmp, vec_B[i].reveal())
+print_ln("res_ip=%s", res_ip.reveal())

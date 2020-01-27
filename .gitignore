@@ -44,10 +44,10 @@ callgrind.out.*
 
 # Compiled source #
 ###################
-Programs/Source/*
-Programs/Bytecode/*
-Programs/Schedules/*
-Programs/Public-Input/*
+#Programs/Source/*
+#Programs/Bytecode/*
+#Programs/Schedules/*
+#Programs/Public-Input/*
 *.com
 *.class
 *.dll
