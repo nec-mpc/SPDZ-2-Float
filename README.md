@@ -1,25 +1,23 @@
-# SPDZ-2 With Extensions
+# SPDZ-2-With Extensions for Ring
 
-A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Changes performed by Bar Ilan Cryptography Research Group and NEC Security Research Labs. This code is used in the publication "Generalizing the SPDZ Compiler For Other Protocols" accpeted for ACM-CCS 2018. A link to the eprint will follow once available.
+A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Changes performed by Bar Ilan Cryptography Research Group and NEC Security Research Labs. This code is used in the publication "Generalizing the SPDZ Compiler For Other Protocols" accepted for ACM-CCS 2018. A link to the eprint is https://eprint.iacr.org/2018/762 
+This code is for Ring based protocol.
 
-We would like to thank to the team behind the SPDZ-2 framework, which is an extensive effort and an excellent contribution to the MPC community. Special thanks to Marcel Keller for his numerous insights and explanantions making this work possible.   
+We would like to thank to the team behind the SPDZ-2 framework, which is an extensive effort and an excellent contribution to the MPC community. Special thanks to Marcel Keller for his numerous insights and explanations making this work possible.
 
-(C) 2017 University of Bristol. See License.txt
-Software for the SPDZ and MASCOT secure multi-party computation protocols.
-See `Programs/Source/` for some example MPC programs, and `tutorial.md` for
-a basic tutorial.
-See also https://www.cs.bris.ac.uk/Research/CryptographySecurity/SPDZ
+(C) 2017 University of Bristol. See License.txt Software for the SPDZ and MASCOT secure multi-party computation protocols. See Programs/Source/ for some example MPC programs.
 
 ## SPDZ-2 With Extensions - rationale
-The SPDZ-2 extensions is a mechanism that enables substitution of the original implementation of various operations with an alternate external implementation. This is done by dynamically loading a configured library and prescribed API function pointers. 
-In runtime, the SPDZ-2 processor will call the loaded API functions instead of the original implementation and provide it with the required parameters.
+
+The SPDZ-2 extensions is a mechanism that enables substitution of the original implementation of various operations with an alternate external implementation. This is done by dynamically loading a configured library and prescribed API function pointers. In runtime, the SPDZ-2 processor will call the loaded API functions instead of the original implementation and provide it with the required parameters. In this repository, we set library for ring based protocol as configured library.
 
 ### MPC programs source code
-The [Programs/Source](https://github.com/cryptobiu/SPDZ-2/tree/master/Programs/Source) folder of this fork contains MPC programs added as paro of our work to evaluate different protocols under the framework. For example, the following program evaluates a decision tree.  
+The [Programs/Source](https://github.com/nec-mpc/SPDZ-2/tree/master/Programs/Source) folder of this fork contains MPC programs added as part of our work to evaluate different protocols under the framework. For example, the following program evaluates a decision tree.  
 ```
 import util
 #------------------------------------------------------------------------------
 #definitions
+
 c_FeaturesSetSize = 17
 c_TreeDepth = 30
 c_NodeSetSize = 1255
@@ -30,7 +28,7 @@ c_NodeSetSize = 1255
 # Code for oblivious selection of an array member by a secure index
 def oblivious_selection(sec_array, array_size, sec_index):
     bitcnt = util.log2(array_size)
-    sec_index_bits = sec_index.bit_decompose(bitcnt)
+    sec_index_bits = sec_index.e_bit_decompose(bitcnt)
     return obliviously_select(sec_array, array_size, 0, sec_index_bits, len(sec_index_bits) - 1)
 
 def obliviously_select(array, size, offset, bits, bits_index):
@@ -43,26 +41,23 @@ def obliviously_select(array, size, offset, bits, bits_index):
         half_size = 2**(bits_index)
         msb = bits[bits_index]
         return msb.if_else(
-            obliviously_select(array, size, offset + half_size, bits, bits_index-1) , 
+            obliviously_select(array, size, offset + half_size, bits, bits_index-1) ,
             obliviously_select(array, size, offset, bits, bits_index-1) )
-
 #------------------------------------------------------------------------------
 # Reading feature set from user 1 (the evaluee)
 #print_ln('user 1: please enter input offset:')
 User1InputOffset = sint.get_input_from(1)
 #print_ln('user 1: please enter feature set (%s feature values):', c_FeaturesSetSize)
-FeaturesSet = Array(c_FeaturesSetSize, sint)
-@for_range(c_FeaturesSetSize)
-def init_features_set(i):
+FeaturesSet = [sint() for i in range(c_FeaturesSetSize)]
+
+for i in range(c_FeaturesSetSize):
     FeaturesSet[i] = sint.get_input_from(1) - User1InputOffset
     #debug-print
     #print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
-
 #------------------------------------------------------------------------------
 def test(FeatureIdx, Operator, Threshold):
     feature_value = oblivious_selection(FeaturesSet, c_FeaturesSetSize, FeatureIdx)
     return Operator.if_else(feature_value > Threshold, feature_value == Threshold)
-    
 #------------------------------------------------------------------------------
 #print_ln('user 0: please enter input offset:')
 User0InputOffset = sint.get_input_from(0)
@@ -71,7 +66,6 @@ def read_node(i):
     FeatureIdx = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('FeatureIdx[%s] = %s', i, FeatureIdx.reveal())
-
     #print_ln('user 0: please enter node %s operator:', i)
     Operator = sint.get_input_from(0) - User0InputOffset
     #debug-print
@@ -81,7 +75,7 @@ def read_node(i):
     Threshold = sint.get_input_from(0) - User0InputOffset
     #debug-print
     #print_ln('Threshold[%s] = %s', i, Threshold.reveal())
-    
+
     #print_ln('user 0: please enter node %s GT/EQ:', i)
     GT_or_EQ = sint.get_input_from(0) - User0InputOffset
     #debug-print
@@ -93,110 +87,74 @@ def read_node(i):
     #print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
 
     NodePass = test(FeatureIdx, Operator, Threshold)
-
     #debug-print
     #print_ln('Node[%s] passage = %s', i, NodePass.reveal())
-    
+
     return NodePass*GT_or_EQ + (1 - NodePass)*LTE_or_NEQ
 #------------------------------------------------------------------------------
 # Reading node set from user 0 (the evaluator)
-NodeSet = Array(c_NodeSetSize, sint)
-@for_range(c_NodeSetSize)
-def read_node_loop(i):
+NodeSet = [sint() for i in range(c_NodeSetSize)]
+for i in range(c_NodeSetSize):
     NodeSet[i] = read_node(i)
 #------------------------------------------------------------------------------
 #evaluation
 NodePtr = MemValue(sint(0))
-@for_range(c_TreeDepth)
-def evaluation_loop(c_CurrLyr):
+for i in range(c_TreeDepth):
     NextNodePtr = oblivious_selection(NodeSet, c_NodeSetSize, NodePtr)
-    CycleBack = (NextNodePtr < 0) * (c_CurrLyr < (c_TreeDepth-1))
+    CycleBack = (NextNodePtr < 0) * (i < (c_TreeDepth-1))
     NodePtr.write(CycleBack.if_else(NodePtr, NextNodePtr))
     #debug-print
-    #print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', c_CurrLyr, NodePtr.reveal(), NextNodePtr.reveal())
+    #print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', i, NodePtr.reveal(), NextNodePtr.reveal())
 
 NodePtr = (NodePtr + 1) * (-1)
 print_ln('evaluation result = %s', NodePtr.reveal())
 ```
-### marking of code changes
-Code changes in the fork can be detected by searching for ```EXTENDED_SPDZ_GFP``` compiler directive. 
-If this directive is swiched off, the original SPDZ-2 code will be compiled.
-Here is an example of a code change, in [Instruction.cpp](https://github.com/cryptobiu/SPDZ-2/edit/master/Processor/Instruction.cpp)
-```
-case STARTOPEN:
-#if defined(EXTENDED_SPDZ_GFP)
-    	  Proc.POpen_Start_Ext_64(start, size);
-#else
-    	  Proc.POpen_Start(start,Proc.P,Proc.MCp,size);
-#endif
-```
-if the directive is defined, the code will call the SPDZ extension code instrad of the standard processing for a open.
+### SPDZ-2 extension library
+See https://github.com/nec-mpc/SPDZ-2-Extension-Ring for our implemented extension library.
 
-### Extension API
-The API for an extension is defined [in the following include file](https://github.com/cryptobiu/SPDZ-2-Extension-MpcHonestMajority/blob/master/spdzext.h)
+## SPDZ-2
+### Requirements:
 
-```
-int init(void ** handle, const int pid, const int num_of_parties, const int thread_id,
-	 const char * field, const int open_count, const int mult_count, const int bits_count);
+- GCC (tested with 4.8.5) or ICC (18.0.3)
+- MPIR library, compiled with C++ support (use flag --enable-cxx when running configure)
+- libsodium library, tested against 1.0.11
+- CPU supporting AES-NI
+- Python 2.x (tested with 2.7.5)
 
-int term(void * handle);
+### To compile:
+1) Download files of this repository to above environment.
 
-int offline(void * handle, const int offline_size);
+2) Change directories to download one.
 
-int opens(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * opens, int verify);
+3) Run `make clean all`
 
-int triple(void * handle, mpz_t a, mpz_t b, mpz_t c);
+### To generate the bytecode:
+1) Set the program source file of MPC on [Programs/Source](https://github.com/nec-mpc/SPDZ-2/tree/master/Programs/Source). 
+ - File extension is ".mpc"
+ 
+2) Change directories to download one.
 
-int verify(void * handle, int * error);
+3) Run `python compile.py [PROGRAM NAME]`
 
-int input(void * handle, const int input_of_pid, const size_t num_of_inputs, mpz_t * inputs);
+### To run the protocol:
+1) Set environment variables for extension library. 
+ - See the URL and README.md
 
-int mult(void * handle, const size_t share_count, const mpz_t * shares, mpz_t * products, int verify);
+2) Change directories to download one.
 
-int mix_add(void * handle, mpz_t share, const mpz_t scalar);
+3) Run each entity as follows.
+* [Proxy]
+	`./Server.x 3 [port number]`
+	
+* [Each MPC server(0/1/2)] 
+	`.Player-Online.x -pn [port number] -lgp 64 [server ID] [PROGRAM NAME]`
 
-int mix_sub_scalar(void * handle, mpz_t share, const mpz_t scalar);
-
-int mix_sub_share(void * handle, const mpz_t scalar, mpz_t share);
-
-int share_immediates(void * handle, const int party_id, const size_t value_count, const mpz_t * values, mpz_t * shares);
-
-int bit(void * handle, mpz_t share);
-
-int inverse(void * handle, mpz_t share_value, mpz_t share_inverse);
-
-```
-### Example of SPDZ-2 extension
-See https://github.com/cryptobiu/SPDZ-2-Extension-MpcHonestMajority for an example of such implemented extension library.
-
-
-## SPDZ-2 
-
-#### Requirements:
- - GCC (tested with 7.2) or LLVM (tested with 3.8)
- - MPIR library, compiled with C++ support (use flag --enable-cxx when running configure)
- - libsodium library, tested against 1.0.11
- - CPU supporting AES-NI and PCLMUL
- - Python 2.x
- - If using macOS, Sierra or later
-
-#### To compile:
-
-1) Edit `CONFIG` or `CONFIG.mine`:
-
- - Add the following line at the top: `MY_CFLAGS = -DINSECURE`
- - For processors without AVX (e.g., Intel Atom) or for optimization, set `ARCH = -march=<architecture>`.
-
-2) Run `make bmr` (use the flag -j for faster compilation multiple threads). Remember to run `make clean` first after changing `CONFIG` or `CONFIG.mine`.
-
-#### Configure the parameters:
-
-1) Edit `Program/Source/gc_oram.mpc` to change size and to choose Circuit ORAM or linear scan without ORAM.
-2) Run `./compile.py -D gc_oram`.
-
-#### Run the protocol:
-
-- Run everything locally: `Scripts/bmr-program-run.sh gc_oram`.
-- Run on different hosts: `Scripts/bmr-program-run-remote.sh gc_oram <host1> <host2> [...]`
-
-To run with more than two parties, change `CFLAGS = -DN_PARTIES=<n>` in `CONFIG`, and compile again after `make clean`.
+- ÅiEx.Åjvariance_modified_10input (This program computes variance from 10 inputs)
+   * [Proxy]
+     `./Server.x 3 60000`
+   * [MPC server0]
+     `.Player-Online.x -pn 60000 -lgp 64 0 variance_modified_10input`
+   * [MPC server1]
+      ` .Player-Online.x -pn 60000 -lgp 64 1 variance_modified_10input`
+   * [MPC server2]
+      `.Player-Online.x -pn 60000 -lgp 64 2 variance_modified_10input`
