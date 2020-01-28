@@ -2,7 +2,7 @@
 # (C) 2017 University of Bristol. See License.txt
 
 #####
-# Part of the implementations (e_exp, e_log and so on) were done by Yusaku Maeda, an intern student of NEC.
+# Part of the implementations (e_exp, e_log and so on) were done by Yusaku Maeda, a student of the University of Tokyo master's program, during the internship of NEC.
 # The implementation of the floating point operations were done by Takuma Amada, a researcher of NEC.
 #####
 
