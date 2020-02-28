@@ -154,3 +154,9 @@ c18 = a18 / b18
 # actual output: c18=1.234568e+04
 print_ln("c18=%s", c18.reveal())
 
+print_ln("LT Test:")
+x = sfloat(2*(10**5))
+y = sfloat(2*(10**(-5)))
+res = (x<y)
+print_ln("res == %s", res.reveal())
+

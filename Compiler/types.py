@@ -5706,9 +5706,9 @@ class sfloat(_number):
         e_bitdec(self.s, 1, *s1)
         e_bitdec(other.s, 1, *s2)
 
-        both_s = s1[0] * s2[0]
+        # both_s = s1[0] * s2[0]
 
-        res_bit = (both_zero + 1) * v_eq_res * p_eq_res * (1 + s1[0] + s2[0] + both_s) + both_zero
+        res_bit = (both_zero + 1) * v_eq_res * p_eq_res * (1 + s1[0] + s2[0]) + both_zero
         res = [sint()]
         e_bitinj(res_bit, *res)
         return res[0]
