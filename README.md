@@ -14,102 +14,169 @@ This repository is the improved one of SPDZ-2(https://github.com/nec-mpc/SPDZ-2)
 The SPDZ-2 extensions is a mechanism that enables substitution of the original implementation of various operations with an alternate external implementation. This is done by dynamically loading a configured library and prescribed API function pointers. In runtime, the SPDZ-2 processor will call the loaded API functions instead of the original implementation and provide it with the required parameters. In this repository, we set library for ring based protocol as configured library.
 
 ### MPC programs source code
-The [Programs/Source](https://github.com/nec-mpc/SPDZ-2/tree/master/Programs/Source) folder of this fork contains MPC programs added as part of our work to evaluate different protocols under the framework. For example, the following program evaluates a decision tree.  
+The [Programs/Source](https://github.com/nec-mpc/SPDZ-2-Float/tree/master/Programs/Source) folder of this fork contains MPC programs added as part of our work to evaluate different protocols under the framework. For example, the following program performs some basic operations.  
 ```
-import util
-#------------------------------------------------------------------------------
-#definitions
+##### examples for secret integer operation #####
 
-c_FeaturesSetSize = 17
-c_TreeDepth = 30
-c_NodeSetSize = 1255
+# sint: secret integer
+# cint: clear integer
 
-#user 0 the evaluator
-#user 1 is the evaluee
-#------------------------------------------------------------------------------
-# Code for oblivious selection of an array member by a secure index
-def oblivious_selection(sec_array, array_size, sec_index):
-    bitcnt = util.log2(array_size)
-    sec_index_bits = sec_index.e_bit_decompose(bitcnt)
-    return obliviously_select(sec_array, array_size, 0, sec_index_bits, len(sec_index_bits) - 1)
+## addition ##
 
-def obliviously_select(array, size, offset, bits, bits_index):
-    #print('size={}; offset={}; bi={};'.format(size, offset, bits_index))
-    if offset >= size:
-        return 0
-    elif bits_index < 0:
-        return array[offset]
-    else:
-        half_size = 2**(bits_index)
-        msb = bits[bits_index]
-        return msb.if_else(
-            obliviously_select(array, size, offset + half_size, bits, bits_index-1) ,
-            obliviously_select(array, size, offset, bits, bits_index-1) )
-#------------------------------------------------------------------------------
-# Reading feature set from user 1 (the evaluee)
-#print_ln('user 1: please enter input offset:')
-User1InputOffset = sint.get_input_from(1)
-#print_ln('user 1: please enter feature set (%s feature values):', c_FeaturesSetSize)
-FeaturesSet = [sint() for i in range(c_FeaturesSetSize)]
+a1 = sint(1)
+b1 = sint(2)
+c1 = a1 + b1
+# expected value: c1=3
+print_ln("c1=%s", c1.reveal())
 
-for i in range(c_FeaturesSetSize):
-    FeaturesSet[i] = sint.get_input_from(1) - User1InputOffset
-    #debug-print
-    #print_ln('FeaturesSet[%s] = %s', i, FeaturesSet[i].reveal())
-#------------------------------------------------------------------------------
-def test(FeatureIdx, Operator, Threshold):
-    feature_value = oblivious_selection(FeaturesSet, c_FeaturesSetSize, FeatureIdx)
-    return Operator.if_else(feature_value > Threshold, feature_value == Threshold)
-#------------------------------------------------------------------------------
-#print_ln('user 0: please enter input offset:')
-User0InputOffset = sint.get_input_from(0)
-def read_node(i):
-    #print_ln('user 0: please enter node %s feature index:', i)
-    FeatureIdx = sint.get_input_from(0) - User0InputOffset
-    #debug-print
-    #print_ln('FeatureIdx[%s] = %s', i, FeatureIdx.reveal())
-    #print_ln('user 0: please enter node %s operator:', i)
-    Operator = sint.get_input_from(0) - User0InputOffset
-    #debug-print
-    #print_ln('Operator[%s] = %s', i, Operator.reveal())
+a2 = sint(2)
+b2 = cint(1)
+c2 = a2 + b2
+# expected value: c2=3
+print_ln("c2=%s", c2.reveal())
 
-    #print_ln('user 0: please enter node %s Threshold:', i)
-    Threshold = sint.get_input_from(0) - User0InputOffset
-    #debug-print
-    #print_ln('Threshold[%s] = %s', i, Threshold.reveal())
 
-    #print_ln('user 0: please enter node %s GT/EQ:', i)
-    GT_or_EQ = sint.get_input_from(0) - User0InputOffset
-    #debug-print
-    #print_ln('GT_or_EQ[%s] = %s', i, GT_or_EQ.reveal())
+## multiplication ##
 
-    #print_ln('user 0: please enter node %s LTE/NEQ:', i)
-    LTE_or_NEQ = sint.get_input_from(0) - User0InputOffset
-    #debug-print
-    #print_ln('LTE_or_NEQ[%s] = %s', i, LTE_or_NEQ.reveal())
+# "sint * sint" requires communications. 
+a3 = sint(1)
+b3 = sint(2)
+c3 = a3 * b3
+# expected value: c3=2
+print_ln("c3=%s", c3.reveal())
 
-    NodePass = test(FeatureIdx, Operator, Threshold)
-    #debug-print
-    #print_ln('Node[%s] passage = %s', i, NodePass.reveal())
 
-    return NodePass*GT_or_EQ + (1 - NodePass)*LTE_or_NEQ
-#------------------------------------------------------------------------------
-# Reading node set from user 0 (the evaluator)
-NodeSet = [sint() for i in range(c_NodeSetSize)]
-for i in range(c_NodeSetSize):
-    NodeSet[i] = read_node(i)
-#------------------------------------------------------------------------------
-#evaluation
-NodePtr = MemValue(sint(0))
-for i in range(c_TreeDepth):
-    NextNodePtr = oblivious_selection(NodeSet, c_NodeSetSize, NodePtr)
-    CycleBack = (NextNodePtr < 0) * (i < (c_TreeDepth-1))
-    NodePtr.write(CycleBack.if_else(NodePtr, NextNodePtr))
-    #debug-print
-    #print_ln('CurrentLayer = %s; NodePtr = %s; NextNodePtr = %s', i, NodePtr.reveal(), NextNodePtr.reveal())
+# "sint * cint" does not require communications.
+# It needs only local operations. Hence, it takes no communication cost.
+a4 = sint(2)
+b4 = cint(1)
+c4 = a4 * b4
+# expected value: c4=2
+print_ln("c4=%s", c4.reveal())
 
-NodePtr = (NodePtr + 1) * (-1)
-print_ln('evaluation result = %s', NodePtr.reveal())
+## comparison ##
+a5 = sint(5)
+b5 = sint(3)
+c5 = (a5 < b5)
+# expected value: c5=0
+print_ln("c5=%s", c5.reveal())
+
+a6 = sint(4)
+b6 = sint(10)
+c6 = (a6 < b6)
+# expected value: c6=1
+print_ln("c6=%s", c6.reveal())
+
+## equality testing ##
+a7 = sint(1)
+b7 = sint(2)
+c7 = (a7 == b7)
+# expected value: c7=0
+print_ln("c7=%s", c7.reveal())
+
+a8 = sint(5)
+b8 = sint(5)
+c8 = (a8 == b8)
+# expected value: c8=1
+print_ln("c8=%s", c8.reveal())
+
+## secure if_else ##
+# Secure if_else operation is branching program while hiding the condition value.
+# Let cond be the condition value which is 1 or 0.
+# For example, cond.if_else(x, y) outputs x, otherwise it ouputs y.
+# That is, cond.if_else(x, y) equals to cond * x + (1 - cond) * y.
+
+a9 = sint(10)
+b9 = sint(8)
+cond1 = (a9 < b9)
+c9 = cond1.if_else(100, 20)
+# expected value: c9=20
+print_ln("c9=%s", c9.reveal())
+
+a10 = sint(10)
+b10 = sint(10)
+cond2 = (a10 == b10)
+c10 = cond2.if_else(100, 20)
+# expected value: c10=100
+print_ln("c10=%s", c10.reveal())
+
+##### examples for secret fixed operation #####
+
+## sfix: secure fixed value
+## cfix: clear fixed value 
+
+## addition ##
+a11 = sfix(1.5)
+b11 = sfix(3.21)
+c11 = a11 + b11
+# expected value: c11=4.71
+# actual output: c11=4.710007
+print_ln("c11=%s", c11.reveal())
+
+a12 = sfix(1.5)
+b12 = cfix(0.21)
+c12 = a12 + b12
+# expected value: c12=1.71
+# actual output: c12=1.710007
+print_ln("c12=%s", c12.reveal())
+
+## multiplication ##
+a13 = sfix(1.5)
+b13 = sfix(0.2)
+c13 = a13 * b13
+# expected value: c13=0.3
+# actual output: c13=0.300003
+print_ln("c13=%s", c13.reveal())
+
+a14 = sfix(1.7)
+b14 = cfix(0.3)
+c14 = a14 * b14
+# expected value: c14=0.51
+# actual output: c14=0.510010
+print_ln("c14=%s", c14.reveal())
+
+## division ##
+a15 = sfix(3.5)
+b15 = sfix(2.1)
+c15 = a15 / b15
+# expected value: c15=1.6666...
+# actual output: c15=1.666656
+print_ln("c15=%s", c15.reveal())
+
+
+##### examples for secret float operation #####
+
+## sfloat: secure float value
+
+## addition ## 
+a16 = sfloat(3.2)
+b16 = sfloat(1000000000.1)
+c16 = a16 + b16
+# expected value: c16=1000000003.3
+# actual output: c16=1.000000e+09
+print_ln("c16=%s", c16.reveal())
+ 
+## multiplication ##
+a17 = sfloat(0.00000001)
+b17 = sfloat(1000000000)
+c17 = a17 * b17
+# expected value: c17=10
+# actual output: c17=9.999999e+00
+print_ln("c17=%s", c17.reveal())
+
+## division ## 
+a18 = sfloat(1.2345678)
+b18 = sfloat(0.0001)
+c18 = a18 / b18
+# expected value: c18=12345.678
+# actual output: c18=1.234568e+04
+print_ln("c18=%s", c18.reveal())
+
+print_ln("LT Test:")
+x = sfloat(2*(10**5))
+y = sfloat(2*(10**(-5)))
+res = (x<y)
+print_ln("res == %s", res.reveal())
 ```
 ### SPDZ-2 extension library
 See https://github.com/nec-mpc/SPDZ-2-Extension-Ring-Float for our implemented extension library.
