@@ -1,4 +1,4 @@
-# SPDZ-2-With Extensions for Ring
+# SPDZ-2-With Extensions for Ring Supporting a Floating-point Operation 
 
 A fork of the University Of Bristol SPDZ-2 Repository, with changes to support extending the SPDZ-2 Framework to run additional protocols. Changes performed by Bar Ilan Cryptography Research Group and NEC Security Research Labs. This code is used in the publication "Generalizing the SPDZ Compiler For Other Protocols" accepted for ACM-CCS 2018. A link to the eprint is https://eprint.iacr.org/2018/762 
 This code is for Ring based protocol.
@@ -6,6 +6,8 @@ This code is for Ring based protocol.
 We would like to thank to the team behind the SPDZ-2 framework, which is an extensive effort and an excellent contribution to the MPC community. Special thanks to Marcel Keller for his numerous insights and explanations making this work possible.
 
 (C) 2017 University of Bristol. See License.txt Software for the SPDZ and MASCOT secure multi-party computation protocols. See Programs/Source/ for some example MPC programs.
+
+This repository is the improved one of SPDZ-2(https://github.com/nec-mpc/SPDZ-2). In this version, the secure computation on floating point numbers via ring-based 3PC protocol is newly supported.
 
 ## SPDZ-2 With Extensions - rationale
 
@@ -110,7 +112,7 @@ NodePtr = (NodePtr + 1) * (-1)
 print_ln('evaluation result = %s', NodePtr.reveal())
 ```
 ### SPDZ-2 extension library
-See https://github.com/nec-mpc/SPDZ-2-Extension-Ring for our implemented extension library.
+See https://github.com/nec-mpc/SPDZ-2-Extension-Ring-Float for our implemented extension library.
 
 ## SPDZ-2
 ### Requirements:
