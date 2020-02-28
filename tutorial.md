@@ -22,7 +22,7 @@ If you want to run it, please see the README.md to know how to generate the byte
 The output is the result of the computation.
 
 ````
-	Result is 17
+Result is 17
 
 ````
 
@@ -107,7 +107,7 @@ print_ln('Result is %s', abc.reveal())
 The output is the result of the computation.
 
 ````
-	Result is 100
+Result is 100
 
 ````
 
@@ -134,7 +134,7 @@ print_ln('Result is %s', d)
 The output is the result of the computation.
 
 ````
-	Result is 0x1
+Result is 0x1
 
 ````
 
@@ -153,7 +153,7 @@ print_ln('Result is %s', d.reveal())
 The output is the result of the computation.
 
 ````
-	Result is 0x1
+Result is 0x1
 
 ````
 
@@ -177,7 +177,7 @@ print_ln('Result is %s', abc.reveal())
 The output is the result of the computation.
 
 ````
-	Result is 0x0
+Result is 0x0
 
 ````
 
@@ -192,82 +192,30 @@ If we change the types of bit recomposition instruction from communication-effic
 After the above change, we run `python compile.py [PROGRAM NAME]` then the other bytecode is generated.
 
 
-To run some experiments of [A+18 paper](https://eprint.iacr.org/2018/762)
+To run the programs
 ==============================================================
-We prepare program codes of some experiments in Program/Source as follows:
+We prepare program codes in Program/Source as follows:
 * List of test programs
-  - mean_modified_10input.mpc
-  - variance_modified_10input.mpc
-  - sql_query_3_modified_10input.mpc
-  - Non_Balanced_Generic_Decision_Tree_modified.mpc
+  - test_inner_product.mpc
+  - test_matrix.mpc
+  - tutorial_NEC_codes.mpc
 
-* Caution
- - File name shows the compuation and the number of input.
- - If the number of input is less than it, programs go core-dump. 
- - Programs whose name includes "modified" is  carefully written in such a way as to be optimized well. The compilation time is long but the processing time is fast.
+## How to Compile and run the programs
+### test_inner_product
 
-## To run the programs
-### mean_modified_10input
-
-1) Make inputs.
+1) Generate the bytecode.
 ```
-cat ./single_input/mean_10input/Input/parallel_1_mean_10input.txt > ./integers_input_2.txt
+python compile.py test_inner_product 
 ```
 
-2) Generate the bytecode.
-```
-python compile.py mean_modified_10input 
-```
+2) Run the protocol. (See "To run the protocol:" in README.md.)
 
-3) Run the protocol. (See "To run the protocol:" in README.md.)
+### test_matrix
 
-### variance_modified_10input
-
-1) Make inputs.
+1) Generate the bytecode.
 ```
-cat ./single_input/variance_10input/Input/parallel_1_variance_10input.txt > ./integers_input_2.txt
+python compile.py test_matrix 
 ```
 
-2) Generate the bytecode.
-```
-python compile.py variance_modified_10input 
-```
-
-3) Run the protocol. (See "To run the protocol:" in README.md.)
-
-### sql_query_3_modified_10input
-
-1) Make inputs.
-```
-cat ./single_input/sql_program_10input/Input/parallel_1_sql_int_10input_0.txt > ./integers_input_0.txt
-cat ./single_input/sql_program_10input/Input/parallel_1_sql_int_10input_1.txt > ./integers_input_1.txt
-cat ./single_input/sql_program_10input/Input/parallel_1_sql_int_10input_2.txt > ./integers_input_2.txt
-```
-
-2) Generate the bytecode.
-```
-python compile.py sql_query_3_modified_10input
-```
-
-3) Run the protocol. (See "To run the protocol:" in README.md.)
-
-### Non_Balanced_Generic_Decision_Tree_modified
-
-1) Make inputs.
-```
-cat ./single_input/decision_tree/Input/parallel_1_0.txt > ./integers_input_0.txt
-cat ./single_input/decision_tree/Input/parallel_1_dc_input_4spdz2.txt > ./integers_input_1.txt
-```
-We also prepare another example file, parallel_1_1.txt. It provides the another result. 
-
-2) Generate the bytecode.
-```
-python compile.py Non_Balanced_Generic_Decision_Tree_modified
-```
-
-3) Run the protocol. (See "To run the protocol:" in README.md.)
-
-
-### To check the result
-We prepare the expected result files in ./single_input/[type of experiment]/Result/. 
+2) Run the protocol. (See "To run the protocol:" in README.md.)
 
