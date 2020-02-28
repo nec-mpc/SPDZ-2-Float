@@ -198,7 +198,7 @@ See https://github.com/nec-mpc/SPDZ-2-Extension-Ring-Float for our implemented e
 3) Run `make clean all`
 
 ### To generate the bytecode:
-1) Set the program source file of MPC on [Programs/Source](https://github.com/nec-mpc/SPDZ-2/tree/master/Programs/Source). 
+1) Set the program source file of MPC on [Programs/Source](https://github.com/nec-mpc/SPDZ-2-Float/tree/master/Programs/Source). 
  - File extension is ".mpc"
  
 2) Change directories to download one.
@@ -218,12 +218,12 @@ See https://github.com/nec-mpc/SPDZ-2-Extension-Ring-Float for our implemented e
 * [Each MPC server(0/1/2)] 
 	`.Player-Online.x -pn [port number] -lgp 64 [server ID] [PROGRAM NAME]`
 
-- variance_modified_10input (This program computes variance from 10 inputs)
+- test_inner_product (This program computes the inner-product value)
    * [Proxy]
      `./Server.x 3 60000`
    * [MPC server0]
-     `.Player-Online.x -pn 60000 -lgp 64 0 variance_modified_10input`
+     `.Player-Online.x -pn 60000 -lgp 64 0 test_inner_product`
    * [MPC server1]
-      ` .Player-Online.x -pn 60000 -lgp 64 1 variance_modified_10input`
+      ` .Player-Online.x -pn 60000 -lgp 64 1 test_inner_product`
    * [MPC server2]
-      `.Player-Online.x -pn 60000 -lgp 64 2 variance_modified_10input`
+      `.Player-Online.x -pn 60000 -lgp 64 2 test_inner_product`
